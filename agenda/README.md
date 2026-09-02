@@ -123,15 +123,19 @@ Acesse `http://localhost:3000`.
 
 O repositório tem tanto `server.js` (Express, para rodar localmente com `npm start`) quanto `api/calendar.js` (função serverless equivalente, usada em produção na Vercel). A Vercel não executa o `server.js` diretamente — ela detecta automaticamente arquivos dentro de `api/` como funções serverless e serve os demais arquivos estaticamente.
 
-Passos no painel da Vercel:
+O projeto na Vercel é o **`saa-agenda-tcm-ba`**, ligado a este repositório com
+**Root Directory = `agenda`**. Cada push na branch de produção do repositório
+gera um deploy de produção; pushes em outras branches geram deploys de
+pré-visualização, com URL própria.
 
-1. Abra o projeto na Vercel → **Settings → General → Root Directory**.
-2. Defina o Root Directory como `agenda` (já que o app fica nessa subpasta do repositório) e salve.
-3. Nenhum "Build Command" é necessário (é um site estático + 1 função serverless — preset "Other").
-4. Em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL` e, se necessário, `ALLOWED_ORIGIN` e `CACHE_TTL_MS`. Com `USE_DEMO_DATA = true` em `script.js` (modo de demonstração), o frontend nem chega a chamar `/api/calendar`, e a variável é dispensável.
-5. Faça um novo deploy (redeploy do último commit, ou apenas dê push de um novo commit).
+Se for preciso recriar o projeto do zero:
 
-Depois disso, `/` deve carregar `agenda/index.html` e `/api/calendar` deve responder com o ICS.
+1. Importe o repositório na Vercel e defina o Root Directory como `agenda` (o app fica nessa subpasta).
+2. Nenhum "Build Command" é necessário — é um site estático mais uma função serverless (preset "Other").
+3. Em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL` e, se necessário, `ALLOWED_ORIGIN` e `CACHE_TTL_MS`. Enquanto `USE_DEMO_DATA = true` em `script.js` (modo de demonstração), o frontend nem chega a chamar `/api/calendar` e a variável é dispensável.
+
+Depois disso, `/` carrega `agenda/index.html` e `/api/calendar` responde com o
+ICS quando o modo de demonstração estiver desligado.
 
 ## Como funciona a leitura do calendário
 
