@@ -45,12 +45,20 @@ conformidade com o eMAG.
 
 | Arquivo | Uso |
 | --- | --- |
-| `tcm-mark.png` | Marca "A" — topbar, sobre placa branca, e cabeçalho do card JPEG |
+| `tcm-mark.png` | Símbolo "A" isolado — topbar, sobre placa branca, e cabeçalho do card JPEG |
 | `tcm-lockup.png` | Assinatura horizontal completa — rodapés e cabeçalho do extrato A4 |
 | `tcm-55.png` | Selo comemorativo dos 55 anos |
 | `tcm-marca.svg` | Símbolo isolado em vetor (reconstrução), disponível para uso avulso |
 | `tcm-logo.svg` | Assinatura completa em vetor — rodapé da página |
 | `tcm-55anos.svg` | Selo comemorativo em vetor |
+
+Os três PNG foram redimensionados para cerca do dobro do maior uso real em
+tela — 220px de largura no símbolo (exibido a 78px no card, rasterizado a
+1,5x), 420px na assinatura e 180px no selo — e recomprimidos: 763 KB no
+conjunto original, 76 KB agora. O símbolo veio da entrega do design como um
+recorte grosseiro da assinatura, trazendo um pedaço do "T" de TCM à direita e o
+topo da tipografia embaixo; foi recortado no símbolo, com respiro, para não
+publicar a marca do Tribunal cortada.
 
 > **Substituição pelos arquivos oficiais:** basta sobrescrever os arquivos
 > mantendo os mesmos nomes e proporções — nenhum código precisa mudar. As
