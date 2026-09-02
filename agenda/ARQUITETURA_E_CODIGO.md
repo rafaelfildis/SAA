@@ -1,10 +1,12 @@
-# Agenda Diego Daltro — Arquitetura e Código-Fonte Completo
+# SAA — Arquitetura e Código-Fonte
 
-> Documento gerado para consolidar a arquitetura do sistema e uma cópia integral do código-fonte, conforme solicitado. Repositório: [rafaelfildis/diegodaltrodaily](https://github.com/rafaelfildis/diegodaltrodaily).
+> Documento gerado para consolidar a arquitetura do sistema e uma cópia integral do código-fonte. Repositório: [rafaelfildis/SAA](https://github.com/rafaelfildis/SAA).
+>
+> ⚠️ **As listagens de código deste documento estão defasadas.** Elas foram geradas antes da adaptação para o TCM-BA (paleta institucional, marca em SVG, `CALENDAR_ICS_URL` como configuração de implantação). As seções de arquitetura continuam válidas; para o código atual, consulte os arquivos do repositório. Este documento precisa ser regerado.
 
 ## 1. Visão geral
 
-Aplicação web de agenda institucional (SISD/SESAB) que sincroniza automaticamente com um calendário Outlook/Microsoft 365 publicado em formato **ICS**. Não há framework/bundler no frontend — é HTML/CSS/JS puro. O backend é uma camada fina cujo único papel é contornar CORS ao buscar o ICS do Outlook.
+Aplicação web de agenda institucional (TCM-BA) que sincroniza automaticamente com um calendário Outlook/Microsoft 365 publicado em formato **ICS**. Não há framework/bundler no frontend — é HTML/CSS/JS puro. O backend é uma camada fina cujo único papel é contornar CORS ao buscar o ICS do Outlook.
 
 ```
 Navegador (index.html + script.js + styles.css)
@@ -148,7 +150,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Agenda Diego Daltro - SISD/SESAB</title>
+<title>SAA — Agenda Institucional do TCM-BA</title>
 <meta name="description" content="Agenda institucional com sincronização automática do calendário Outlook/Microsoft 365." />
 <meta name="theme-color" content="#061A35" id="meta-theme-color" />
 <script>
@@ -189,8 +191,8 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
           </svg>
         </span>
         <div class="topbar__titles">
-          <h1>Agenda Diego Daltro</h1>
-          <p>SISD/SESAB — Compromissos sincronizados do Outlook / Microsoft 365</p>
+          <h1>SAA — Agenda Institucional do TCM-BA</h1>
+          <p>TCM-BA — Compromissos sincronizados do Outlook / Microsoft 365</p>
         </div>
       </div>
     </div>
@@ -473,7 +475,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
   </div>
 
   <footer class="app-footer">
-    <p>Agenda Diego Daltro — SISD/SESAB — dados sincronizados automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
+    <p>SAA — Agenda Institucional do TCM-BA — dados sincronizados automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
   </footer>
 
   <div id="export-sandbox" class="export-sandbox" aria-hidden="true"></div>
@@ -526,7 +528,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
 
 ```css
 /* ==========================================================================
-   Agenda Diego Daltro — SISD/SESAB
+   SAA — Agenda Institucional do TCM-BA
    Identidade visual "Saúde Digital": institucional, tecnológica, acessível.
    ========================================================================== */
 
@@ -3533,7 +3535,7 @@ function construirPaperExport(grupos, totalFiltrados) {
       ${marca}
       <div style="flex:1;min-width:0;">
         <div style="font-size:17px;font-weight:800;letter-spacing:-.2px;">Agenda — Diego Daltro</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.72);margin-top:2px;">SISD/SESAB · Superintendência de Informação e Saúde Digital</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.72);margin-top:2px;">TCM-BA · Superintendência de Informação e Saúde Digital</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
         <div style="font-size:9.5px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.5px;">Período</div>
@@ -3546,7 +3548,7 @@ function construirPaperExport(grupos, totalFiltrados) {
     </div>
     <div style="padding:18px 24px 6px;">${corpo}</div>
     <div style="padding:11px 24px 18px;border-top:1px solid #EEF2F8;font-size:9.5px;color:#8899AD;text-align:center;">
-      Agenda institucional sincronizada do Outlook / Microsoft 365 · SISD/SESAB
+      Agenda institucional sincronizada do Outlook / Microsoft 365 · TCM-BA
     </div>
   `;
   return paper;
@@ -3693,7 +3695,7 @@ function construirTextoAgenda() {
   const grupos = agruparPorDia(eventos);
   const linhas = [];
 
-  linhas.push("Agenda Diego Daltro - SISD/SESAB");
+  linhas.push("SAA — Agenda Institucional do TCM-BA");
   linhas.push("Gerado em " + formatarDataHora(new Date()));
   linhas.push("");
 

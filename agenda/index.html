@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Agenda Diego Daltro - SISD/SESAB</title>
-<meta name="description" content="Agenda institucional com sincronização automática do calendário Outlook/Microsoft 365." />
-<meta name="theme-color" content="#061A35" id="meta-theme-color" />
+<title>SAA — Agenda Institucional | TCM-BA</title>
+<meta name="description" content="SAA — Agenda institucional do Tribunal de Contas dos Municípios do Estado da Bahia, com sincronização automática do calendário Outlook/Microsoft 365." />
+<meta name="theme-color" content="#0A3165" id="meta-theme-color" />
 <script>
   // Aplica o tema salvo antes da primeira pintura, evitando o "flash" de
   // tela clara ao carregar com o modo escuro já escolhido anteriormente.
   (function () {
     try {
-      var tema = localStorage.getItem("agendaSisd.tema");
+      var tema = localStorage.getItem("saaTcm.tema");
       if (tema === "dark" || tema === "light") {
         document.documentElement.setAttribute("data-theme", tema);
       }
@@ -33,19 +33,10 @@
       </button>
 
       <div class="topbar__brand">
-        <img src="logo-sisd.png" alt="Logotipo da Superintendência de Informação e Saúde Digital (SISD)" class="topbar__logo-sisd" />
-        <span class="topbar__logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="17" rx="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-            <path d="M8 14h2M8 17h5"></path>
-          </svg>
-        </span>
+        <img src="img/tcm-marca.svg" alt="Tribunal de Contas dos Municípios do Estado da Bahia" class="topbar__marca" />
         <div class="topbar__titles">
-          <h1>Agenda Diego Daltro</h1>
-          <p>SISD/SESAB — Compromissos sincronizados do Outlook / Microsoft 365</p>
+          <h1>SAA — Agenda Institucional</h1>
+          <p>TCM-BA — compromissos sincronizados do Outlook / Microsoft 365</p>
         </div>
       </div>
     </div>
@@ -328,7 +319,9 @@
   </div>
 
   <footer class="app-footer">
-    <p>Agenda Diego Daltro — SISD/SESAB — dados sincronizados automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
+    <img src="img/tcm-logo.svg" class="app-footer__logo"
+         alt="Tribunal de Contas dos Municípios do Estado da Bahia — 55 anos de serviços prestados à sociedade" />
+    <p>SAA — Agenda Institucional do TCM-BA. Dados sincronizados automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
   </footer>
 
   <div id="export-sandbox" class="export-sandbox" aria-hidden="true"></div>

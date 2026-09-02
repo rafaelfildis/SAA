@@ -1,34 +1,37 @@
 /* ==========================================================================
-   Agenda Diego Daltro — SISD/SESAB
-   Identidade visual "Saúde Digital": institucional, tecnológica, acessível.
+   SAA — Agenda Institucional do TCM-BA
+   Paleta institucional do Tribunal de Contas dos Municípios do Estado da
+   Bahia, derivada das cores aplicadas em tcm.ba.gov.br:
+     azul-marinho #0A3165 · azul médio #124589 · vermelho #940000
+     cinza de texto #5F6878 · cinza de borda #D9D7D7 · âmbar #FBAA3F
    ========================================================================== */
 
 :root {
-  --color-primary: #061A35;
-  --color-primary-dark: #031124;
-  --color-secondary: #174D83;
-  --color-accent: #55A9E8;
-  --color-background: #F5F8FC;
+  --color-primary: #0A3165;
+  --color-primary-dark: #06213F;
+  --color-secondary: #124589;
+  --color-accent: #4E93D9;
+  --color-background: #F4F7FB;
   --color-surface: #FFFFFF;
-  --color-text-primary: #10233C;
-  --color-text-secondary: #607086;
-  --color-heading: #061A35;
-  --color-border: #DCE5EF;
-  --color-success: #2E8B68;
-  --color-warning: #D99A2B;
-  --color-error: #C94B4B;
+  --color-text-primary: #16233A;
+  --color-text-secondary: #5F6878;
+  --color-heading: #0A3165;
+  --color-border: #D9D7D7;
+  --color-success: #2E7D5B;
+  --color-warning: #B87415;
+  --color-error: #940000;
 
-  --color-secondary-tint: #E9F1FA;
-  --color-accent-tint: #E7F3FD;
-  --color-success-tint: #E6F4EE;
-  --color-warning-tint: #FBF1DF;
-  --color-error-tint: #FBEAEA;
-  --color-pautaonline-texto: #1F6FB0;
+  --color-secondary-tint: #E7EFF9;
+  --color-accent-tint: #E8F1FC;
+  --color-success-tint: #E4F2EC;
+  --color-warning-tint: #FBF0DC;
+  --color-error-tint: #F6E6E6;
+  --color-pautaonline-texto: #124589;
   --color-continuo-tint: #E1F5F7;
   --color-continuo-texto: #0E7C86;
 
-  --sombra-leve: 0 1px 3px rgba(6, 26, 53, 0.08), 0 1px 2px rgba(6, 26, 53, 0.06);
-  --sombra-media: 0 8px 24px rgba(6, 26, 53, 0.16);
+  --sombra-leve: 0 1px 3px rgba(10, 49, 101, 0.08), 0 1px 2px rgba(10, 49, 101, 0.06);
+  --sombra-media: 0 8px 24px rgba(10, 49, 101, 0.16);
   --raio: 12px;
   --raio-pequeno: 8px;
   --topbar-altura: 64px;
@@ -46,28 +49,28 @@
    à preferência do sistema em qualquer direção. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-primary: #0B2545;
-    --color-primary-dark: #071A33;
-    --color-secondary: #4A9FE0;
-    --color-accent: #6FC1FF;
-    --color-background: #0F1720;
-    --color-surface: #17222E;
+    --color-primary: #0B2A4E;
+    --color-primary-dark: #06182E;
+    --color-secondary: #6BA6E8;
+    --color-accent: #8FC0F5;
+    --color-background: #0E1620;
+    --color-surface: #16212D;
     --color-text-primary: #E8EEF5;
-    --color-text-secondary: #94A6BA;
+    --color-text-secondary: #97A7BA;
     --color-heading: #E8EEF5;
-    --color-border: #2B3948;
+    --color-border: #2A3746;
     --color-success: #4FB784;
     --color-warning: #E3B25B;
-    --color-error: #E27272;
+    --color-error: #E87A7A;
 
-    --color-secondary-tint: rgba(74, 159, 224, 0.16);
-    --color-accent-tint: rgba(111, 193, 255, 0.16);
+    --color-secondary-tint: rgba(107, 166, 232, 0.16);
+    --color-accent-tint: rgba(143, 192, 245, 0.16);
     --color-success-tint: rgba(79, 183, 132, 0.16);
     --color-warning-tint: rgba(227, 178, 91, 0.16);
-    --color-error-tint: rgba(226, 114, 114, 0.16);
+    --color-error-tint: rgba(232, 122, 122, 0.16);
     --color-recorrente-tint: rgba(151, 122, 224, 0.18);
     --color-recorrente-texto: #B7A6F2;
-    --color-pautaonline-texto: #8FD1FF;
+    --color-pautaonline-texto: #8FC0F5;
     --color-continuo-tint: rgba(45, 197, 208, 0.18);
     --color-continuo-texto: #6FE0E8;
 
@@ -79,28 +82,28 @@
 }
 
 :root[data-theme="dark"] {
-  --color-primary: #0B2545;
-  --color-primary-dark: #071A33;
-  --color-secondary: #4A9FE0;
-  --color-accent: #6FC1FF;
-  --color-background: #0F1720;
-  --color-surface: #17222E;
+  --color-primary: #0B2A4E;
+  --color-primary-dark: #06182E;
+  --color-secondary: #6BA6E8;
+  --color-accent: #8FC0F5;
+  --color-background: #0E1620;
+  --color-surface: #16212D;
   --color-text-primary: #E8EEF5;
-  --color-text-secondary: #94A6BA;
+  --color-text-secondary: #97A7BA;
   --color-heading: #E8EEF5;
-  --color-border: #2B3948;
+  --color-border: #2A3746;
   --color-success: #4FB784;
   --color-warning: #E3B25B;
-  --color-error: #E27272;
+  --color-error: #E87A7A;
 
-  --color-secondary-tint: rgba(74, 159, 224, 0.16);
-  --color-accent-tint: rgba(111, 193, 255, 0.16);
+  --color-secondary-tint: rgba(107, 166, 232, 0.16);
+  --color-accent-tint: rgba(143, 192, 245, 0.16);
   --color-success-tint: rgba(79, 183, 132, 0.16);
   --color-warning-tint: rgba(227, 178, 91, 0.16);
-  --color-error-tint: rgba(226, 114, 114, 0.16);
+  --color-error-tint: rgba(232, 122, 122, 0.16);
   --color-recorrente-tint: rgba(151, 122, 224, 0.18);
   --color-recorrente-texto: #B7A6F2;
-  --color-pautaonline-texto: #8FD1FF;
+  --color-pautaonline-texto: #8FC0F5;
   --color-continuo-tint: rgba(45, 197, 208, 0.18);
   --color-continuo-texto: #6FE0E8;
 
@@ -207,23 +210,19 @@ button, input {
 
 .topbar__brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
-.topbar__logo-sisd {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
-}
-
-.topbar__logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
+/* A marca do TCM é azul-marinho sobre fundo claro; na topbar (também
+   azul-marinho) ela vai sobre uma placa branca, preservando as cores
+   institucionais em vez de recolorir o símbolo. */
+.topbar__marca {
+  box-sizing: border-box;
+  width: 48px;
+  height: 44px;
+  padding: 5px 7px;
   border-radius: var(--raio-pequeno);
-  background: rgba(255, 255, 255, 0.12);
+  background: #FFFFFF;
+  object-fit: contain;
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
 }
 
 .topbar__titles { min-width: 0; }
@@ -265,7 +264,7 @@ button, input {
 }
 .topbar__search input::placeholder { color: rgba(255, 255, 255, 0.6); }
 .topbar__search input:focus-visible { outline: none; }
-.topbar__search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(85, 169, 232, 0.3); }
+.topbar__search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(78, 147, 217, 0.35); }
 
 .topbar__actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; align-items: center; }
 
@@ -345,7 +344,7 @@ button, input {
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(6, 26, 53, 0.45);
+  background: rgba(10, 49, 101, 0.45);
   z-index: 35;
 }
 
@@ -543,6 +542,9 @@ button, input {
   text-decoration: none;
 }
 .sync-box__link:hover { text-decoration: underline; }
+/* O `display` acima sobrepõe o atributo `hidden`; esta regra devolve o efeito
+   dele quando não há calendário público configurado. */
+.sync-box__link[hidden] { display: none; }
 
 /* ---------------------------------- Breadcrumbs ---------------------------------- */
 
@@ -589,7 +591,7 @@ button, input {
   border-radius: var(--raio);
   padding: 14px 18px;
   margin-bottom: 16px;
-  box-shadow: 0 6px 18px rgba(201, 75, 75, 0.35);
+  box-shadow: 0 6px 18px rgba(148, 0, 0, 0.35);
 }
 .conflict-alert[hidden] { display: none; }
 .conflict-alert__icon {
@@ -679,7 +681,7 @@ button, input {
 
 .spinner {
   width: 12px; height: 12px; border-radius: 50%;
-  border: 2px solid rgba(23, 77, 131, 0.25);
+  border: 2px solid rgba(18, 69, 137, 0.25);
   border-top-color: var(--color-secondary);
   animation: girar 0.7s linear infinite;
 }
@@ -718,13 +720,13 @@ button, input {
   height: 18px;
   border: none;
   border-radius: 50%;
-  background: rgba(23, 77, 131, 0.15);
+  background: rgba(18, 69, 137, 0.15);
   color: inherit;
   cursor: pointer;
   font-size: 0.7rem;
   line-height: 1;
 }
-.filter-tag button:hover { background: rgba(23, 77, 131, 0.3); }
+.filter-tag button:hover { background: rgba(18, 69, 137, 0.3); }
 
 /* ---------------------------------- Toolbar de conteúdo + alternância de vista ---------------------------------- */
 
@@ -973,7 +975,7 @@ button, input {
   inset: 0;
   z-index: 60;
   display: flex;
-  background: rgba(6, 26, 53, 0.55);
+  background: rgba(10, 49, 101, 0.55);
   animation: entradaOverlay 0.18s ease;
 }
 .export-overlay[hidden] { display: none; }
@@ -1036,13 +1038,33 @@ button, input {
   .export-stage { padding: 18px; }
 }
 
-.app-footer { text-align: center; font-size: 0.72rem; color: var(--color-text-secondary); padding: 14px 20px 26px; }
+.app-footer { text-align: center; font-size: 0.72rem; color: var(--color-text-secondary); padding: 18px 20px 30px; }
+
+/* Assinatura institucional completa (símbolo + tipografia + selo dos 55 anos). */
+.app-footer__logo { display: block; width: 260px; max-width: 70%; height: auto; margin: 0 auto 14px; }
+
+/* No tema escuro a marca vai sobre uma placa branca, já que o azul-marinho
+   institucional não tem contraste suficiente sobre o fundo escuro. */
+:root[data-theme="dark"] .app-footer__logo {
+  background: #FFFFFF;
+  padding: 12px 16px;
+  border-radius: var(--raio-pequeno);
+  box-sizing: border-box;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .app-footer__logo {
+    background: #FFFFFF;
+    padding: 12px 16px;
+    border-radius: var(--raio-pequeno);
+    box-sizing: border-box;
+  }
+}
 
 .export-sandbox { position: fixed; left: -9999px; top: 0; background: #fff; }
 
 /* ---------------------------------- Painel lateral de detalhes ---------------------------------- */
 
-.panel-backdrop { position: fixed; inset: 0; background: rgba(6, 26, 53, 0.45); z-index: 45; }
+.panel-backdrop { position: fixed; inset: 0; background: rgba(10, 49, 101, 0.45); z-index: 45; }
 .panel-backdrop[hidden] { display: none; }
 
 .detail-panel {
@@ -1201,7 +1223,7 @@ button, input {
 }
 
 @media (max-width: 560px) {
-  .topbar__logo { display: none; }
+  .topbar__marca { display: none; }
 }
 
 @media (max-width: 640px) {

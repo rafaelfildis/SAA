@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Servidor Express da Agenda SISD.
+ * Servidor Express do SAA — Agenda Institucional do TCM-BA.
  *
  * Responsabilidades:
  *  - Servir os arquivos estáticos da aplicação (index.html, styles.css, script.js).
@@ -18,9 +18,9 @@ const path = require("path");
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const CALENDAR_ICS_URL =
-  process.env.CALENDAR_ICS_URL ||
-  "https://outlook.office365.com/owa/calendar/7390fe9481a141ad939331a8bd576247@saude.ba.gov.br/f56c542fabd0452f9f6c3178fbda6ea23840265162433551595/calendar.ics";
+// Obrigatória: URL do calendário ICS publicado no Outlook/Microsoft 365 do
+// TCM-BA. Sem ela o endpoint responde 500 em vez de servir outro calendário.
+const CALENDAR_ICS_URL = process.env.CALENDAR_ICS_URL || "";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
 
@@ -37,6 +37,11 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/calendar", async (req, res) => {
+  if (!CALENDAR_ICS_URL) {
+    console.error("CALENDAR_ICS_URL não configurada.");
+    return res.status(500).json({ erro: "Calendário não configurado: defina a variável de ambiente CALENDAR_ICS_URL." });
+  }
+
   const agora = Date.now();
 
   if (cache.body && agora - cache.fetchedAt < CACHE_TTL_MS) {
@@ -73,5 +78,5 @@ app.get("/api/calendar", async (req, res) => {
 app.use(express.static(path.join(__dirname)));
 
 app.listen(PORT, () => {
-  console.log(`Agenda SISD disponível em http://localhost:${PORT}`);
+  console.log(`SAA (Agenda TCM-BA) disponível em http://localhost:${PORT}`);
 });

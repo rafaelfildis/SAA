@@ -1,8 +1,35 @@
-# Agenda Diego Daltro - SISD/SESAB
+# SAA — Agenda Institucional do TCM-BA
 
-Aplicação web responsiva para visualização da agenda institucional, sincronizada automaticamente com o calendário Outlook/Microsoft 365 publicado em formato ICS.
+Aplicação web responsiva para visualização da agenda institucional do **Tribunal de Contas dos Municípios do Estado da Bahia**, sincronizada automaticamente com o calendário Outlook/Microsoft 365 publicado em formato ICS.
 
-## Interface (identidade "Saúde Digital")
+## Identidade visual
+
+A paleta reproduz as cores aplicadas em [tcm.ba.gov.br](https://www.tcm.ba.gov.br/), extraídas do CSS do tema institucional:
+
+| Cor | Hex | Aplicação na interface |
+| --- | --- | --- |
+| Azul-marinho | `#0A3165` | Topbar, cabeçalhos, badges de data |
+| Azul médio | `#124589` | Links, itens ativos, botões secundários |
+| Azul claro | `#4E93D9` | Botão primário e anéis de foco (derivado) |
+| Vermelho institucional | `#940000` | Conflitos, cancelamentos, alertas |
+| Vermelho da marca | `#E1051E` | Filete da tarja nas exportações e símbolo |
+| Cinza de texto | `#5F6878` | Texto secundário, rótulos |
+| Cinza de borda | `#D9D7D7` | Bordas e divisores |
+| Âmbar | `#B87415` | Categoria "pauta presencial" (derivado de `#FBAA3F`) |
+
+As cores ficam concentradas em variáveis CSS (`:root` em `styles.css`), com um conjunto equivalente para o tema escuro.
+
+### Arquivos da marca (`img/`)
+
+| Arquivo | Uso |
+| --- | --- |
+| `tcm-marca.svg` | Símbolo isolado — topbar, sobre placa branca |
+| `tcm-logo.svg` | Assinatura completa (símbolo + tipografia + selo dos 55 anos) — rodapé e cabeçalho das exportações |
+| `tcm-55anos.svg` | Selo comemorativo isolado, disponível para uso avulso |
+
+> **Substituição pelos arquivos oficiais:** as três marcas são reconstruções vetoriais. Para adotar os arquivos oficiais do TCM-BA, basta sobrescrever esses SVGs mantendo os mesmos nomes e proporções — nenhum código precisa mudar. O SVG é convertido em *data URL* em tempo de execução para que o `html2canvas` consiga rasterizá-lo nas exportações.
+
+## Interface
 
 - **Topbar** institucional (azul-marinho `#061A35`) com logotipo, busca global e ações rápidas.
 - **Sidebar** de navegação/filtros: drawer com backdrop no mobile (botão ☰), recolhível no desktop (preferência salva em `localStorage`).
@@ -24,12 +51,13 @@ Aplicação web responsiva para visualização da agenda institucional, sincroni
 ```bash
 cd agenda
 npm install
+export CALENDAR_ICS_URL="https://outlook.office365.com/owa/calendar/.../calendar.ics"
 npm start
 ```
 
 Acesse `http://localhost:3000`.
 
-Opcionalmente, copie `.env.example` para `.env` e ajuste `CALENDAR_ICS_URL`, `ALLOWED_ORIGIN` e `CACHE_TTL_MS` conforme o ambiente.
+`CALENDAR_ICS_URL` é **obrigatória**: sem ela, `/api/calendar` responde `500` com uma mensagem explícita, em vez de servir um calendário de outra instituição. Copie `.env.example` para `.env` e ajuste também `ALLOWED_ORIGIN` e `CACHE_TTL_MS` conforme o ambiente.
 
 ## Deploy na Vercel
 
@@ -40,15 +68,15 @@ Passos no painel da Vercel:
 1. Abra o projeto na Vercel → **Settings → General → Root Directory**.
 2. Defina o Root Directory como `agenda` (já que o app fica nessa subpasta do repositório) e salve.
 3. Nenhum "Build Command" é necessário (é um site estático + 1 função serverless — preset "Other").
-4. Opcional: em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL`, `ALLOWED_ORIGIN` e `CACHE_TTL_MS` se quiser sobrescrever os padrões.
+4. Em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL` (obrigatória) e, se necessário, `ALLOWED_ORIGIN` e `CACHE_TTL_MS`.
 5. Faça um novo deploy (redeploy do último commit, ou apenas dê push de um novo commit).
 
 Depois disso, `/` deve carregar `agenda/index.html` e `/api/calendar` deve responder com o ICS.
 
 ## Como funciona a leitura do calendário
 
-1. O frontend tenta `fetch(CALENDAR_ICS_URL)` diretamente do navegador.
-2. Se o navegador bloquear por CORS (o esperado, já que o Outlook não libera a origem da aplicação), o frontend recorre a `fetch(CALENDAR_API_URL)`, isto é, `/api/calendar`.
+1. O frontend tenta `fetch(CALENDAR_ICS_URL)` diretamente do navegador — **apenas se** a constante estiver preenchida em `script.js`. Por padrão ela vem vazia, e a etapa é pulada: o endereço do calendário fica na configuração da implantação, não no código servido ao navegador.
+2. O frontend usa `fetch(CALENDAR_API_URL)`, isto é, `/api/calendar` — que é também o caminho de recuperação quando o fetch direto existe e é bloqueado por CORS.
 3. `server.js` busca o ICS no servidor (sem restrição de CORS, pois é uma chamada servidor-servidor), aplica um cache curto em memória (`CACHE_TTL_MS`, padrão 5 min) e devolve o conteúdo com `Content-Type: text/calendar`, liberando apenas a origem configurada em `ALLOWED_ORIGIN`.
 4. O conteúdo ICS é interpretado inteiramente no cliente com `ical.js`.
 

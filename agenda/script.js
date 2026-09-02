@@ -9,12 +9,18 @@ import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.1.0/dist/ical.min.js";
    CONFIGURAÇÃO CENTRAL
    ========================================================================== */
 
-const CALENDAR_ICS_URL =
-  "https://outlook.office365.com/owa/calendar/7390fe9481a141ad939331a8bd576247@saude.ba.gov.br/f56c542fabd0452f9f6c3178fbda6ea23840265162433551595/calendar.ics";
+// URL pública do calendário ICS publicado no Outlook/Microsoft 365 do TCM-BA.
+// Deixe vazia para que a agenda seja buscada apenas pelo endpoint
+// intermediário (/api/calendar), que lê a URL da variável de ambiente
+// CALENDAR_ICS_URL — assim o endereço do calendário fica na configuração da
+// implantação, e não no código servido ao navegador.
+const CALENDAR_ICS_URL = "";
 
 // Link "humano" do mesmo calendário publicado, usado apenas no botão
 // "Abrir calendário no Outlook" — nunca como fonte de dados.
-const CALENDAR_HTML_URL = CALENDAR_ICS_URL.replace(/calendar\.ics$/, "calendar.html");
+const CALENDAR_HTML_URL = CALENDAR_ICS_URL
+  ? CALENDAR_ICS_URL.replace(/calendar\.ics$/, "calendar.html")
+  : "";
 
 // Endpoint intermediário (server.js / função serverless) usado quando o
 // fetch direto ao Outlook é bloqueado por CORS.
@@ -24,7 +30,7 @@ const USE_DEMO_DATA = false;
 
 const DISPLAY_TIMEZONE = "America/Bahia";
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutos
-const STORAGE_KEY = "agendaSisd.cache.v1";
+const STORAGE_KEY = "saaTcm.cache.v1";
 
 // Janela de expansão de eventos recorrentes (evita gerar ocorrências infinitas).
 const JANELA_MESES_PASSADO = 1;
@@ -63,7 +69,7 @@ const state = {
   },
 };
 
-const SIDEBAR_RECOLHIDA_STORAGE_KEY = "agendaSisd.sidebarRecolhida";
+const SIDEBAR_RECOLHIDA_STORAGE_KEY = "saaTcm.sidebarRecolhida";
 
 /* ==========================================================================
    DEMO (somente para desenvolvimento local, quando USE_DEMO_DATA = true)
@@ -71,18 +77,18 @@ const SIDEBAR_RECOLHIDA_STORAGE_KEY = "agendaSisd.sidebarRecolhida";
 
 const DEMO_ICS = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Demo//Agenda SISD//PT
+PRODID:-//Demo//SAA TCM-BA//PT
 BEGIN:VEVENT
 UID:demo-1@agenda
 DTSTAMP:20260701T120000Z
 DTSTART:20260720T120000Z
 DTEND:20260720T130000Z
-SUMMARY:Reunião de alinhamento (Teams)
-DESCRIPTION:Pauta online via Microsoft Teams para discutir indicadores.
+SUMMARY:Sessão de julgamento — 1ª Câmara (Teams)
+DESCRIPTION:Pauta online via Microsoft Teams.
 LOCATION:Microsoft Teams
-ORGANIZER;CN=Diego Daltro:mailto:diego@saude.ba.gov.br
-ATTENDEE;CN=Ana Ribeiro:mailto:ana@saude.ba.gov.br
-ATTENDEE;CN=Marcos Lima:mailto:marcos@saude.ba.gov.br
+ORGANIZER;CN=Gabinete:mailto:gabinete@exemplo.tcm.ba.gov.br
+ATTENDEE;CN=Ana Ribeiro:mailto:ana@exemplo.tcm.ba.gov.br
+ATTENDEE;CN=Marcos Lima:mailto:marcos@exemplo.tcm.ba.gov.br
 END:VEVENT
 BEGIN:VEVENT
 UID:demo-2@agenda
@@ -92,16 +98,16 @@ DTEND;VALUE=DATE:20260725
 SUMMARY:Viagem a Brasília
 DESCRIPTION:Embarque às 7h, desembarque previsto às 10h.
 LOCATION:Aeroporto de Brasília
-ATTENDEE;CN=Diego Daltro:mailto:diego@saude.ba.gov.br
-ATTENDEE;CN=Assessoria:mailto:assessoria@saude.ba.gov.br
+ATTENDEE;CN=Gabinete:mailto:gabinete@exemplo.tcm.ba.gov.br
+ATTENDEE;CN=Assessoria:mailto:assessoria@exemplo.tcm.ba.gov.br
 END:VEVENT
 BEGIN:VEVENT
 UID:demo-3@agenda
 DTSTAMP:20260701T120000Z
 DTSTART:20260721T190000Z
 DTEND:20260721T210000Z
-SUMMARY:Aula de mestrado — Seminário de pesquisa
-DESCRIPTION:Disciplina obrigatória, sala 12, universidade.
+SUMMARY:Escola de Contas — Módulo de auditoria
+DESCRIPTION:Capacitação de jurisdicionados, sala 12.
 LOCATION:Sala 12
 RRULE:FREQ=WEEKLY;COUNT=4
 END:VEVENT
@@ -573,12 +579,16 @@ async function buscarIcsTexto() {
     return DEMO_ICS;
   }
 
-  try {
-    const resposta = await fetch(CALENDAR_ICS_URL, { mode: "cors", cache: "no-store" });
-    if (!resposta.ok) throw new Error("HTTP " + resposta.status);
-    return await resposta.text();
-  } catch (erroDireto) {
-    console.warn("Fetch direto ao Outlook falhou (provável bloqueio de CORS):", erroDireto);
+  // Só tenta o fetch direto quando há uma URL configurada no cliente; caso
+  // contrário vai direto ao endpoint intermediário.
+  if (CALENDAR_ICS_URL) {
+    try {
+      const resposta = await fetch(CALENDAR_ICS_URL, { mode: "cors", cache: "no-store" });
+      if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+      return await resposta.text();
+    } catch (erroDireto) {
+      console.warn("Fetch direto ao Outlook falhou (provável bloqueio de CORS):", erroDireto);
+    }
   }
 
   const respostaProxy = await fetch(CALENDAR_API_URL, { cache: "no-store" });
@@ -1055,10 +1065,10 @@ const PERIODO_TITULO = { todos: "Agenda — todos os compromissos", dia: "Agenda
 // Pontos coloridos por categoria (mesmas cores dos badges), usados na lista
 // de categorias da sidebar.
 const CATEGORIA_COR = {
-  viagem: "#174D83",
-  mestrado: "#2E8B68",
-  "pauta-online": "#55A9E8",
-  "pauta-presencial": "#D99A2B",
+  viagem: "#124589",
+  mestrado: "#2E7D5B",
+  "pauta-online": "#4E93D9",
+  "pauta-presencial": "#B87415",
 };
 
 function subtituloDaPagina() {
@@ -1478,7 +1488,7 @@ function confirmarAcao(mensagem, titulo) {
    TEMA CLARO/ESCURO
    ========================================================================== */
 
-const TEMA_STORAGE_KEY = "agendaSisd.tema";
+const TEMA_STORAGE_KEY = "saaTcm.tema";
 
 function sistemaPrefereTemaEscuro() {
   return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1498,7 +1508,7 @@ function aplicarTema(tema) {
   if (btn) btn.setAttribute("aria-pressed", String(efetivoEscuro));
 
   const metaTema = document.getElementById("meta-theme-color");
-  if (metaTema) metaTema.setAttribute("content", efetivoEscuro ? "#0B2545" : "#061A35");
+  if (metaTema) metaTema.setAttribute("content", efetivoEscuro ? "#0B2A4E" : "#0A3165");
 }
 
 function alternarTema() {
@@ -1665,10 +1675,10 @@ async function atualizarAgenda() {
 // já comunica visualmente se é viagem, mestrado, pauta online ou presencial,
 // sem precisar de um segundo indicador redundante.
 const CATEGORIA_CORES_EXPORT = {
-  viagem: { borda: "#174D83", fundo: "#E9F1FA", texto: "#174D83" },
-  mestrado: { borda: "#2E8B68", fundo: "#E6F4EE", texto: "#2E8B68" },
-  "pauta-online": { borda: "#55A9E8", fundo: "#E7F3FD", texto: "#1F6FB0" },
-  "pauta-presencial": { borda: "#D99A2B", fundo: "#FBF1DF", texto: "#B9821F" },
+  viagem: { borda: "#124589", fundo: "#E7EFF9", texto: "#124589" },
+  mestrado: { borda: "#2E7D5B", fundo: "#E4F2EC", texto: "#2E7D5B" },
+  "pauta-online": { borda: "#4E93D9", fundo: "#E8F1FC", texto: "#124589" },
+  "pauta-presencial": { borda: "#B87415", fundo: "#FBF0DC", texto: "#B87415" },
 };
 
 // Cartão de exportação minimalista: mostra somente horário, título e
@@ -1692,8 +1702,8 @@ function linhaPaperExport(evento, diaChave, densidade) {
   const mostrarLink = evento.categoria === "pauta-online" && !!evento.link;
 
   const estiloTitulo = evento.cancelado
-    ? "font-size:13.5px;font-weight:700;color:#607086;text-decoration:line-through;"
-    : "font-size:13.5px;font-weight:700;color:#10233C;";
+    ? "font-size:13.5px;font-weight:700;color:#5F6878;text-decoration:line-through;"
+    : "font-size:13.5px;font-weight:700;color:#16233A;";
 
   const metas = [];
   if (densidade !== "resumo") {
@@ -1711,13 +1721,13 @@ function linhaPaperExport(evento, diaChave, densidade) {
 
   const detalhe =
     densidade === "completo"
-      ? `${evento.descricao ? `<div style="font-size:11px;color:#607086;line-height:1.45;margin-top:6px;">${escapeHtml(evento.descricao)}</div>` : ""}${
-          mostrarLink ? `<div style="font-size:10.5px;color:#174D83;margin-top:5px;word-break:break-all;">🔗 ${escapeHtml(evento.link)}</div>` : ""
+      ? `${evento.descricao ? `<div style="font-size:11px;color:#5F6878;line-height:1.45;margin-top:6px;">${escapeHtml(evento.descricao)}</div>` : ""}${
+          mostrarLink ? `<div style="font-size:10.5px;color:#124589;margin-top:5px;word-break:break-all;">🔗 ${escapeHtml(evento.link)}</div>` : ""
         }`
       : "";
 
   const bannerCancelado = evento.cancelado
-    ? `<div style="display:inline-block;background:#C94B4B;color:#fff;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:5px;margin-bottom:5px;">⚠ Cancelado</div>`
+    ? `<div style="display:inline-block;background:#940000;color:#fff;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:5px;margin-bottom:5px;">⚠ Cancelado</div>`
     : "";
 
   return `
@@ -1727,7 +1737,7 @@ function linhaPaperExport(evento, diaChave, densidade) {
         ${bannerCancelado}
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;">
           <div style="${estiloTitulo}">${escapeHtml(evento.titulo)}</div>
-          <div style="font-size:12px;font-weight:800;color:#174D83;white-space:nowrap;flex-shrink:0;">${horario}</div>
+          <div style="font-size:12px;font-weight:800;color:#124589;white-space:nowrap;flex-shrink:0;">${horario}</div>
         </div>
         ${metas.length ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px 11px;margin-top:6px;font-size:10.5px;line-height:1.4;color:#4A5B72;">${metas.join("")}</div>` : ""}
         ${detalhe}
@@ -1744,16 +1754,18 @@ function construirPaperExport(grupos, totalFiltrados) {
   const { formato, densidade } = state.exportacao;
   const largura = formato === "a4" ? 820 : 440;
   const logo = logoDataUrlCache;
-  const marca = logo
-    ? `<img src="${logo}" alt="" style="width:52px;height:52px;border-radius:12px;flex-shrink:0;" />`
-    : `<div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#174D83,#55A9E8);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:15px;letter-spacing:.5px;color:#fff;">SD</div>`;
+  // A assinatura institucional vai numa faixa branca acima da tarja azul: a
+  // marca do TCM é azul-marinho e não teria contraste sobre a própria tarja.
+  const faixaMarca = logo
+    ? `<div style="background:#fff;padding:14px 24px 12px;"><img src="${logo}" alt="Tribunal de Contas dos Municípios do Estado da Bahia" style="height:${formato === "a4" ? 46 : 34}px;display:block;" /></div>`
+    : "";
 
   const resumo = `${totalFiltrados} compromisso${totalFiltrados === 1 ? "" : "s"}`;
   const periodoLabel = subtituloDaPagina();
 
   let corpo = "";
   if (totalFiltrados === 0) {
-    corpo = `<div style="padding:26px;text-align:center;color:#8899AD;font-size:13px;">Nenhum compromisso encontrado para os filtros selecionados.</div>`;
+    corpo = `<div style="padding:26px;text-align:center;color:#8C9AAA;font-size:13px;">Nenhum compromisso encontrado para os filtros selecionados.</div>`;
   } else {
     grupos.forEach((grupo) => {
       const linhas = grupo.eventos
@@ -1762,9 +1774,9 @@ function construirPaperExport(grupos, totalFiltrados) {
       corpo += `
         <div style="margin-bottom:16px;break-inside:avoid;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
-            <span style="background:#061A35;color:#fff;font-size:11px;font-weight:700;padding:4px 11px;border-radius:7px;text-transform:capitalize;white-space:nowrap;">${escapeHtml(grupo.rotulo)}</span>
-            <span style="height:1px;flex:1;background:#DCE5EF;"></span>
-            <span style="font-size:10px;color:#8899AD;font-weight:600;">${grupo.eventos.length} compromisso${grupo.eventos.length === 1 ? "" : "s"}</span>
+            <span style="background:#0A3165;color:#fff;font-size:11px;font-weight:700;padding:4px 11px;border-radius:7px;text-transform:capitalize;white-space:nowrap;">${escapeHtml(grupo.rotulo)}</span>
+            <span style="height:1px;flex:1;background:#D9D7D7;"></span>
+            <span style="font-size:10px;color:#8C9AAA;font-weight:600;">${grupo.eventos.length} compromisso${grupo.eventos.length === 1 ? "" : "s"}</span>
           </div>
           ${linhas}
         </div>
@@ -1774,38 +1786,40 @@ function construirPaperExport(grupos, totalFiltrados) {
 
   const paper = document.createElement("div");
   paper.className = "export-paper";
-  paper.style.cssText = `width:${largura}px;max-width:100%;background:#fff;border-radius:14px;overflow:hidden;font-family:'Segoe UI', Arial, sans-serif;color:#10233C;`;
+  paper.style.cssText = `width:${largura}px;max-width:100%;background:#fff;border-radius:14px;overflow:hidden;font-family:'Segoe UI', Arial, sans-serif;color:#16233A;`;
   paper.innerHTML = `
-    <div style="background:linear-gradient(135deg,#061A35,#0B2D57);color:#fff;padding:20px 24px;display:flex;align-items:center;gap:15px;">
-      ${marca}
+    ${faixaMarca}
+    <div style="background:linear-gradient(135deg,#0A3165,#124589);color:#fff;padding:18px 24px;display:flex;align-items:center;gap:15px;border-top:3px solid #E1051E;">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:17px;font-weight:800;letter-spacing:-.2px;">Agenda — Diego Daltro</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.72);margin-top:2px;">SISD/SESAB · Superintendência de Informação e Saúde Digital</div>
+        <div style="font-size:17px;font-weight:800;letter-spacing:-.2px;">SAA — Agenda Institucional</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.72);margin-top:2px;">Tribunal de Contas dos Municípios do Estado da Bahia</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
         <div style="font-size:9.5px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.5px;">Período</div>
         <div style="font-size:12px;font-weight:700;margin-top:2px;max-width:200px;">${escapeHtml(periodoLabel)}</div>
       </div>
     </div>
-    <div style="background:#E9F1FA;padding:8px 24px;display:flex;justify-content:space-between;gap:10px;font-size:10.5px;color:#174D83;font-weight:600;flex-wrap:wrap;">
+    <div style="background:#E7EFF9;padding:8px 24px;display:flex;justify-content:space-between;gap:10px;font-size:10.5px;color:#124589;font-weight:600;flex-wrap:wrap;">
       <span>${resumo}</span>
       <span>Gerado em ${formatarDataHora(new Date())} · Fuso America/Bahia</span>
     </div>
     <div style="padding:18px 24px 6px;">${corpo}</div>
-    <div style="padding:11px 24px 18px;border-top:1px solid #EEF2F8;font-size:9.5px;color:#8899AD;text-align:center;">
-      Agenda institucional sincronizada do Outlook / Microsoft 365 · SISD/SESAB
+    <div style="padding:11px 24px 18px;border-top:1px solid #E7E5E5;font-size:9.5px;color:#8C9AAA;text-align:center;">
+      Agenda institucional sincronizada do Outlook / Microsoft 365 · TCM-BA
     </div>
   `;
   return paper;
 }
 
-// Carrega o logotipo institucional (SISD) como data URL uma única vez, para
-// uso nos cabeçalhos do PDF (jsPDF) e do JPEG (HTML/html2canvas).
+// Carrega a assinatura institucional do TCM-BA como data URL uma única vez,
+// para uso nos cabeçalhos do PDF (jsPDF) e do JPEG (HTML/html2canvas). O SVG
+// é convertido em data URL porque o html2canvas só rasteriza imagens que não
+// dependem de uma nova requisição de rede durante a captura.
 let logoDataUrlCache = null;
 async function obterLogoDataUrl() {
   if (logoDataUrlCache) return logoDataUrlCache;
   try {
-    const resposta = await fetch("logo-sisd.png");
+    const resposta = await fetch("img/tcm-logo.svg");
     const blob = await resposta.blob();
     logoDataUrlCache = await new Promise((resolve, reject) => {
       const leitor = new FileReader();
@@ -1940,7 +1954,7 @@ function construirTextoAgenda() {
   const grupos = agruparPorDia(eventos);
   const linhas = [];
 
-  linhas.push("Agenda Diego Daltro - SISD/SESAB");
+  linhas.push("SAA — Agenda Institucional do TCM-BA");
   linhas.push("Gerado em " + formatarDataHora(new Date()));
   linhas.push("");
 
@@ -2005,7 +2019,13 @@ function inicializarInterface() {
   inicializarTema();
   document.getElementById("btn-tema").addEventListener("click", alternarTema);
 
-  document.getElementById("btn-abrir-outlook").href = CALENDAR_HTML_URL;
+  // Sem URL pública configurada não há para onde apontar o botão.
+  const btnOutlook = document.getElementById("btn-abrir-outlook");
+  if (CALENDAR_HTML_URL) {
+    btnOutlook.href = CALENDAR_HTML_URL;
+  } else {
+    btnOutlook.hidden = true;
+  }
 
   document.getElementById("btn-atualizar").addEventListener("click", () => atualizarAgenda());
   document.getElementById("btn-tentar-novamente").addEventListener("click", () => atualizarAgenda());
