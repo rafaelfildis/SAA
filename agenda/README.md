@@ -128,6 +128,11 @@ O projeto na Vercel é o **`saa-agenda-tcm-ba`**, ligado a este repositório com
 gera um deploy de produção; pushes em outras branches geram deploys de
 pré-visualização, com URL própria.
 
+O `agenda/vercel.json` fixa o preset como site estático (`framework: null`,
+sem build) com `api/` como função serverless. Sem ele a Vercel detecta o
+`express` do `package.json`, roteia tudo pelo `server.js` e a raiz responde
+`Cannot GET /` — o `server.js` existe para rodar localmente, não como função.
+
 Se for preciso recriar o projeto do zero:
 
 1. Importe o repositório na Vercel e defina o Root Directory como `agenda` (o app fica nessa subpasta).
