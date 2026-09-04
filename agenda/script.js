@@ -763,9 +763,27 @@ async function buscarIcsTexto() {
 
   const respostaProxy = await fetch(CALENDAR_API_URL, { cache: "no-store" });
   if (!respostaProxy.ok) {
-    throw new Error("HTTP " + respostaProxy.status + " ao buscar via " + CALENDAR_API_URL);
+    // O proxy responde erro como JSON {"erro": "..."} com uma mensagem que
+    // diz exatamente o que falta (variável de ambiente ausente, calendário
+    // fora do ar). Descartá-la e mostrar só "HTTP 500" transforma um
+    // problema de configuração de dois minutos em uma investigação.
+    throw new Error(await mensagemDeErroDoProxy(respostaProxy));
   }
   return await respostaProxy.text();
+}
+
+// Extrai a mensagem do corpo de erro do proxy, caindo para o código HTTP
+// quando o corpo não é o JSON esperado (ex.: página de erro da hospedagem).
+async function mensagemDeErroDoProxy(resposta) {
+  const generico = "HTTP " + resposta.status + " ao buscar via " + CALENDAR_API_URL;
+  try {
+    const corpo = await resposta.text();
+    if (!corpo) return generico;
+    const dados = JSON.parse(corpo);
+    return dados && dados.erro ? dados.erro : generico;
+  } catch (e) {
+    return generico;
+  }
 }
 
 function salvarCache(eventos) {
