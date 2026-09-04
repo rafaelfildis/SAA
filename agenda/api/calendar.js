@@ -8,8 +8,9 @@
  * Requer runtime Node.js >= 18 (usa o fetch global).
  */
 
-// Obrigatória: URL do calendário ICS publicado no Outlook/Microsoft 365 do
-// TCM-BA. Sem ela o endpoint responde 500 em vez de servir outro calendário.
+// Obrigatória: endereço secreto no formato iCal do Google Agenda. Sem ela o
+// endpoint responde 500 em vez de servir outro calendário. O endereço é
+// credencial ao portador e por isso vive só aqui, no servidor.
 const CALENDAR_ICS_URL = process.env.CALENDAR_ICS_URL || "";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
@@ -48,7 +49,7 @@ module.exports = async function handler(req, res) {
   try {
     const upstream = await fetch(CALENDAR_ICS_URL);
     if (!upstream.ok) {
-      throw new Error("Servidor do Outlook respondeu " + upstream.status);
+      throw new Error("Servidor do Google respondeu " + upstream.status);
     }
     const texto = await upstream.text();
     cache = { body: texto, fetchedAt: agora };

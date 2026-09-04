@@ -2,25 +2,26 @@
 
 > Documento gerado para consolidar a arquitetura do sistema e uma cópia integral do código-fonte. Repositório: [rafaelfildis/SAA](https://github.com/rafaelfildis/SAA).
 >
-> ⚠️ **As listagens de código deste documento estão defasadas.** Elas foram geradas antes da adaptação para o TCM-BA (paleta institucional, marca em SVG, `CALENDAR_ICS_URL` como configuração de implantação). As seções de arquitetura continuam válidas; para o código atual, consulte os arquivos do repositório. Este documento precisa ser regerado.
+> ⚠️ **As listagens de código deste documento estão defasadas.** Elas foram geradas antes da adaptação para o TCM-BA (paleta institucional, marca em SVG, `CALENDAR_ICS_URL` como configuração de implantação) e antes da troca da fonte de dados do Outlook/Microsoft 365 para o **Google Agenda**. As seções de arquitetura abaixo foram atualizadas e continuam válidas; para o código atual, consulte os arquivos do repositório. Este documento precisa ser regerado.
 
 ## 1. Visão geral
 
-Aplicação web de agenda institucional (TCM-BA) que sincroniza automaticamente com um calendário Outlook/Microsoft 365 publicado em formato **ICS**. Não há framework/bundler no frontend — é HTML/CSS/JS puro. O backend é uma camada fina cujo único papel é contornar CORS ao buscar o ICS do Outlook.
+Aplicação web de agenda institucional (TCM-BA) que sincroniza automaticamente com um calendário do **Google Agenda** publicado em formato **ICS** (endereço secreto no formato iCal). Não há framework/bundler no frontend — é HTML/CSS/JS puro. O backend é uma camada fina com dois papéis: contornar a ausência de CORS no feed do Google e manter o endereço secreto fora do código servido ao navegador.
 
 ```
 Navegador (index.html + script.js + styles.css)
         │
-        │ 1. fetch(CALENDAR_ICS_URL) direto ao Outlook
-        │    (normalmente bloqueado por CORS)
+        │ CALENDAR_ICS_URL no cliente é vazia de propósito:
+        │ o endereço secreto não pode chegar ao navegador
         ▼
-        │ 2. fallback: fetch(/api/calendar)
+        │ fetch(/api/calendar)  ← caminho normal, não plano B
         ▼
 ┌───────────────────────────────┐
 │  server.js (Express, local)   │   OU   ┌────────────────────────────┐
-│  ou api/calendar.js (Vercel)  │───────▶│ outlook.office365.com (ICS)│
-│  proxy + cache em memória     │        └────────────────────────────┘
-└───────────────────────────────┘
+│  ou api/calendar.js (Vercel)  │───────▶│ calendar.google.com (ICS)  │
+│  proxy + cache em memória     │        │ lê CALENDAR_ICS_URL do     │
+│                               │        │ ambiente, nunca do código  │
+└───────────────────────────────┘        └────────────────────────────┘
         │
         ▼
   ical.js interpreta o ICS inteiramente no cliente
@@ -28,8 +29,17 @@ Navegador (index.html + script.js + styles.css)
         │
         ▼
   localStorage guarda o último resultado processado
-  (fallback quando a rede/Outlook falha)
+  (fallback quando a rede/Google falha)
 ```
+
+> O feed iCal do Google não é tempo real: é um retrato atualizado em intervalos
+> próprios do Google. Somam-se o cache do proxy (`CACHE_TTL_MS`, 5 min) e o ciclo
+> de atualização do frontend (`REFRESH_INTERVAL_MS`, 15 min). A fonte de verdade
+> permanece o Google Agenda.
+>
+> O Google **não emite `CATEGORIES`** no feed (organiza por cor), então o ramo de
+> rubrica declarada de `classificarEvento()` nunca é acionado — a classificação
+> recai inteiramente sobre a heurística de palavras-chave.
 
 ## 2. Stack
 
@@ -110,8 +120,8 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
 - **Compromissos de vários dias**: eventos que atravessam mais de um dia passam a aparecer na agenda de **cada dia** que ocupam (`diasQueEventoAbrange`), com horário contextual por dia e badge de intervalo, respeitando a janela de filtro (`janelaDeExibicaoAtual`). Reflete-se também nas exportações.
 - **DTEND exclusivo em eventos de dia inteiro**: o `DTEND` de eventos de dia inteiro é exclusivo no iCalendar (RFC 5545). `dataFimInclusivo` recua para o último dia realmente ocupado, corrigindo a exibição, a contagem de dias, os filtros e as exportações.
 - **Redesenho do front-end (port do novo visual)**:
-  - Topbar com botão **Exportar agenda** (abre o overlay); "Abrir no Outlook" movido para a caixa de sincronização na sidebar.
-  - Sidebar com **lista de categorias** (ponto colorido + rótulo + contador por categoria, respeitando os demais filtros) e **caixa de Sincronização** (status Outlook/M365 + última atualização + link).
+  - Topbar com botão **Exportar agenda** (abre o overlay); "Abrir no Google Agenda" movido para a caixa de sincronização na sidebar.
+  - Sidebar com **lista de categorias** (ponto colorido + rótulo + contador por categoria, respeitando os demais filtros) e **caixa de Sincronização** (status Google Agenda + última atualização + link).
   - **Dashboard de 4 indicadores** (adiciona o total de Compromissos) e **subtítulo dinâmico** da página conforme o período/intervalo.
   - **Participantes**: extração de `ATTENDEE`/`ORGANIZER` do ICS (`lerParticipantes`), exibidos nos cards, na coluna Participantes da tabela e no painel de detalhes (`participantesResumo`). Ausência de participantes é tolerada (calendários publicados às vezes omitem por privacidade).
   - **Overlay de exportação** substituindo a barra inferior: escolha de **formato** (mobile vertical / A4) e **densidade** (completo / compromissos / resumo), com **pré-visualização ao vivo** do "papel" institucional capturada por `html2canvas` para gerar JPEG/PDF (`construirPaperExport`, `exportarPapel`). A exportação em texto continua disponível.
@@ -127,7 +137,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
   "name": "agenda-sisd",
   "version": "1.0.0",
   "private": true,
-  "description": "Agenda web responsiva com sincronização automática de calendário Outlook/Microsoft 365 (ICS).",
+  "description": "Agenda web responsiva com sincronização automática de calendário Google Agenda (ICS).",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -1765,7 +1775,7 @@ import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.1.0/dist/ical.min.js";
    ========================================================================== */
 
 const CALENDAR_ICS_URL =
-  "https://outlook.office365.com/owa/calendar/7390fe9481a141ad939331a8bd576247@saude.ba.gov.br/f56c542fabd0452f9f6c3178fbda6ea23840265162433551595/calendar.ics";
+  "https://calendar.google.com/calendar/ical/SEU_EMAIL%40gmail.com/private-TOKEN/basic.ics";
 
 // Link "humano" do mesmo calendário publicado, usado apenas no botão
 // "Abrir calendário no Outlook" — nunca como fonte de dados.
@@ -1835,9 +1845,9 @@ DTEND:20260720T130000Z
 SUMMARY:Reunião de alinhamento (Teams)
 DESCRIPTION:Pauta online via Microsoft Teams para discutir indicadores.
 LOCATION:Microsoft Teams
-ORGANIZER;CN=Diego Daltro:mailto:diego@saude.ba.gov.br
-ATTENDEE;CN=Ana Ribeiro:mailto:ana@saude.ba.gov.br
-ATTENDEE;CN=Marcos Lima:mailto:marcos@saude.ba.gov.br
+ORGANIZER;CN=Gabinete:mailto:gabinete@exemplo.tcm.ba.gov.br
+ATTENDEE;CN=Assessoria Técnica:mailto:assessoria.tecnica@exemplo.tcm.ba.gov.br
+ATTENDEE;CN=Corpo Técnico:mailto:corpo.tecnico@exemplo.tcm.ba.gov.br
 END:VEVENT
 BEGIN:VEVENT
 UID:demo-2@agenda
@@ -1847,8 +1857,8 @@ DTEND;VALUE=DATE:20260725
 SUMMARY:Viagem a Brasília
 DESCRIPTION:Embarque às 7h, desembarque previsto às 10h.
 LOCATION:Aeroporto de Brasília
-ATTENDEE;CN=Diego Daltro:mailto:diego@saude.ba.gov.br
-ATTENDEE;CN=Assessoria:mailto:assessoria@saude.ba.gov.br
+ATTENDEE;CN=Gabinete:mailto:gabinete@exemplo.tcm.ba.gov.br
+ATTENDEE;CN=Assessoria:mailto:assessoria@exemplo.tcm.ba.gov.br
 END:VEVENT
 BEGIN:VEVENT
 UID:demo-3@agenda
@@ -4074,7 +4084,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const CALENDAR_ICS_URL =
   process.env.CALENDAR_ICS_URL ||
-  "https://outlook.office365.com/owa/calendar/7390fe9481a141ad939331a8bd576247@saude.ba.gov.br/f56c542fabd0452f9f6c3178fbda6ea23840265162433551595/calendar.ics";
+  "https://calendar.google.com/calendar/ical/SEU_EMAIL%40gmail.com/private-TOKEN/basic.ics";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
 
@@ -4146,7 +4156,7 @@ app.listen(PORT, () => {
 
 const CALENDAR_ICS_URL =
   process.env.CALENDAR_ICS_URL ||
-  "https://outlook.office365.com/owa/calendar/7390fe9481a141ad939331a8bd576247@saude.ba.gov.br/f56c542fabd0452f9f6c3178fbda6ea23840265162433551595/calendar.ics";
+  "https://calendar.google.com/calendar/ical/SEU_EMAIL%40gmail.com/private-TOKEN/basic.ics";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
 

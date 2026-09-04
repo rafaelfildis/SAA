@@ -5,9 +5,13 @@
  *
  * Responsabilidades:
  *  - Servir os arquivos estáticos da aplicação (index.html, styles.css, script.js).
- *  - Expor /api/calendar como camada intermediária que busca o ICS do Outlook
- *    no servidor (evitando o bloqueio de CORS do navegador), com cache curto
- *    em memória e CORS restrito à origem configurada.
+ *  - Expor /api/calendar como camada intermediária que busca o ICS do Google
+ *    Agenda no servidor (o feed iCal do Google não envia cabeçalhos CORS, o
+ *    que inviabiliza o fetch direto pelo navegador), com cache curto em
+ *    memória e CORS restrito à origem configurada.
+ *
+ * O endereço secreto do calendário fica exclusivamente na variável de
+ * ambiente CALENDAR_ICS_URL — nunca no código servido ao navegador.
  *
  * Requer Node.js >= 18 (usa o fetch global).
  */
@@ -18,8 +22,8 @@ const path = require("path");
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-// Obrigatória: URL do calendário ICS publicado no Outlook/Microsoft 365 do
-// TCM-BA. Sem ela o endpoint responde 500 em vez de servir outro calendário.
+// Obrigatória: endereço secreto no formato iCal do Google Agenda. Sem ela o
+// endpoint responde 500 em vez de servir outro calendário.
 const CALENDAR_ICS_URL = process.env.CALENDAR_ICS_URL || "";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
@@ -53,7 +57,7 @@ app.get("/api/calendar", async (req, res) => {
   try {
     const upstream = await fetch(CALENDAR_ICS_URL);
     if (!upstream.ok) {
-      throw new Error("Servidor do Outlook respondeu " + upstream.status);
+      throw new Error("Servidor do Google respondeu " + upstream.status);
     }
     const texto = await upstream.text();
     cache = { body: texto, fetchedAt: agora };

@@ -1,6 +1,6 @@
 # SAA — Agenda Institucional do TCM-BA
 
-Aplicação web responsiva para visualização da agenda institucional do **Tribunal de Contas dos Municípios do Estado da Bahia**, sincronizada automaticamente com o calendário Outlook/Microsoft 365 publicado em formato ICS.
+Aplicação web responsiva para visualização da agenda institucional do **Tribunal de Contas dos Municípios do Estado da Bahia**, sincronizada automaticamente com o calendário do **Google Agenda** publicado em formato ICS.
 
 ## Identidade visual
 
@@ -84,34 +84,62 @@ publicar a marca do Tribunal cortada.
 - **Frontend**: HTML5 + CSS3 + JavaScript puro (sem framework/bundler), bibliotecas carregadas via CDN:
   - [ical.js](https://github.com/kewisch/ical.js) — parsing do arquivo ICS (VEVENT, RRULE, EXDATE, RECURRENCE-ID, VTIMEZONE).
   - [html2canvas](https://html2canvas.hertzen.com/) + [jsPDF](https://github.com/parallax/jsPDF) — exportação em JPEG e PDF.
-- **Backend**: Node.js + Express (`server.js`), camada intermediária para contornar CORS ao buscar o ICS do Outlook.
+- **Backend**: Node.js + Express (`server.js`), camada intermediária para contornar CORS ao buscar o ICS do Google Agenda.
 
-## Modo de demonstração (dados fictícios)
+## Origem dos dados
 
-A implantação pública roda com **dados fictícios**, sem qualquer relação com a
-agenda real de autoridade do Tribunal. A chave é a constante `USE_DEMO_DATA` no
-topo de `script.js`:
+A agenda é lida do **Google Agenda**, pelo *endereço secreto no formato iCal*.
+
+### Obtendo o endereço
+
+Google Agenda → engrenagem (**Configurações**) → escolher a agenda na coluna da
+esquerda → **Integrar agenda** → copiar o campo **Endereço secreto no formato
+iCal** (termina em `/basic.ics`).
+
+Use o endereço **secreto**, nunca o *público*: o público só funciona se a agenda
+for tornada pública para toda a internet.
+
+> **O endereço secreto é credencial ao portador.** Quem tiver o link lê a agenda
+> inteira, sem autenticação e por prazo indeterminado. Por isso ele vive
+> exclusivamente na variável de ambiente `CALENDAR_ICS_URL` — nunca no código,
+> nunca no repositório (o `.env` está no `.gitignore`) e nunca no HTML/JS
+> servido ao navegador. Se vazar, **Redefinir**, na mesma tela do Google,
+> invalida o endereço atual e gera outro.
+
+### Modo de demonstração
+
+A constante `USE_DEMO_DATA` no topo de `script.js` alterna entre a agenda real e
+um conjunto fictício:
 
 ```js
-const USE_DEMO_DATA = true; // dados fictícios de demonstração
+const USE_DEMO_DATA = false; // agenda real, lida do Google Agenda
 ```
 
-Com ela ligada, `construirIcsDemo()` monta um calendário ICS em torno da data
-de hoje — cinco compromissos no dia, um cancelado, uma sobreposição real
-(14:00–15:30 × 15:00–16:00) e três janelas livres, mais uma semana e um mês de
-agenda para que os filtros de período não abram vazios. Gerar ICS de verdade,
-em vez de injetar objetos prontos, mantém o caminho de parsing, recorrência e
-classificação exercitado exatamente como em produção.
+Ligada, `construirIcsDemo()` monta um calendário ICS em torno da data de hoje —
+cinco compromissos no dia, um cancelado, uma sobreposição real (14:00–15:30 ×
+15:00–16:00) e três janelas livres, mais uma semana e um mês de agenda para que
+os filtros de período não abram vazios. Gerar ICS de verdade, em vez de injetar
+objetos prontos, mantém o caminho de parsing, recorrência e classificação
+exercitado exatamente como em produção. Serve para desenvolvimento sem rede e
+para demonstrações públicas, em que a agenda real não deve aparecer.
 
-Para apontar para o calendário real, basta definir `USE_DEMO_DATA = false` e
-configurar `CALENDAR_ICS_URL` na implantação (ver abaixo). Nada mais muda.
+### Latência da sincronização
+
+O feed iCal do Google **não é tempo real**: é servido a partir de um retrato que
+o Google atualiza em intervalos próprios, e uma alteração feita agora pode levar
+horas para aparecer aqui. Somam-se a isso os até 5 minutos do cache de
+`/api/calendar` (`CACHE_TTL_MS`) e os 15 minutos do ciclo de atualização
+automática do frontend (`REFRESH_INTERVAL_MS`). Para prazos e compromissos
+inadiáveis, a fonte de verdade continua sendo o Google Agenda; este painel é
+camada de visualização e extração. Sincronização quase imediata exigiria a
+Google Calendar API (OAuth 2.0 + `events.list` com `syncToken`), não o feed iCal.
 
 ## Executando localmente
 
 ```bash
 cd agenda
 npm install
-export CALENDAR_ICS_URL="https://outlook.office365.com/owa/calendar/.../calendar.ics"
+export CALENDAR_ICS_URL="https://calendar.google.com/calendar/ical/SEU_EMAIL%40gmail.com/private-TOKEN/basic.ics"
 npm start
 ```
 
@@ -137,19 +165,23 @@ Se for preciso recriar o projeto do zero:
 
 1. Importe o repositório na Vercel e defina o Root Directory como `agenda` (o app fica nessa subpasta).
 2. Nenhum "Build Command" é necessário — é um site estático mais uma função serverless (preset "Other").
-3. Em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL` e, se necessário, `ALLOWED_ORIGIN` e `CACHE_TTL_MS`. Enquanto `USE_DEMO_DATA = true` em `script.js` (modo de demonstração), o frontend nem chega a chamar `/api/calendar` e a variável é dispensável.
+3. Em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL` com o endereço secreto no formato iCal, marcando os ambientes **Production** e **Preview**; se necessário, defina também `ALLOWED_ORIGIN` (domínio de produção) e `CACHE_TTL_MS`. Com `USE_DEMO_DATA = false`, a variável é **obrigatória**: sem ela `/api/calendar` responde 500 e a agenda não carrega.
 
 Depois disso, `/` carrega `agenda/index.html` e `/api/calendar` responde com o
-ICS quando o modo de demonstração estiver desligado.
+ICS do Google Agenda.
+
+> A variável é lida no momento da invocação da função. Alterar seu valor na
+> Vercel exige um **redeploy** para que as funções passem a enxergar o novo
+> conteúdo.
 
 ## Como funciona a leitura do calendário
 
-1. O frontend tenta `fetch(CALENDAR_ICS_URL)` diretamente do navegador — **apenas se** a constante estiver preenchida em `script.js`. Por padrão ela vem vazia, e a etapa é pulada: o endereço do calendário fica na configuração da implantação, não no código servido ao navegador.
-2. O frontend usa `fetch(CALENDAR_API_URL)`, isto é, `/api/calendar` — que é também o caminho de recuperação quando o fetch direto existe e é bloqueado por CORS.
-3. `server.js` busca o ICS no servidor (sem restrição de CORS, pois é uma chamada servidor-servidor), aplica um cache curto em memória (`CACHE_TTL_MS`, padrão 5 min) e devolve o conteúdo com `Content-Type: text/calendar`, liberando apenas a origem configurada em `ALLOWED_ORIGIN`.
+1. O frontend tentaria `fetch(CALENDAR_ICS_URL)` direto do navegador — **apenas se** a constante estivesse preenchida em `script.js`. Ela é mantida vazia de propósito (o endereço secreto não pode ser servido ao navegador), então a etapa é sempre pulada. O feed iCal do Google também não envia cabeçalhos CORS, de modo que esse caminho seria bloqueado de qualquer forma.
+2. O frontend usa `fetch(CALENDAR_API_URL)`, isto é, `/api/calendar`. Este é o caminho normal de leitura, não um plano B.
+3. `server.js` (ou `api/calendar.js`, na Vercel) busca o ICS no servidor, onde não há restrição de CORS, aplica um cache curto em memória (`CACHE_TTL_MS`, padrão 5 min) e devolve o conteúdo com `Content-Type: text/calendar`, liberando apenas a origem configurada em `ALLOWED_ORIGIN`. Se o Google estiver indisponível e houver cache, mesmo expirado, ele é servido com o cabeçalho `X-Cache-Stale: true`; sem cache algum, responde 502.
 4. O conteúdo ICS é interpretado inteiramente no cliente com `ical.js`.
 
-Nenhuma credencial é usada ou exposta — o link ICS já é público (URL de calendário publicado do Outlook).
+O endereço secreto **nunca é servido ao navegador**: a constante `CALENDAR_ICS_URL` de `script.js` permanece vazia e o endereço vive apenas na variável de ambiente homônima, lida no servidor. Isso importa porque o endereço secreto do Google é **credencial ao portador** — quem o tiver lê a agenda inteira, sem autenticação e por prazo indeterminado. Se vazar, use **Redefinir** na tela "Integrar agenda" do Google para invalidá-lo.
 
 ## Decisões de implementação
 
@@ -157,10 +189,19 @@ Nenhuma credencial é usada ou exposta — o link ICS já é público (URL de ca
 - **Fuso horário**: os horários são resolvidos a partir dos `VTIMEZONE` do calendário (registrados via `ICAL.TimezoneService.register`) e exibidos sempre em `America/Bahia` (`Intl.DateTimeFormat`), independente do fuso do navegador do usuário.
 - **Janela de expansão de recorrência**: eventos recorrentes são expandidos de 1 mês no passado a 6 meses no futuro (configurável em `script.js`, constantes `JANELA_MESES_PASSADO` / `JANELA_MESES_FUTURO`), para evitar séries infinitas.
 - **Eventos que atravessam vários dias**: são agrupados na data de início da timeline; o card mostra a duração total (ex.: "3 dias"). Já para os filtros de dia/semana/mês, o evento aparece se o seu intervalo *intersecta* o período filtrado — ou seja, um evento de 3 dias aparece também nos filtros dos dias intermediários.
-- **Classificação automática**: função centralizada `classificarEvento(evento)` em `script.js`. A **rubrica declarada em `CATEGORIES` no próprio evento do calendário tem precedência** sobre a heurística — quando o gabinete marca a categoria no Outlook, ele já respondeu a pergunta, e adivinhar por palavra-chave só pode errar ("Audiência com o Prefeito de Ilhéus" marcada como Presencial é uma audiência no gabinete, não uma viagem a Ilhéus). Sem rubrica declarada, avalia título, descrição, local e link por palavras-chave, na ordem: viagem → Escola de Contas → online → presencial (fallback quando nada é identificado).
+- **Classificação automática**: função centralizada `classificarEvento(evento)` em `script.js`. A **rubrica declarada em `CATEGORIES` no próprio evento do calendário tem precedência** sobre a heurística — quando a categoria é marcada no calendário de origem, ela já respondeu a pergunta, e adivinhar por palavra-chave só pode errar ("Audiência com o Prefeito de Ilhéus" marcada como Presencial é uma audiência no gabinete, não uma viagem a Ilhéus). Sem rubrica declarada, avalia título, descrição, local e link por palavras-chave, na ordem: viagem → Escola de Contas → online → presencial (fallback quando nada é identificado).
+
+  > **Com o Google Agenda, o ramo da rubrica declarada nunca é acionado.** O Google
+  > organiza compromissos por cor, não por categoria, e não emite a propriedade
+  > `CATEGORIES` no feed iCal — verificado contra o formato real. Toda a classificação
+  > passa pela heurística de palavras-chave, cujo vocabulário é o do Tribunal. Links de
+  > reunião continuam funcionando: `REGEX_LINK_REUNIAO` já reconhece `meet.google.com`,
+  > e o Google publica o link do Meet na `DESCRIPTION`, de onde `lerUrl()` o extrai —
+  > esses compromissos são classificados corretamente como *pauta online*. Os demais
+  > caem no fallback *presencial*, salvo quando o título contiver palavra reconhecida.
 - **Números derivados, nunca escritos à mão**: ocupação, janelas livres, sobreposições, "ainda hoje", "agora" e "a seguir" saem todos de `analisarDia()`, em tempo de render. O extrato em PDF e o card JPEG chamam a mesma função que a tela, de modo que o que é impresso é exatamente o que está exibido — e não uma segunda contagem que pode divergir.
 - **Nível de detalhe por altura disponível**: na linha do tempo, o quanto cada compromisso mostra é decidido pelos pixels que sobram no bloco, não pela duração em minutos. Um compromisso de 1h em coluna dividida mostra menos que um de 1h em coluna cheia, porque tem menos espaço.
-- **Cache local**: a última lista de eventos processada é salva em `localStorage` a cada atualização bem-sucedida. Se a busca falhar (rede/CORS/indisponibilidade do Outlook), a interface exibe os dados salvos com aviso de que podem estar desatualizados.
+- **Cache local**: a última lista de eventos processada é salva em `localStorage` a cada atualização bem-sucedida. Se a busca falhar (rede/CORS/indisponibilidade do Google), a interface exibe os dados salvos com aviso de que podem estar desatualizados.
 - **Duas camadas intermediárias equivalentes**: `server.js` (Express) para rodar localmente/em qualquer provedor Node (Render, Railway, VPS), e `api/calendar.js` (função serverless) para deploy na Vercel — a Vercel não executa o Express diretamente, então a mesma lógica de fetch + cache + CORS foi duplicada nesse formato específico.
 
 ## Estrutura de dados do evento
@@ -239,7 +280,7 @@ colar em e-mail ou mensagem.
 
 ## Checklist de testes realizados
 
-- [x] Carregamento da agenda (fallback para `/api/calendar` quando o fetch direto ao Outlook é bloqueado por CORS).
+- [x] Carregamento da agenda pelo endpoint `/api/calendar` (caminho normal: o feed iCal do Google não envia cabeçalhos CORS).
 - [x] Eventos com horário.
 - [x] Eventos de dia inteiro.
 - [x] Eventos recorrentes (RRULE) com exceções (EXDATE/RECURRENCE-ID).
@@ -254,4 +295,23 @@ colar em e-mail ou mensagem.
 - [x] Layout responsivo (mobile 390px: lista vertical em coluna única, sem rolagem horizontal / desktop: pista em escala real com filtros fixos ao lado).
 - [x] Exibição em `America/Bahia` independente do fuso do dispositivo.
 
-> Nota: os testes de carregamento contra o link real do Outlook dependem de o link ICS estar acessível no momento do teste e de a rede permitir a saída HTTP do servidor até `outlook.office365.com`. Se o link expirar ou for revogado, o endpoint `/api/calendar` retornará erro 502 e a interface cairá automaticamente para os dados em cache local, exibindo o aviso correspondente.
+### Verificação da troca para o Google Agenda
+
+Feita contra um ICS construído no formato exato que o Google emite (`PRODID:-//Google
+Inc//Google Calendar`, `VTIMEZONE` de `America/Sao_Paulo`, `X-GOOGLE-CONFERENCE`),
+servido por um upstream local, com o app rodando de ponta a ponta e a página
+carregada no Chromium em fuso `America/Bahia`:
+
+- [x] `VTIMEZONE` do Google registrado em `ICAL.TimezoneService` sem erro.
+- [x] Evento com horário, evento de dia inteiro (`DTEND` exclusivo) e evento cancelado (`STATUS:CANCELLED`) lidos corretamente.
+- [x] Série recorrente com `RRULE` + `EXDATE` + override por `RECURRENCE-ID`: das 6 ocorrências declaradas, 1 removida pelo `EXDATE` e 1 deslocada pelo override — 5 ocorrências, nos horários corretos.
+- [x] `ORGANIZER`/`ATTENDEE` com parâmetro `CN` lidos como participantes.
+- [x] Link do Google Meet extraído da `DESCRIPTION` e classificado como *pauta online*.
+- [x] `CATEGORIES` ausente em todos os eventos — confirmado que o Google não emite a propriedade.
+- [x] `/api/calendar` devolve o ICS íntegro, com `text/calendar` e `Access-Control-Allow-Origin` restrito.
+- [x] Sem `CALENDAR_ICS_URL`: HTTP 500 com mensagem explícita.
+- [x] Google indisponível **com** cache quente: HTTP 200 com `X-Cache-Stale: true`.
+- [x] Google indisponível **sem** cache: HTTP 502.
+- [x] Interface renderizando a agenda do dia a partir do feed, com a identidade do TCM-BA intacta e a caixa de sincronização indicando "Google Agenda".
+
+> Nota: os testes contra o feed real dependem de a rede permitir a saída HTTPS do servidor até `calendar.google.com`. Se o endereço secreto for redefinido no Google, o endpoint `/api/calendar` retornará erro 502 e a interface cairá automaticamente para os dados em cache local, exibindo o aviso correspondente — basta atualizar a variável `CALENDAR_ICS_URL` com o novo endereço.

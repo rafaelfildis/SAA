@@ -9,27 +9,27 @@ import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.1.0/dist/ical.min.js";
    CONFIGURAÇÃO CENTRAL
    ========================================================================== */
 
-// URL pública do calendário ICS publicado no Outlook/Microsoft 365 do TCM-BA.
-// Deixe vazia para que a agenda seja buscada apenas pelo endpoint
-// intermediário (/api/calendar), que lê a URL da variável de ambiente
-// CALENDAR_ICS_URL — assim o endereço do calendário fica na configuração da
-// implantação, e não no código servido ao navegador.
+// Endereço do calendário ICS consumido diretamente pelo navegador.
+// DEVE PERMANECER VAZIA: o endereço secreto do Google Agenda é credencial ao
+// portador — quem tem o link lê a agenda inteira, sem autenticação. Mantendo
+// esta constante vazia, o endereço vive apenas na variável de ambiente
+// CALENDAR_ICS_URL, lida no servidor por /api/calendar, e nunca é servido ao
+// navegador nem versionado no repositório.
 const CALENDAR_ICS_URL = "";
 
-// Link "humano" do mesmo calendário publicado, usado apenas no botão
-// "Abrir calendário no Outlook" — nunca como fonte de dados.
-const CALENDAR_HTML_URL = CALENDAR_ICS_URL
-  ? CALENDAR_ICS_URL.replace(/calendar\.ics$/, "calendar.html")
-  : "";
+// Link "humano" do calendário, usado apenas no botão "Abrir no Google Agenda"
+// — nunca como fonte de dados. É a interface web do próprio Google, que exige
+// a sessão autenticada do usuário e portanto não expõe nada.
+const CALENDAR_HTML_URL = "https://calendar.google.com/calendar/r";
 
-// Endpoint intermediário (server.js / função serverless) usado quando o
-// fetch direto ao Outlook é bloqueado por CORS.
+// Endpoint intermediário (server.js / função serverless) que busca o ICS no
+// servidor. É o caminho normal de leitura: o Google não envia cabeçalhos CORS
+// no feed iCal, então o fetch direto pelo navegador seria bloqueado.
 const CALENDAR_API_URL = "/api/calendar";
 
-// Dados fictícios de demonstração. Em produção com calendário real,
-// defina como `false` e configure CALENDAR_ICS_URL na implantação — o resto
-// do fluxo (proxy /api/calendar, cache local, classificação) é o mesmo.
-const USE_DEMO_DATA = true;
+// Dados fictícios de demonstração. Desligado: a agenda real é lida do Google
+// Agenda via /api/calendar. Religar apenas para desenvolvimento sem rede.
+const USE_DEMO_DATA = false;
 
 const DISPLAY_TIMEZONE = "America/Bahia";
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutos
@@ -547,9 +547,9 @@ function lerUrl(icalEvent, descricao, local) {
 
 // Lê os participantes (ATTENDEE) e o organizador (ORGANIZER) do evento.
 // Prioriza o nome amigável (parâmetro CN); na ausência, usa a parte local do
-// e-mail (antes do @). Calendários publicados do Outlook às vezes omitem
-// ATTENDEE por privacidade — nesse caso a lista volta vazia e a interface
-// simplesmente não mostra a linha de participantes.
+// e-mail (antes do @). O feed iCal do Google só traz ATTENDEE/ORGANIZER em
+// compromissos que têm convidados — nos demais a lista volta vazia e a
+// interface simplesmente não mostra a linha de participantes.
 function lerParticipantes(icalEvent) {
   const nomes = [];
   const vistos = new Set();
@@ -757,7 +757,7 @@ async function buscarIcsTexto() {
       if (!resposta.ok) throw new Error("HTTP " + resposta.status);
       return await resposta.text();
     } catch (erroDireto) {
-      console.warn("Fetch direto ao Outlook falhou (provável bloqueio de CORS):", erroDireto);
+      console.warn("Fetch direto ao calendário falhou (provável bloqueio de CORS):", erroDireto);
     }
   }
 
@@ -1851,7 +1851,7 @@ function subtituloDaPagina() {
       new Intl.DateTimeFormat("pt-BR", { timeZone: DISPLAY_TIMEZONE, month: "long", year: "numeric" }).format(agora)
     );
   }
-  return "Todos os compromissos sincronizados do Outlook / Microsoft 365";
+  return "Todos os compromissos sincronizados do Google Agenda";
 }
 
 function capitalizar(txt) {
@@ -2760,7 +2760,7 @@ function construirExtratoA4(grupos, totalFiltrados, opcoes) {
 
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
       <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:460px;text-wrap:pretty">
-        Documento gerado automaticamente pelo SAA a partir da agenda do Outlook / Microsoft 365. Alterações devem ser feitas no calendário de origem. Dados fictícios de demonstração.
+        Documento gerado automaticamente pelo SAA a partir do Google Agenda. Alterações devem ser feitas no calendário de origem.${USE_DEMO_DATA ? " Dados fictícios de demonstração." : ""}
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
         TCM-BA · SAA<br>${totalFiltrados} compromisso${totalFiltrados === 1 ? "" : "s"}
@@ -3199,12 +3199,12 @@ function inicializarInterface() {
   inicializarTema();
   document.getElementById("btn-tema").addEventListener("click", alternarTema);
 
-  // Sem URL pública configurada não há para onde apontar o botão.
-  const btnOutlook = document.getElementById("btn-abrir-outlook");
+  // Sem URL configurada não há para onde apontar o botão.
+  const btnCalendario = document.getElementById("btn-abrir-calendario");
   if (CALENDAR_HTML_URL) {
-    btnOutlook.href = CALENDAR_HTML_URL;
+    btnCalendario.href = CALENDAR_HTML_URL;
   } else {
-    btnOutlook.hidden = true;
+    btnCalendario.hidden = true;
   }
 
   document.getElementById("btn-atualizar").addEventListener("click", () => atualizarAgenda());
