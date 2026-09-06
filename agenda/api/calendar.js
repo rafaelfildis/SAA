@@ -29,6 +29,24 @@ const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
 // serverless, não é um cache persistente garantido entre execuções.
 let cache = { body: null, fetchedAt: 0 };
 
+// Mensagem de falha voltada a quem está olhando a tela. O 404 do Google tem
+// uma causa quase certa e uma correção de um clique — dizer só "não foi
+// possível" obriga a abrir os logs do servidor para descobrir isso.
+function mensagemDeFalha(erro) {
+  const detalhe = (erro && erro.message) || "causa desconhecida";
+  if (/\b404\b/.test(detalhe)) {
+    return (
+      "O Google respondeu 404 ao endereço do calendário. O endereço público só " +
+      "responde enquanto a agenda estiver marcada como pública no Google " +
+      "(Configurações da agenda → Permissões de acesso a eventos → Tornar " +
+      "disponível ao público, com Ver todos os detalhes do evento). Com a " +
+      "agenda privada, defina CALENDAR_ICS_URL com o endereço secreto."
+    );
+  }
+  return "Não foi possível obter o calendário no momento: " + detalhe + ".";
+}
+
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -77,6 +95,6 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(502).json({ erro: "Não foi possível obter o calendário no momento." });
+    res.status(502).json({ erro: mensagemDeFalha(erro) });
   }
 };
