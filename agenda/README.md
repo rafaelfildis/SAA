@@ -115,6 +115,32 @@ anônimos.
 > compromissos direto do Google, e o feed pode ser indexado por buscadores.
 > Não é "acesso por link", é acesso aberto.
 
+### Ocultando um compromisso do painel
+
+Nem tudo que está na agenda pessoal deve aparecer no painel — ainda mais com o
+endereço aberto. `server.js` e `api/calendar.js` removem os compromissos
+ocultos **no servidor**, antes de o ICS chegar ao navegador: esconder apenas na
+renderização deixaria o evento legível para quem abrisse `/api/calendar`
+direto.
+
+Duas formas, ambas no topo dos dois arquivos:
+
+| Mecanismo | Quando usar |
+| --- | --- |
+| `UIDS_OCULTOS` | Um compromisso específico. O identificador está na linha `UID:` do próprio ICS. |
+| `MARCADORES_PRIVADOS` | Qualquer título que contenha o marcador (padrão: `#privado`, `#pessoal`). Permite ao titular ocultar sozinho, só acrescentando o marcador ao título no Google. |
+
+O filtro desdobra as linhas do ICS antes de comparar (RFC 5545 §3.1), de modo
+que um título longo o bastante para ser quebrado pelo Google não escapa da
+checagem, e preserva o restante do arquivo — cabeçalho, `VTIMEZONE` e demais
+componentes — exatamente como veio.
+
+> **O que ele não faz:** nada é alterado no Google. O evento continua íntegro
+> na agenda do titular, com convidados e notificações intocados — e continua
+> visível no **endereço público do próprio Google**, que não passa por este
+> proxy. Para retirá-lo também de lá, marque o evento como privado no Google
+> ou despublique a agenda.
+
 ### Voltando a agenda para privada
 
 Desmarque *Tornar disponível ao público* no Google e defina a variável de
