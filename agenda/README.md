@@ -90,21 +90,44 @@ publicar a marca do Tribunal cortada.
 
 A agenda é lida do **Google Agenda**, pelo *endereço secreto no formato iCal*.
 
-### Obtendo o endereço
+### Qual endereço a implantação usa
 
-Google Agenda → engrenagem (**Configurações**) → escolher a agenda na coluna da
-esquerda → **Integrar agenda** → copiar o campo **Endereço secreto no formato
-iCal** (termina em `/basic.ics`).
+Esta implantação roda com a agenda **pública** e, por isso, com o **endereço
+público** no formato iCal, definido como padrão em `server.js` e
+`api/calendar.js`:
 
-Use o endereço **secreto**, nunca o *público*: o público só funciona se a agenda
-for tornada pública para toda a internet.
+```
+https://calendar.google.com/calendar/ical/<conta>/public/basic.ics
+```
+
+Ele vive no código por ser público por definição: não é credencial e não revela
+nada que a agenda já não revele a qualquer pessoa. Em troca, dispensa variável
+de ambiente — a aplicação sobe e funciona sem nenhuma configuração de
+implantação.
+
+**Pré-requisito no Google:** Configurações da agenda → *Permissões de acesso a
+eventos* → marcar **Tornar disponível ao público**, com **Ver todos os detalhes
+do evento**. A opção *Ver apenas livre/ocupado* faz o feed sair sem título,
+local nem participantes, e a agenda aparece como uma sequência de blocos
+anônimos.
+
+> **Consequência:** com a agenda pública, qualquer pessoa na internet lê os
+> compromissos direto do Google, e o feed pode ser indexado por buscadores.
+> Não é "acesso por link", é acesso aberto.
+
+### Voltando a agenda para privada
+
+Desmarque *Tornar disponível ao público* no Google e defina a variável de
+ambiente `CALENDAR_ICS_URL` na implantação, apontando para o **Endereço secreto
+no formato iCal** (Configurações da agenda → *Integrar agenda*). A variável tem
+precedência sobre o padrão do código, então nada mais precisa mudar.
 
 > **O endereço secreto é credencial ao portador.** Quem tiver o link lê a agenda
-> inteira, sem autenticação e por prazo indeterminado. Por isso ele vive
-> exclusivamente na variável de ambiente `CALENDAR_ICS_URL` — nunca no código,
-> nunca no repositório (o `.env` está no `.gitignore`) e nunca no HTML/JS
-> servido ao navegador. Se vazar, **Redefinir**, na mesma tela do Google,
-> invalida o endereço atual e gera outro.
+> inteira, sem autenticação e por prazo indeterminado. Ele vive exclusivamente
+> na variável de ambiente — nunca no código, nunca no repositório (que é
+> **público**; o `.env` está no `.gitignore`) e nunca no HTML/JS servido ao
+> navegador. Se vazar, **Redefinir**, na mesma tela do Google, invalida o
+> endereço atual e gera outro.
 
 ### Modo de demonstração
 
@@ -145,7 +168,7 @@ npm start
 
 Acesse `http://localhost:3000`.
 
-`CALENDAR_ICS_URL` é **obrigatória**: sem ela, `/api/calendar` responde `500` com uma mensagem explícita, em vez de servir um calendário de outra instituição. Copie `.env.example` para `.env` e ajuste também `ALLOWED_ORIGIN` e `CACHE_TTL_MS` conforme o ambiente.
+`CALENDAR_ICS_URL` é **opcional**: sem ela vale o endereço público padrão definido no código. Defina-a apenas para apontar a um endereço secreto (agenda privada). Copie `.env.example` para `.env` e ajuste também `ALLOWED_ORIGIN` e `CACHE_TTL_MS` conforme o ambiente.
 
 ## Deploy na Vercel
 
@@ -165,7 +188,7 @@ Se for preciso recriar o projeto do zero:
 
 1. Importe o repositório na Vercel e defina o Root Directory como `agenda` (o app fica nessa subpasta).
 2. Nenhum "Build Command" é necessário — é um site estático mais uma função serverless (preset "Other").
-3. Em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL` com o endereço secreto no formato iCal, marcando os ambientes **Production** e **Preview**; se necessário, defina também `ALLOWED_ORIGIN` (domínio de produção) e `CACHE_TTL_MS`. Com `USE_DEMO_DATA = false`, a variável é **obrigatória**: sem ela `/api/calendar` responde 500 e a agenda não carrega.
+3. Nenhuma variável de ambiente é necessária enquanto a agenda estiver pública — o endereço padrão está no código. Em **Settings → Environment Variables**, defina `CALENDAR_ICS_URL` apenas se a agenda voltar a ser privada, e opcionalmente `ALLOWED_ORIGIN` (domínio de produção) e `CACHE_TTL_MS`.
 
 Depois disso, `/` carrega `agenda/index.html` e `/api/calendar` responde com o
 ICS do Google Agenda.
@@ -309,7 +332,7 @@ carregada no Chromium em fuso `America/Bahia`:
 - [x] Link do Google Meet extraído da `DESCRIPTION` e classificado como *pauta online*.
 - [x] `CATEGORIES` ausente em todos os eventos — confirmado que o Google não emite a propriedade.
 - [x] `/api/calendar` devolve o ICS íntegro, com `text/calendar` e `Access-Control-Allow-Origin` restrito.
-- [x] Sem `CALENDAR_ICS_URL`: HTTP 500 com mensagem explícita.
+- [x] Endereço inválido ou agenda fora do ar: HTTP 502 com mensagem explícita, propagada até a faixa de erro da interface.
 - [x] Google indisponível **com** cache quente: HTTP 200 com `X-Cache-Stale: true`.
 - [x] Google indisponível **sem** cache: HTTP 502.
 - [x] Interface renderizando a agenda do dia a partir do feed, com a identidade do TCM-BA intacta e a caixa de sincronização indicando "Google Agenda".

@@ -10,11 +10,14 @@ import ICAL from "https://cdn.jsdelivr.net/npm/ical.js@2.1.0/dist/ical.min.js";
    ========================================================================== */
 
 // Endereço do calendário ICS consumido diretamente pelo navegador.
-// DEVE PERMANECER VAZIA: o endereço secreto do Google Agenda é credencial ao
-// portador — quem tem o link lê a agenda inteira, sem autenticação. Mantendo
-// esta constante vazia, o endereço vive apenas na variável de ambiente
-// CALENDAR_ICS_URL, lida no servidor por /api/calendar, e nunca é servido ao
-// navegador nem versionado no repositório.
+// PERMANECE VAZIA por dois motivos independentes, e ambos continuam valendo
+// mesmo com a agenda pública:
+//   1. O feed iCal do Google não envia cabeçalhos CORS — um fetch direto do
+//      navegador seria bloqueado de qualquer forma.
+//   2. Se um dia a agenda voltar a ser privada, a implantação aponta para o
+//      endereço secreto por variável de ambiente; deixar esta constante vazia
+//      garante que esse endereço jamais chegue ao código servido ao navegador.
+// O endereço em uso fica em CALENDAR_ICS_URL do servidor (/api/calendar).
 const CALENDAR_ICS_URL = "";
 
 // Link "humano" do calendário, usado apenas no botão "Abrir no Google Agenda"

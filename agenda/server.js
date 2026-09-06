@@ -22,9 +22,19 @@ const path = require("path");
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-// Obrigatória: endereço secreto no formato iCal do Google Agenda. Sem ela o
-// endpoint responde 500 em vez de servir outro calendário.
-const CALENDAR_ICS_URL = process.env.CALENDAR_ICS_URL || "";
+// Endereço público do calendário no formato iCal. Vive no código porque é
+// público por definição — não é credencial e não expõe nada que a agenda já
+// não exponha. Só responde enquanto a agenda estiver marcada como pública no
+// Google ("Tornar disponível ao público", com "Ver todos os detalhes do
+// evento"); do contrário o Google devolve 404 e o endpoint cai para o cache.
+const CALENDAR_ICS_URL_PADRAO =
+  "https://calendar.google.com/calendar/ical/rafaelfildis%40gmail.com/public/basic.ics";
+
+// A variável de ambiente tem precedência sobre o padrão. É por ela que se
+// aponta para o endereço SECRETO (.../private-TOKEN/basic.ics) sem tocar no
+// código, caso a agenda volte a ser privada — o endereço secreto é credencial
+// ao portador e nunca pode ser commitado, ainda mais em repositório público.
+const CALENDAR_ICS_URL = process.env.CALENDAR_ICS_URL || CALENDAR_ICS_URL_PADRAO;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
 
