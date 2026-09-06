@@ -215,8 +215,11 @@ O endereço secreto **nunca é servido ao navegador**: a constante `CALENDAR_ICS
 - **Classificação automática**: função centralizada `classificarEvento(evento)` em `script.js`. A **rubrica declarada em `CATEGORIES` no próprio evento do calendário tem precedência** sobre a heurística — quando a categoria é marcada no calendário de origem, ela já respondeu a pergunta, e adivinhar por palavra-chave só pode errar ("Audiência com o Prefeito de Ilhéus" marcada como Presencial é uma audiência no gabinete, não uma viagem a Ilhéus). Sem rubrica declarada, avalia título, descrição, local e link por palavras-chave, na ordem: viagem → Escola de Contas → online → presencial (fallback quando nada é identificado).
 
   > **Com o Google Agenda, o ramo da rubrica declarada nunca é acionado.** O Google
-  > organiza compromissos por cor, não por categoria, e não emite a propriedade
-  > `CATEGORIES` no feed iCal — verificado contra o formato real. Toda a classificação
+  > organiza compromissos por cor, não por categoria. Eventos antigos migrados
+  > chegam a trazer `CATEGORIES`, mas com o valor
+  > `http://schemas.google.com/g/2005#event` — um identificador de esquema, não
+  > uma rubrica, que não casa com nenhuma chave de `CATEGORIA_ICS_EXPLICITA`
+  > (verificado contra o feed real). Toda a classificação
   > passa pela heurística de palavras-chave, cujo vocabulário é o do Tribunal. Links de
   > reunião continuam funcionando: `REGEX_LINK_REUNIAO` já reconhece `meet.google.com`,
   > e o Google publica o link do Meet na `DESCRIPTION`, de onde `lerUrl()` o extrai —

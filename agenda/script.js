@@ -390,12 +390,16 @@ const PALAVRAS_VIAGEM = [
   "deslocamento", "passagem aerea", "passagem",
 ];
 
+// Cidades que caracterizam deslocamento. Salvador NÃO entra: é a sede do
+// Tribunal, então um endereço em Salvador é compromisso local, não viagem —
+// listá-la fazia toda reunião no próprio município ser marcada como viagem
+// (ex.: "Apresentação SEI" na Secretaria de Saúde, no Centro Administrativo,
+// vinha classificada como deslocamento).
 const CIDADES_REFERENCIA = [
   "brasilia", "sao paulo", "rio de janeiro", "feira de santana",
   "vitoria da conquista", "ilheus", "porto seguro", "juazeiro",
   "barreiras", "itabuna", "camacari", "belo horizonte", "recife",
   "fortaleza", "curitiba", "porto alegre", "goiania", "manaus", "belem",
-  "salvador",
 ];
 
 const PALAVRAS_ESCOLA = [
