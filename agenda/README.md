@@ -15,7 +15,7 @@ institucional de referência. Não são aproximações a olho.
 | Vermelho de interface | `#D80425` | Ações primárias, linha do "agora", alertas |
 | Azul de link | `#14448A` | Links, horários, foco |
 | Azul de reunião online | `#2C63B0` | Compromissos remotos |
-| Verde de disponibilidade | `#0F7B5F` | Em andamento, janelas livres, Escola de Contas |
+| Verde de disponibilidade | `#0F7B5F` | Em andamento, janelas livres |
 | Âmbar de deslocamento | `#A65A05` | Viagens |
 | Tinta de texto | `#12203A` | Corpo de texto |
 | Texto secundário | `#5F6E88` | Rótulos de seção, apoio |
@@ -238,7 +238,7 @@ O endereço secreto **nunca é servido ao navegador**: a constante `CALENDAR_ICS
 - **Fuso horário**: os horários são resolvidos a partir dos `VTIMEZONE` do calendário (registrados via `ICAL.TimezoneService.register`) e exibidos sempre em `America/Bahia` (`Intl.DateTimeFormat`), independente do fuso do navegador do usuário.
 - **Janela de expansão de recorrência**: eventos recorrentes são expandidos de 1 mês no passado a 6 meses no futuro (configurável em `script.js`, constantes `JANELA_MESES_PASSADO` / `JANELA_MESES_FUTURO`), para evitar séries infinitas.
 - **Eventos que atravessam vários dias**: são agrupados na data de início da timeline; o card mostra a duração total (ex.: "3 dias"). Já para os filtros de dia/semana/mês, o evento aparece se o seu intervalo *intersecta* o período filtrado — ou seja, um evento de 3 dias aparece também nos filtros dos dias intermediários.
-- **Classificação automática**: função centralizada `classificarEvento(evento)` em `script.js`. A **rubrica declarada em `CATEGORIES` no próprio evento do calendário tem precedência** sobre a heurística — quando a categoria é marcada no calendário de origem, ela já respondeu a pergunta, e adivinhar por palavra-chave só pode errar ("Audiência com o Prefeito de Ilhéus" marcada como Presencial é uma audiência no gabinete, não uma viagem a Ilhéus). Sem rubrica declarada, avalia título, descrição, local e link por palavras-chave, na ordem: viagem → Escola de Contas → online → presencial (fallback quando nada é identificado).
+- **Classificação automática**: função centralizada `classificarEvento(evento)` em `script.js`. A **rubrica declarada em `CATEGORIES` no próprio evento do calendário tem precedência** sobre a heurística — quando a categoria é marcada no calendário de origem, ela já respondeu a pergunta, e adivinhar por palavra-chave só pode errar ("Audiência com o Prefeito de Ilhéus" marcada como Presencial é uma audiência no gabinete, não uma viagem a Ilhéus). Sem rubrica declarada, avalia título, descrição, local e link por palavras-chave, na ordem: viagem → online → presencial (fallback quando nada é identificado). A lista de cidades que caracterizam viagem não inclui a sede — endereço na própria cidade é compromisso local, não deslocamento.
 
   > **Com o Google Agenda, o ramo da rubrica declarada nunca é acionado.** O Google
   > organiza compromissos por cor, não por categoria. Eventos antigos migrados
@@ -279,7 +279,13 @@ O endereço secreto **nunca é servido ao navegador**: a constante `CALENDAR_ICS
 ## Filtros disponíveis
 
 - Período: todos / hoje / semana (segunda a domingo) / mês.
-- Modalidade (seleção múltipla): viagem, Escola de Contas, online, presencial. Com nenhuma marcada, todos os compromissos são exibidos; marcar uma ou mais restringe a lista a elas.
+- Intervalo de datas ("De"/"Até"). **Tem precedência sobre o período**: os dois
+  controles recortam a mesma coisa — uma janela de tempo — e aplicá-los em
+  conjunto produzia lista vazia sempre que a data escolhida não caísse dentro
+  do período marcado (o caso comum: escolher outro dia com "Hoje" ainda ativo).
+  Por isso digitar uma data devolve o período para "Todos", e clicar num
+  período limpa as datas — nunca há dois recortes disputando a mesma janela.
+- Modalidade (seleção múltipla): viagem, online, presencial. Com nenhuma marcada, todos os compromissos são exibidos; marcar uma ou mais restringe a lista a elas.
 - Busca textual (título, descrição, local).
 - Mostrar/ocultar compromissos concluídos.
 

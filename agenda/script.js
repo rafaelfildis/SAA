@@ -190,7 +190,7 @@ function construirIcsDemo() {
       participantes: ["2ª Câmara", "Ministério Público de Contas"],
     },
     {
-      uid: "demo-amanha-2", dia: 1, ini: "14:30", fim: "16:00", categoria: "Escola de Contas",
+      uid: "demo-amanha-2", dia: 1, ini: "14:30", fim: "16:00", categoria: "Presencial",
       titulo: "Abertura do curso de capacitação de jurisdicionados",
       local: "Escola de Contas Conselheiro Joaquim Bahia — Auditório",
       descricao: "Módulo de licitações e contratos administrativos.",
@@ -227,7 +227,7 @@ function construirIcsDemo() {
       rrule: "FREQ=WEEKLY;COUNT=6",
     },
     {
-      uid: "demo-mes-1", dia: 14, ini: "15:00", fim: "17:00", categoria: "Escola de Contas",
+      uid: "demo-mes-1", dia: 14, ini: "15:00", fim: "17:00", categoria: "Presencial",
       titulo: "Seminário de Prestação de Contas Municipais",
       local: "Escola de Contas Conselheiro Joaquim Bahia — Auditório",
       descricao: "Orientações sobre o e-TCM e o envio de dados do exercício.",
@@ -402,12 +402,6 @@ const CIDADES_REFERENCIA = [
   "fortaleza", "curitiba", "porto alegre", "goiania", "manaus", "belem",
 ];
 
-const PALAVRAS_ESCOLA = [
-  "escola de contas", "capacitacao", "curso", "treinamento", "oficina",
-  "seminario", "congresso", "palestra", "workshop", "aula", "disciplina",
-  "modulo", "mestrado", "doutorado", "atividade academica", "universidade",
-];
-
 const PALAVRAS_ONLINE = [
   "online", "virtual", "teams", "microsoft teams", "google meet",
   "meet", "zoom", "videoconferencia", "webex",
@@ -449,9 +443,6 @@ const CATEGORIA_ICS_EXPLICITA = {
   remoto: "pauta-online",
   viagem: "viagem",
   deslocamento: "viagem",
-  "escola de contas": "mestrado",
-  escola: "mestrado",
-  capacitacao: "mestrado",
 };
 
 function categoriaDeclarada(evento) {
@@ -490,13 +481,6 @@ function classificarEvento(evento) {
     contemAlgumaPalavra(textoCompleto, PALAVRAS_VIAGEM) ||
     contemAlgumaPalavra(textoCidade, CIDADES_REFERENCIA);
   if (temViagem) return "viagem";
-
-  // "Escola de Contas" só é reconhecida pela nomenclatura do próprio
-  // compromisso (título) — "capacitação", "curso", "seminário" etc. — e não
-  // pela descrição, que costuma trazer texto de terceiros (convites,
-  // assinaturas) sem relação com a categoria.
-  const textoTitulo = normalizarTexto(evento.titulo);
-  if (contemAlgumaPalavra(textoTitulo, PALAVRAS_ESCOLA)) return "mestrado";
 
   const temLinkReuniao = REGEX_LINK_REUNIAO.test(evento.link || "");
   if (contemAlgumaPalavra(textoCompleto, PALAVRAS_ONLINE) || temLinkReuniao) {
@@ -888,6 +872,16 @@ function eventoNoPeriodo(evento, periodo) {
   return inicioEvento <= janela.fim.getTime() && fimEvento >= janela.inicio.getTime();
 }
 
+// Um intervalo de datas explícito vence o filtro de período. Os dois controles
+// recortam a mesma coisa — uma janela de tempo — e aplicá-los em conjunto
+// produzia lista vazia sempre que a data escolhida não caísse dentro do
+// período marcado. O caso comum era escolher outro dia com "Hoje" ainda
+// ativo: a interseção das duas janelas nunca existia, e a tela respondia
+// "Nenhum compromisso encontrado" para um dia que tinha compromissos.
+function filtroDeDataAtivo() {
+  return Boolean(state.filtros.dataInicio || state.filtros.dataFim);
+}
+
 function eventoNoIntervaloDeData(evento, dataInicio, dataFim) {
   if (!dataInicio && !dataFim) return true;
 
@@ -921,7 +915,7 @@ function obterEventosFiltrados() {
   return state.eventos.filter((evento) => {
     // Nenhuma categoria marcada = nenhum filtro de categoria ativo (mostra tudo).
     if (categorias.size > 0 && !categorias.has(evento.categoria)) return false;
-    if (!eventoNoPeriodo(evento, periodo)) return false;
+    if (!filtroDeDataAtivo() && !eventoNoPeriodo(evento, periodo)) return false;
     if (!eventoNoIntervaloDeData(evento, dataInicio, dataFim)) return false;
     if (!mostrarConcluidos && situacaoTemporal(evento) === "concluido") return false;
     if (!passaBusca(evento)) return false;
@@ -935,7 +929,6 @@ function obterEventosFiltrados() {
 
 const CATEGORIA_LABEL = {
   viagem: "Viagem",
-  mestrado: "Escola de Contas",
   "pauta-online": "Online",
   "pauta-presencial": "Presencial",
 };
@@ -943,7 +936,7 @@ const CATEGORIA_LABEL = {
 // Todas as chaves "YYYY-MM-DD" que um compromisso atravessa (do dia de
 // início ao dia de fim, inclusive). Compromissos de um único dia retornam
 // apenas uma chave — usado para que compromissos de vários dias (viagens,
-// módulos de mestrado etc.) apareçam na agenda de cada dia que ocupam, não
+// cursos de vários dias etc.) apareçam na agenda de cada dia que ocupam, não
 // somente no dia em que começam.
 const LIMITE_DIAS_ABRANGIDOS = 90; // proteção contra datas malformadas no ICS
 
@@ -979,7 +972,7 @@ function eventoEhContinuo(evento) {
 // intervalo "De"/"Até" escolhido) reapareceria em dias fora do filtro.
 function janelaDeExibicaoAtual() {
   const { periodo, dataInicio, dataFim } = state.filtros;
-  const janelaPeriodo = janelaDoPeriodo(periodo);
+  const janelaPeriodo = filtroDeDataAtivo() ? null : janelaDoPeriodo(periodo);
 
   let inicioChave = janelaPeriodo ? chaveDia(janelaPeriodo.inicio) : null;
   let fimChave = janelaPeriodo ? chaveDia(janelaPeriodo.fim) : null;
@@ -1804,10 +1797,10 @@ function renderizarDashboard(filtrados) {
   const temPista = !document.getElementById("pista-card").hidden;
   document.getElementById("vista-timeline").classList.toggle("tem-pista", temPista);
 
-  document.getElementById("page-title").textContent = PERIODO_TITULO[state.filtros.periodo] || "Agenda";
+  document.getElementById("page-title").textContent = tituloDaPagina();
   document.getElementById("page-subtitle").textContent = subtituloDaPagina();
   document.getElementById("page-eyebrow").textContent =
-    state.filtros.periodo === "dia" ? "Agenda do dia" : "Agenda institucional";
+    ehAgendaDeUmDiaSo() ? "Agenda do dia" : "Agenda institucional";
 
   // Alerta de sobreposição: no dia, aponta o par exato e leva à posição na
   // linha do tempo; em janelas de vários dias, conta os compromissos
@@ -1854,10 +1847,33 @@ const PERIODO_TITULO = { todos: "Agenda — todos os compromissos", dia: "Agenda
 // de categorias da sidebar.
 const CATEGORIA_COR = {
   viagem: "#A65A05",
-  mestrado: "#0F7B5F",
   "pauta-online": "#2C63B0",
   "pauta-presencial": "#0B3163",
 };
+
+// Verdadeiro quando a tela mostra um único dia — seja por "Hoje", seja por um
+// intervalo digitado que começa e termina no mesmo dia.
+function ehAgendaDeUmDiaSo() {
+  const { periodo, dataInicio, dataFim } = state.filtros;
+  if (filtroDeDataAtivo()) return Boolean(dataInicio && dataFim && dataInicio === dataFim);
+  return periodo === "dia";
+}
+
+// Com um intervalo digitado, o título passa a nomear a data escolhida. Dizer
+// "todos os compromissos" ali seria enganoso: o período foi devolvido para
+// "Todos" justamente porque quem manda agora é a data.
+function tituloDaPagina() {
+  const { dataInicio, dataFim } = state.filtros;
+
+  if (filtroDeDataAtivo()) {
+    if (dataInicio && dataFim && dataInicio === dataFim) {
+      return `Agenda de ${formatarDataCurta(new Date(`${dataInicio}T12:00:00${offsetBahia()}`))}`;
+    }
+    return "Agenda do período escolhido";
+  }
+
+  return PERIODO_TITULO[state.filtros.periodo] || "Agenda";
+}
 
 function subtituloDaPagina() {
   const { periodo, dataInicio, dataFim } = state.filtros;
@@ -1883,12 +1899,6 @@ function capitalizar(txt) {
   return txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : txt;
 }
 
-function sincronizarChipsPeriodo() {
-  document.querySelectorAll("#periodo-group .chip").forEach((chip) => {
-    chip.classList.toggle("is-active", chip.dataset.periodo === state.filtros.periodo);
-  });
-}
-
 // Renderiza a lista de categorias na sidebar com um ponto colorido, o rótulo
 // e a contagem de compromissos daquela categoria (respeitando os demais
 // filtros ativos, exceto o próprio filtro de categoria — assim os números
@@ -1899,7 +1909,7 @@ function renderizarCategorias() {
 
   const baseContagem = state.eventos.filter(
     (evento) =>
-      eventoNoPeriodo(evento, state.filtros.periodo) &&
+      (filtroDeDataAtivo() || eventoNoPeriodo(evento, state.filtros.periodo)) &&
       eventoNoIntervaloDeData(evento, state.filtros.dataInicio, state.filtros.dataFim) &&
       (state.filtros.mostrarConcluidos || situacaoTemporal(evento) !== "concluido") &&
       passaBusca(evento)
@@ -1921,6 +1931,14 @@ function renderizarCategorias() {
       <span class="cat-list__count">${contar(cat)}</span>
     `;
     container.appendChild(btn);
+  });
+}
+
+// Reflete no DOM o período em vigor. Necessário porque o período passou a
+// mudar também por caminhos que não são o clique no próprio chip.
+function sincronizarChipsPeriodo() {
+  document.querySelectorAll("#periodo-group .chip").forEach((chip) => {
+    chip.classList.toggle("is-active", chip.dataset.periodo === state.filtros.periodo);
   });
 }
 
@@ -2492,7 +2510,6 @@ const EXP_CAT = {
   "pauta-presencial": { label: "Presencial", cor: "#0B3163", bg: "#EAF0F9", borda: "#CBDAEE" },
   "pauta-online": { label: "Online", cor: "#2C63B0", bg: "#EAF2FC", borda: "#C9DCF4" },
   viagem: { label: "Viagem", cor: "#A65A05", bg: "#FDF1E3", borda: "#F0DCBE" },
-  mestrado: { label: "Escola de Contas", cor: "#0F7B5F", bg: "#E7F4F0", borda: "#C4E3D9" },
 };
 
 function expCat(categoria) {
@@ -3267,6 +3284,15 @@ function inicializarInterface() {
     esconderErroData();
     state.filtros.dataInicio = inicio;
     state.filtros.dataFim = fim;
+
+    // Escolher uma data manda no que é exibido. Sem devolver o período para
+    // "Todos", a tela ficaria contraditória: chip "Hoje" aceso enquanto se
+    // exibe outro dia.
+    if (inicio || fim) {
+      state.filtros.periodo = "todos";
+      sincronizarChipsPeriodo();
+    }
+
     atualizarVisibilidadeBtnLimparDatas();
     renderizarConteudo();
   }
@@ -3283,6 +3309,9 @@ function inicializarInterface() {
     "#periodo-group",
     (btn) => {
       state.filtros.periodo = btn.dataset.periodo;
+      // Caminho inverso do de cima: escolher um período descarta o intervalo
+      // digitado, para que os dois controles nunca disputem a mesma janela.
+      limparFiltroDeData();
       renderizarConteudo();
     },
     false
