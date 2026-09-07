@@ -40,7 +40,9 @@ async function gerarCard({ origem, data, formato = "mobile", proporcao = "story"
   const navegador = await puppeteer.launch({
     args: chromium.args,
     executablePath: await chromium.executablePath(),
-    headless: true,
+    // O modo vem da própria biblioteca: a partir da v112 ela controla headless
+    // e flags em conjunto, e forçar `true` aqui desalinha os dois.
+    headless: chromium.headless,
     defaultViewport: { width: 1440, height: 1000 },
   });
 
