@@ -1936,6 +1936,13 @@ function renderizarCategorias() {
 
 // Reflete no DOM o período em vigor. Necessário porque o período passou a
 // mudar também por caminhos que não são o clique no próprio chip.
+// No escopo do módulo porque o recorte vindo da URL também precisa dele, antes
+// de inicializarInterface terminar de montar seus próprios manipuladores.
+function atualizarVisibilidadeBtnLimparDatas() {
+  const btn = document.getElementById("btn-limpar-datas");
+  if (btn) btn.hidden = !state.filtros.dataInicio && !state.filtros.dataFim;
+}
+
 function sincronizarChipsPeriodo() {
   document.querySelectorAll("#periodo-group .chip").forEach((chip) => {
     chip.classList.toggle("is-active", chip.dataset.periodo === state.filtros.periodo);
@@ -3266,10 +3273,6 @@ function inicializarInterface() {
   const inputDataFim = document.getElementById("filtro-data-fim");
   const btnLimparDatas = document.getElementById("btn-limpar-datas");
 
-  function atualizarVisibilidadeBtnLimparDatas() {
-    btnLimparDatas.hidden = !state.filtros.dataInicio && !state.filtros.dataFim;
-  }
-
   // Valida o intervalo (Até >= De) antes de aplicar ao filtro — em caso de
   // erro, mantém o filtro anterior válido e exibe uma mensagem clara.
   function aplicarFiltroDeData() {
@@ -3559,8 +3562,51 @@ function inicializarInterface() {
    INICIALIZAÇÃO
    ========================================================================== */
 
+// Lê o recorte pedido na própria URL, para que um link abra a agenda já no
+// dia certo. É o que permite a um e-mail, a um cron ou a um atalho no celular
+// apontarem para um dia específico — e é também o que garante que a imagem
+// gerada automaticamente venha desta mesma tela, com estes mesmos números, em
+// vez de um segundo renderizador que divergiria com o tempo.
+//
+//   ?data=2026-09-08              um dia
+//   ?de=2026-09-08&ate=2026-09-12 um intervalo
+//   ?periodo=dia|semana|mes|todos quando não há data explícita
+//
+// Datas fora do formato YYYY-MM-DD são ignoradas em silêncio: um link torto
+// deve abrir a agenda de hoje, não uma tela de erro.
+function aplicarFiltrosDaURL() {
+  const params = new URLSearchParams(window.location.search);
+  const dataValida = (v) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+
+  const dia = dataValida(params.get("data"));
+  const de = dia || dataValida(params.get("de"));
+  const ate = dia || dataValida(params.get("ate"));
+
+  if (de || ate) {
+    state.filtros.dataInicio = de;
+    state.filtros.dataFim = ate;
+    // Intervalo explícito manda no que é exibido; o período volta a "Todos"
+    // para que os dois controles não disputem a mesma janela.
+    state.filtros.periodo = "todos";
+    const campoInicio = document.getElementById("filtro-data-inicio");
+    const campoFim = document.getElementById("filtro-data-fim");
+    if (campoInicio) campoInicio.value = de || "";
+    if (campoFim) campoFim.value = ate || "";
+    atualizarVisibilidadeBtnLimparDatas();
+    sincronizarChipsPeriodo();
+    return;
+  }
+
+  const periodo = params.get("periodo");
+  if (["dia", "semana", "mes", "todos"].includes(periodo)) {
+    state.filtros.periodo = periodo;
+    sincronizarChipsPeriodo();
+  }
+}
+
 function iniciar() {
   inicializarInterface();
+  aplicarFiltrosDaURL();
 
   // Pré-carrega as marcas institucionais em data URL: o html2canvas só
   // rasteriza imagens que já estejam disponíveis no momento da captura.
