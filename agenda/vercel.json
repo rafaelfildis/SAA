@@ -6,7 +6,28 @@
   "headers": [
     {
       "source": "/img/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, immutable"
+        }
+      ]
     }
-  ]
+  ],
+  "crons": [
+    {
+      "path": "/api/enviar-agenda",
+      "schedule": "0 20 * * *"
+    }
+  ],
+  "functions": {
+    "api/card.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/enviar-agenda.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  }
 }

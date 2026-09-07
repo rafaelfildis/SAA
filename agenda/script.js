@@ -3604,6 +3604,37 @@ function aplicarFiltrosDaURL() {
   }
 }
 
+// Ponto de automação. Expõe a geração do artefato para processos que abrem
+// esta página em navegador headless — hoje, o envio diário por e-mail.
+//
+// Devolve o data URL do JPEG no tamanho real, produzido pelo MESMO caminho do
+// botão "Baixar JPEG": mesma montagem do papel, mesma escala, mesma
+// rasterização. É o que garante que o arquivo enviado automaticamente seja
+// idêntico ao que a pessoa baixaria da tela, em vez de sair de um segundo
+// renderizador que divergiria com o tempo.
+//
+// Respeita os filtros em vigor, inclusive os vindos da URL — de modo que
+// abrir "?data=2026-09-08" e chamar esta função produz o card daquele dia.
+window.saaGerarCard = async function ({ formato = "mobile", proporcao = "story", qualidade = 0.95 } = {}) {
+  if (!window.html2canvas) throw new Error("Biblioteca de captura indisponível.");
+  await precarregarMarcas();
+
+  state.exportacao.formato = formato;
+  state.exportacao.proporcao = proporcao;
+
+  const lista = obterEventosFiltrados();
+  const grupos = agruparPorDia(lista);
+  const paper = construirPaperExport(grupos, lista.length);
+  const canvas = await renderizarCanvasElemento(paper, formato === "a4" ? 2.5 : 1.5);
+
+  return {
+    dataUrl: canvas.toDataURL("image/jpeg", qualidade),
+    largura: canvas.width,
+    altura: canvas.height,
+    compromissos: lista.length,
+  };
+};
+
 function iniciar() {
   inicializarInterface();
   aplicarFiltrosDaURL();
