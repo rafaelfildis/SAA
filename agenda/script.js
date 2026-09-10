@@ -4443,6 +4443,21 @@ function linhaPlanoExport(p) {
     </div>`;
 }
 
+// Título do documento. Com um recorte em vigor, dizer qual é o recorte informa
+// o leitor. Sem recorte, não: "todas as entregas lançadas, sem recorte de
+// data" é uma frase sobre a ausência de filtro, não sobre o documento — no
+// papel ela ocupa o lugar do título sem dizer o que ali está.
+function tituloDoExtratoPlano(lista) {
+  const { horizonte, prazoInicio, prazoFim } = state.filtrosProjeto;
+  if (prazoInicio || prazoFim || horizonte !== HORIZONTE_TODAS) return subtituloDoPlano();
+
+  const contratos = lista.filter((p) => p.tipo === "contrato").length;
+  const projetos = lista.length - contratos;
+  if (contratos && projetos) return "Projetos e contratos";
+  if (contratos) return "Contratos";
+  return "Projetos";
+}
+
 function construirExtratoPlano(lista) {
   const emAndamento = lista.filter((p) => situacaoEfetiva(p) === "em-andamento").length;
   const risco = lista.filter(exigeProvidencia).length;
@@ -4500,7 +4515,7 @@ function construirExtratoPlano(lista) {
     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-bottom:22px">
       <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
         <span style="font:600 10px/1 'IBM Plex Sans',sans-serif;letter-spacing:.13em;color:${EXP.texto2}">PROJETOS EM DESENVOLVIMENTO</span>
-        <h1 style="margin:0;font:700 27px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.015em;text-wrap:pretty">${escapeHtml(subtituloDoPlano())}</h1>
+        <h1 style="margin:0;font:700 27px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.015em;text-wrap:pretty">${escapeHtml(tituloDoExtratoPlano(lista))}</h1>
       </div>
       <div style="flex:0 0 auto;text-align:right;font:400 10.5px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">
         Emitido em <span style="font-family:'IBM Plex Mono',monospace;color:${EXP.tinta}">${formatarDataHora(new Date())}</span><br>
