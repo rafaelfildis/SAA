@@ -3997,6 +3997,10 @@ function filtroDePrazoAtivo() {
 }
 
 function projetosNoHorizonte() {
+  return projetosFiltrados();
+}
+
+function projetosFiltrados({ ignorarHorizonte = false } = {}) {
   const { horizonte, situacoes, busca, prazoInicio, prazoFim } = state.filtrosProjeto;
   const hoje = hojeChave();
   const limite = chaveMaisDias(hoje, horizonte);
@@ -4010,7 +4014,7 @@ function projetosNoHorizonte() {
       if (porIntervalo) {
         if (prazoInicio && p.prazoEntrega < prazoInicio) return false;
         if (prazoFim && p.prazoEntrega > prazoFim) return false;
-      } else if (horizonte !== HORIZONTE_TODAS && p.prazoEntrega > limite) {
+      } else if (!ignorarHorizonte && horizonte !== HORIZONTE_TODAS && p.prazoEntrega > limite) {
         // Fora do horizonte só some quem entrega depois dele. O que já venceu
         // e não foi entregue continua na lista — sumir com um projeto
         // atrasado seria esconder justamente o que precisa de atenção.
@@ -4098,6 +4102,60 @@ function renderizarResumoProjetos(lista) {
     `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"}`;
 
   document.getElementById("proj-subtitulo").textContent = subtituloDoPlano();
+  renderizarAvisoDeOcultos(lista);
+}
+
+// Filtro que esconde registros sem dizer nada leva a pessoa a concluir que os
+// que faltam se perderam. Aqui a conta fica à vista, com o caminho para ver o
+// resto a um clique: pelo horizonte, quando é ele que corta; pelos demais
+// filtros, quando são eles.
+function renderizarAvisoDeOcultos(lista) {
+  const aviso = document.getElementById("proj-ocultos");
+  const texto = document.getElementById("proj-ocultos-texto");
+  const botao = document.getElementById("btn-ver-ocultos");
+  if (!aviso || !texto || !botao) return;
+
+  const ocultos = state.projetos.length - lista.length;
+  if (ocultos <= 0) {
+    aviso.hidden = true;
+    return;
+  }
+
+  const { horizonte } = state.filtrosProjeto;
+  const semHorizonte = projetosFiltrados({ ignorarHorizonte: true }).length;
+  const peloHorizonte =
+    !filtroDePrazoAtivo() && horizonte !== HORIZONTE_TODAS && semHorizonte > lista.length;
+
+  if (peloHorizonte) {
+    const fora = semHorizonte - lista.length;
+    texto.textContent = `${fora} ${fora === 1 ? "entrega fica" : "entregas ficam"} além do horizonte de ${horizonte} dias.`;
+    botao.textContent = "Ver todas";
+    botao.dataset.acao = "horizonte";
+  } else {
+    texto.textContent = `${ocultos} ${ocultos === 1 ? "registro está oculto" : "registros estão ocultos"} pelos filtros em vigor.`;
+    botao.textContent = "Limpar filtros";
+    botao.dataset.acao = "limpar";
+  }
+  aviso.hidden = false;
+}
+
+// Devolve a lista completa à tela, pelo caminho que o aviso oferece.
+function verTodosOsProjetos(acao) {
+  if (acao === "limpar") {
+    state.filtrosProjeto.situacoes.clear();
+    state.filtrosProjeto.busca = "";
+    const busca = document.getElementById("busca");
+    if (busca) busca.value = "";
+    state.filtrosProjeto.prazoInicio = null;
+    state.filtrosProjeto.prazoFim = null;
+    document.getElementById("proj-filtro-de").value = "";
+    document.getElementById("proj-filtro-ate").value = "";
+    mostrarErroPrazo("");
+    atualizarVisibilidadeBtnLimparPrazo();
+  }
+  state.filtrosProjeto.horizonte = HORIZONTE_TODAS;
+  sincronizarChipsHorizonte();
+  renderizarProjetos();
 }
 
 // Barras posicionadas numa escala de datas: início e prazo viram porcentagem
@@ -5142,18 +5200,24 @@ function trocarModulo(modulo) {
    Ligação com a interface
    -------------------------------------------------------------------------- */
 
-// Carrega a carteira que vem com o sistema (dados/contratos.js) na primeira
-// abertura de cada navegador. Sem isto, os contratos só existiriam para quem
-// importasse o arquivo à mão, em cada dispositivo.
+// Carrega a carteira que vem com o sistema (dados/contratos.js e
+// dados/projetos.js) na primeira abertura de cada navegador. Sem isto, esses
+// registros só existiriam para quem importasse o arquivo à mão, em cada
+// dispositivo.
 //
 // Uma vez por navegador, e mesclada por id: quem editar ou apagar um contrato
 // não o vê ressurgir no carregamento seguinte. A versão gravada é a do arquivo
 // de dados, então acrescentar contratos lá alcança quem já usa o sistema, sem
 // desfazer o que a pessoa mexeu nos que já tinha.
-function semearContratos() {
-  const semente = Array.isArray(window.SAA_CONTRATOS) ? window.SAA_CONTRATOS : [];
-  const versao = String(window.SAA_CONTRATOS_VERSAO || "");
-  if (!semente.length || !versao) return false;
+function semearCarteira() {
+  const contratos = Array.isArray(window.SAA_CONTRATOS) ? window.SAA_CONTRATOS : [];
+  const projetos = Array.isArray(window.SAA_PROJETOS) ? window.SAA_PROJETOS : [];
+  const semente = [...contratos, ...projetos];
+  // A marca combina as duas versões: acrescentar um projeto faz a semente
+  // rodar de novo e alcançar quem já usa o sistema, sem tocar no que a pessoa
+  // já tinha (a mesclagem por id preserva o que está gravado).
+  const versao = [window.SAA_CONTRATOS_VERSAO || "", window.SAA_PROJETOS_VERSAO || ""].join("|");
+  if (!semente.length || versao === "|") return false;
 
   let aplicada = "";
   try {
@@ -5187,7 +5251,7 @@ function semearContratos() {
 
 function inicializarModuloProjetos() {
   state.projetos = lerProjetos();
-  semearContratos();
+  semearCarteira();
 
   preencherSelectSituacoes(document.getElementById("status-situacao"), SITUACAO_PADRAO);
 
@@ -5258,6 +5322,7 @@ function inicializarModuloProjetos() {
   document.getElementById("proj-filtro-de").addEventListener("change", aplicarFiltroDePrazo);
   document.getElementById("proj-filtro-ate").addEventListener("change", aplicarFiltroDePrazo);
   document.getElementById("btn-limpar-prazo").addEventListener("click", limparFiltroDePrazo);
+  document.getElementById("btn-ver-ocultos").addEventListener("click", (ev) => verTodosOsProjetos(ev.currentTarget.dataset.acao));
 
   document.getElementById("btn-exportar-projetos").addEventListener("click", exportarProjetos);
   document.getElementById("input-importar-projetos").addEventListener("change", (ev) => {
