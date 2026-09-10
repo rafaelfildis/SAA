@@ -2482,3 +2482,16 @@ html, body { overflow-x: hidden; }
   background: rgba(255, 255, 255, .55);
 }
 .proj-barra--marco[style*="right:"]::before { left: auto; right: 0; }
+
+/* Aviso de registros fora do recorte. Fica ao lado da contagem, no mesmo tom
+   de apoio: informa sem competir com o conteúdo. */
+.proj-ocultos {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.proj-ocultos .link-button { font-size: 0.8rem; }
