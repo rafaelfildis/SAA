@@ -11,7 +11,7 @@
 // Script clássico e não módulo de propósito: se este arquivo falhar ao
 // carregar, o sistema continua de pé sem estes projetos, em vez de quebrar.
 
-window.SAA_PROJETOS_VERSAO = "2026-09-10.1";
+window.SAA_PROJETOS_VERSAO = "2026-09-10.2";
 window.SAA_PROJETOS = [
   {
     "id": "projeto-portal-tcm-digital",
@@ -20,7 +20,7 @@ window.SAA_PROJETOS = [
     "responsavel": "",
     "area": "",
     "dataInicio": "2026-09-10",
-    "prazoEntrega": "2027-03-09",
+    "prazoEntrega": "2026-12-19",
     "situacao": "nao-iniciado",
     "progresso": 0,
     "historico": [
@@ -28,10 +28,10 @@ window.SAA_PROJETOS = [
         "em": "2026-09-10T12:00:00.000-03:00",
         "situacao": "nao-iniciado",
         "progresso": 0,
-        "nota": "Projeto lançado com prazo de 180 dias, para entrega em 09/03/2027."
+        "nota": "Projeto lançado com prazo de 100 dias, para entrega em 19/12/2026."
       }
     ],
     "criadoEm": "2026-09-10T12:00:00.000-03:00",
-    "atualizadoEm": "2026-09-10T12:00:00.000-03:00"
+    "atualizadoEm": "2026-09-10T15:10:00.000-03:00"
   }
 ];
