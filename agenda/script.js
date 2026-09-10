@@ -5201,11 +5201,34 @@ function semearCarteira() {
   if (!validos.length) return false;
 
   const porId = new Map(state.projetos.map((p) => [p.id, p]));
-  let novos = 0;
+  let mudou = 0;
   validos.forEach((p) => {
-    if (porId.has(p.id)) return; // já existe: o que está gravado manda
-    porId.set(p.id, p);
-    novos++;
+    // Carimbo de origem: permite distinguir, mais tarde, um registro que veio
+    // do sistema e nunca foi tocado de um que a pessoa ajustou.
+    const marcado = { ...p, origem: "semente", semeadoEm: p.atualizadoEm || "" };
+    const existente = porId.get(p.id);
+
+    if (!existente) {
+      porId.set(p.id, marcado);
+      mudou++;
+      return;
+    }
+
+    // Corrigir um prazo no arquivo de dados precisa alcançar quem já abriu o
+    // sistema — senão a correção só valeria para navegadores novos. Mas a
+    // correção não pode atropelar quem editou o registro: só substitui o que
+    // veio da semente e continua exatamente como foi semeado.
+    // Registros semeados por versões anteriores não têm o carimbo. Para eles
+    // vale o mesmo teste por outro caminho: a semente grava criadoEm igual a
+    // atualizadoEm, e qualquer edição mexe só no segundo.
+    const carimbado = existente.origem === "semente" && existente.semeadoEm;
+    const intocado = carimbado
+      ? existente.semeadoEm === existente.atualizadoEm
+      : Boolean(existente.criadoEm) && existente.criadoEm === existente.atualizadoEm;
+    if (intocado && existente.atualizadoEm !== marcado.atualizadoEm) {
+      porId.set(p.id, marcado);
+      mudou++;
+    }
   });
   state.projetos = [...porId.values()];
 
@@ -5214,8 +5237,8 @@ function semearCarteira() {
   } catch (e) {
     /* sem armazenamento: segue sem marcar */
   }
-  if (novos) gravarProjetos(state.projetos);
-  return novos > 0;
+  if (mudou) gravarProjetos(state.projetos);
+  return mudou > 0;
 }
 
 function inicializarModuloProjetos() {
