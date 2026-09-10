@@ -86,6 +86,11 @@ state.filtrosProjeto = {
   horizonte: 100,
   situacoes: new Set(),
   busca: "",
+  // Intervalo explícito de prazo de entrega. Quando preenchido, manda no que
+  // é exibido e o horizonte em dias sai de cena — os dois não devem disputar
+  // a mesma janela.
+  prazoInicio: null,
+  prazoFim: null,
 };
 
 const SIDEBAR_RECOLHIDA_STORAGE_KEY = "saaTcm.sidebarRecolhida";
@@ -3930,22 +3935,50 @@ function rotuloPrazo(p) {
   return `faltam ${dias} dias`;
 }
 
+function dataCurtaDaChave(chave) {
+  return formatarDataCurta(new Date(`${chave}T12:00:00${offsetBahia()}`));
+}
+
+// Diz em uma linha qual janela de entrega está sendo exibida — pelo intervalo
+// do calendário, quando há um, ou pelo horizonte em dias.
+function subtituloDoPlano() {
+  const { horizonte, prazoInicio, prazoFim } = state.filtrosProjeto;
+  if (prazoInicio && prazoFim) return `Entregas de ${dataCurtaDaChave(prazoInicio)} a ${dataCurtaDaChave(prazoFim)}`;
+  if (prazoInicio) return `Entregas a partir de ${dataCurtaDaChave(prazoInicio)}`;
+  if (prazoFim) return `Entregas até ${dataCurtaDaChave(prazoFim)}`;
+  return `Entregas até ${dataCurtaDaChave(chaveMaisDias(hojeChave(), horizonte))} · horizonte de ${horizonte} dias`;
+}
+
 function corDoProjeto(p) {
   if (projetoAtrasado(p)) return SITUACOES.suspenso.cor;
   return (SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO]).cor;
 }
 
+// Há um intervalo de prazo escolhido no calendário da barra lateral?
+function filtroDePrazoAtivo() {
+  return Boolean(state.filtrosProjeto.prazoInicio || state.filtrosProjeto.prazoFim);
+}
+
 function projetosNoHorizonte() {
-  const { horizonte, situacoes, busca } = state.filtrosProjeto;
+  const { horizonte, situacoes, busca, prazoInicio, prazoFim } = state.filtrosProjeto;
   const hoje = hojeChave();
   const limite = chaveMaisDias(hoje, horizonte);
+  const porIntervalo = filtroDePrazoAtivo();
 
   return state.projetos
     .filter((p) => {
-      // Fora do horizonte só some quem entrega depois dele. O que já venceu e
-      // não foi entregue continua na lista — sumir com um projeto atrasado
-      // seria esconder justamente o que precisa de atenção.
-      if (p.prazoEntrega > limite) return false;
+      // Intervalo escolhido no calendário manda sozinho: quem pediu "entregas
+      // de março" quer exatamente isso, inclusive o que já venceu dentro da
+      // janela e o que cai além dos 100 dias.
+      if (porIntervalo) {
+        if (prazoInicio && p.prazoEntrega < prazoInicio) return false;
+        if (prazoFim && p.prazoEntrega > prazoFim) return false;
+      } else if (p.prazoEntrega > limite) {
+        // Fora do horizonte só some quem entrega depois dele. O que já venceu
+        // e não foi entregue continua na lista — sumir com um projeto
+        // atrasado seria esconder justamente o que precisa de atenção.
+        return false;
+      }
       if (situacoes.size && !situacoes.has(p.situacao)) return false;
       if (busca) {
         const alvo = normalizarTexto(`${p.nome} ${p.descricao || ""} ${p.responsavel || ""} ${p.area || ""}`);
@@ -4002,9 +4035,7 @@ function renderizarResumoProjetos(lista) {
   document.getElementById("proj-resumo").textContent =
     `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"}`;
 
-  const horizonte = state.filtrosProjeto.horizonte;
-  document.getElementById("proj-subtitulo").textContent =
-    `Entregas até ${formatarDataCurta(new Date(`${chaveMaisDias(hojeChave(), horizonte)}T12:00:00${offsetBahia()}`))} · horizonte de ${horizonte} dias`;
+  document.getElementById("proj-subtitulo").textContent = subtituloDoPlano();
 }
 
 // Barras posicionadas numa escala de datas: início e prazo viram porcentagem
@@ -4022,21 +4053,30 @@ function renderizarPistaProjetos(lista) {
 
   const hoje = hojeChave();
   const horizonte = state.filtrosProjeto.horizonte;
-  // A janela começa no início mais antigo (ou hoje) para que projetos já em
-  // curso apareçam com a parte já percorrida, não colados na borda.
-  let inicioJanela = hoje;
+  const { prazoInicio, prazoFim } = state.filtrosProjeto;
+
+  // A escala tem de conter tudo que está na lista, senão barras aparecem
+  // grudadas na borda ou fora dela. Com intervalo escolhido no calendário a
+  // janela é o próprio intervalo, esticado até caber a entrega mais distante.
+  let inicioJanela = prazoInicio || hoje;
+  let fimJanela = prazoFim || chaveMaisDias(hoje, horizonte);
   lista.forEach((p) => {
     if (p.dataInicio && p.dataInicio < inicioJanela) inicioJanela = p.dataInicio;
+    if (p.prazoEntrega < inicioJanela) inicioJanela = p.prazoEntrega;
+    if (p.prazoEntrega > fimJanela) fimJanela = p.prazoEntrega;
   });
-  const fimJanela = chaveMaisDias(hoje, horizonte);
+  if (fimJanela <= inicioJanela) fimJanela = chaveMaisDias(inicioJanela, 1);
   const total = Math.max(diasEntreChaves(inicioJanela, fimJanela), 1);
   const pct = (chave) => (Math.min(Math.max(diasEntreChaves(inicioJanela, chave), 0), total) / total) * 100;
 
   const passos = Math.min(6, total);
   escala.innerHTML = Array.from({ length: passos + 1 }, (_, i) => {
     const chave = chaveMaisDias(inicioJanela, Math.round((total / passos) * i));
-    const posicao = pct(chave);
-    return `<span class="proj-escala__marca" style="left:${posicao}%">${formatarDataCurta(new Date(`${chave}T12:00:00${offsetBahia()}`))}</span>`;
+    // As pontas encostam na borda em vez de ficarem centradas na marca: com
+    // translateX(-50%) em 0% e 100% metade do rótulo sairia da régua.
+    const extremo = i === 0 ? " proj-escala__marca--inicio" : i === passos ? " proj-escala__marca--fim" : "";
+    const ancora = i === 0 ? "left:0" : i === passos ? "right:0" : `left:${pct(chave)}%`;
+    return `<span class="proj-escala__marca${extremo}" style="${ancora}">${dataCurtaDaChave(chave)}</span>`;
   }).join("");
 
   const linhas = lista
@@ -4059,9 +4099,13 @@ function renderizarPistaProjetos(lista) {
     })
     .join("");
 
-  pista.innerHTML = `<div class="proj-pista__hoje" style="left:${pct(hoje)}%"></div>${linhas}`;
+  // A marca do "hoje" some quando a janela escolhida não o contém: mantê-la
+  // colada na borda faria parecer que a data cai ali dentro.
+  const hojeNaJanela = hoje >= inicioJanela && hoje <= fimJanela;
+  const marcaHoje = hojeNaJanela ? `<div class="proj-pista__hoje" style="left:${pct(hoje)}%"></div>` : "";
+  pista.innerHTML = `${marcaHoje}${linhas}`;
   document.getElementById("proj-pista-contagem").textContent =
-    `${lista.length} ${lista.length === 1 ? "barra" : "barras"} · ${formatarDataCurta(new Date(`${inicioJanela}T12:00:00${offsetBahia()}`))} a ${formatarDataCurta(new Date(`${fimJanela}T12:00:00${offsetBahia()}`))}`;
+    `${lista.length} ${lista.length === 1 ? "barra" : "barras"} · ${dataCurtaDaChave(inicioJanela)} a ${dataCurtaDaChave(fimJanela)}`;
 }
 
 function renderizarListaProjetos(lista) {
@@ -4132,6 +4176,341 @@ function renderizarProjetos() {
   renderizarPistaProjetos(lista);
   renderizarListaProjetos(lista);
   renderizarFiltrosSituacao(lista);
+}
+
+/* --------------------------------------------------------------------------
+   EXTRATO DO PLANO 100 DIAS EM A4 (PDF/JPEG)
+   --------------------------------------------------------------------------
+   Mesmo princípio da exportação da agenda: o documento sai do que está em
+   tela, com os filtros em vigor, e passa por um único ponto de construção —
+   assim o PDF e o JPEG não podem divergir entre si nem da tela.
+   -------------------------------------------------------------------------- */
+
+// Dia/mês/ano: o horizonte de 100 dias atravessa a virada do ano, e "12/01"
+// sozinho não diz de qual.
+function dataPlenaDaChave(chave) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: DISPLAY_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(`${chave}T12:00:00${offsetBahia()}`));
+}
+
+// Atraso é derivado do prazo vencido e tem precedência sobre a situação
+// lançada — as cores do "suspenso" servem ao alerta, mas o rótulo é o do
+// atraso. A ordem do espalhamento importa: o label vem depois.
+function situacaoDoProjeto(p) {
+  if (projetoAtrasado(p)) return { ...SITUACOES.suspenso, label: "Atrasado" };
+  return SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO];
+}
+
+// Janela da escala: a mesma conta da pista em tela, para que a barra impressa
+// caia onde a pessoa a viu.
+function janelaDoPlano(lista) {
+  const hoje = hojeChave();
+  const { horizonte, prazoInicio, prazoFim } = state.filtrosProjeto;
+  let inicio = prazoInicio || hoje;
+  let fim = prazoFim || chaveMaisDias(hoje, horizonte);
+  lista.forEach((p) => {
+    if (p.dataInicio && p.dataInicio < inicio) inicio = p.dataInicio;
+    if (p.prazoEntrega < inicio) inicio = p.prazoEntrega;
+    if (p.prazoEntrega > fim) fim = p.prazoEntrega;
+  });
+  if (fim <= inicio) fim = chaveMaisDias(inicio, 1);
+  return { inicio, fim, total: Math.max(diasEntreChaves(inicio, fim), 1) };
+}
+
+function escalaPlanoExport(lista) {
+  const { inicio, fim, total } = janelaDoPlano(lista);
+  const hoje = hojeChave();
+  const pct = (chave) => (Math.min(Math.max(diasEntreChaves(inicio, chave), 0), total) / total) * 100;
+
+  const passos = Math.min(5, total);
+  const marcas = Array.from({ length: passos + 1 }, (_, i) => {
+    const chave = chaveMaisDias(inicio, Math.round((total / passos) * i));
+    const pos = pct(chave);
+    const alinhamento = i === 0 ? "left:0;text-align:left" : i === passos ? "right:0;text-align:right" : `left:${pos}%;transform:translateX(-50%)`;
+    return `<span style="position:absolute;${alinhamento};font:400 8px/1 'IBM Plex Mono',monospace;color:${EXP.texto3};white-space:nowrap">${dataCurtaDaChave(chave)}</span>`;
+  }).join("");
+
+  const barras = lista
+    .map((p) => {
+      const ini = p.dataInicio && p.dataInicio > inicio ? p.dataInicio : inicio;
+      const esq = pct(ini);
+      const largura = Math.max(pct(p.prazoEntrega) - esq, 1.5);
+      const s = situacaoDoProjeto(p);
+      const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+      return `
+        <div style="position:relative;height:15px;margin-bottom:5px">
+          <span style="position:absolute;left:0;right:0;top:6px;height:3px;background:${EXP.bordaSuave};border-radius:2px"></span>
+          <span style="position:absolute;left:${esq}%;width:${largura}%;top:0;height:15px;background:${s.cor};border-radius:4px;overflow:hidden">
+            <span style="position:absolute;left:0;top:0;bottom:0;width:${progresso}%;background:rgba(255,255,255,.28)"></span>
+          </span>
+        </div>`;
+    })
+    .join("");
+
+  const hojeNaJanela = hoje >= inicio && hoje <= fim;
+  const marcaHoje = hojeNaJanela
+    ? `<span style="position:absolute;left:${pct(hoje)}%;top:0;bottom:0;width:1px;background:${EXP.vermelho}"></span>`
+    : "";
+
+  return `
+    <div style="break-inside:avoid;margin-bottom:22px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+        <span style="font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${EXP.texto2}">LINHA DE ENTREGA</span>
+        <span style="flex:1;height:1px;background:${EXP.borda}"></span>
+        <span style="font:400 8.5px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">${dataCurtaDaChave(inicio)} a ${dataCurtaDaChave(fim)}${hojeNaJanela ? ` · hoje em vermelho` : ""}</span>
+      </div>
+      <div style="position:relative;height:14px;margin-bottom:4px">${marcas}</div>
+      <div style="position:relative">${marcaHoje}${barras}</div>
+    </div>`;
+}
+
+function linhaPlanoExport(p) {
+  const s = situacaoDoProjeto(p);
+  const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+  const ultimo = (p.historico || [])[0];
+  const responsavel = [p.responsavel, p.area].filter(Boolean).join(" · ");
+
+  const apoio = [];
+  if (responsavel) apoio.push(escapeHtml(responsavel));
+  if (p.descricao) apoio.push(escapeHtml(p.descricao));
+  const nota = ultimo && ultimo.nota ? ultimo.nota : "";
+
+  return `
+    <div style="display:grid;grid-template-columns:84px 1fr 96px 74px;gap:14px;padding:10px 0;border-bottom:1px solid ${EXP.bordaSuave};break-inside:avoid;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font:600 11px/1.2 'IBM Plex Mono',monospace;color:${EXP.tinta}">${dataPlenaDaChave(p.prazoEntrega)}</span>
+        <span style="font:400 8.5px/1.2 'IBM Plex Sans',sans-serif;color:${projetoAtrasado(p) ? EXP.vermelhoTexto : EXP.texto3}">${escapeHtml(rotuloPrazo(p))}</span>
+      </div>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:3px">
+        <span style="font:600 11.5px/1.35 'IBM Plex Sans',sans-serif;color:${EXP.tinta};text-wrap:pretty">${escapeHtml(p.nome)}</span>
+        ${apoio.length ? `<span style="font:400 9.5px/1.45 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-wrap:pretty">${apoio.join(" — ")}</span>` : ""}
+        ${nota ? `<span style="font:400 9px/1.45 'IBM Plex Sans',sans-serif;color:${EXP.texto3};text-wrap:pretty">Último lançamento: ${escapeHtml(nota)}</span>` : ""}
+      </div>
+      <div>
+        <span style="display:inline-block;font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.04em;color:${s.cor};background:${s.bg};border:1px solid ${s.borda};border-radius:999px;padding:5px 9px">${escapeHtml(s.label.toUpperCase())}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 11px/1 'IBM Plex Mono',monospace;color:${EXP.tinta}">${progresso}%</span>
+        <span style="display:block;height:4px;background:${EXP.bordaSuave};border-radius:2px;overflow:hidden">
+          <span style="display:block;height:4px;width:${progresso}%;background:${s.cor}"></span>
+        </span>
+      </div>
+    </div>`;
+}
+
+function construirExtratoPlano(lista) {
+  const emAndamento = lista.filter((p) => p.situacao === "em-andamento").length;
+  const risco = lista.filter((p) => projetoAtrasado(p) || p.situacao === "em-risco").length;
+  const concluidos = lista.filter((p) => p.situacao === "concluido").length;
+
+  const indicadores = [
+    { rotulo: "PROJETOS", valor: lista.length },
+    { rotulo: "EM ANDAMENTO", valor: emAndamento },
+    {
+      // Cela de ~140px: "Em risco ou atrasados" quebraria em duas linhas e
+      // desalinharia este número dos demais da fileira.
+      rotulo: "RISCO OU ATRASO",
+      valor: risco,
+      cor: risco ? EXP.vermelho : EXP.navy,
+      destaque: risco > 0,
+    },
+    { rotulo: "CONCLUÍDOS", valor: concluidos, cor: concluidos ? EXP.verde : EXP.navy },
+  ];
+
+  const corpo = lista.length
+    ? `${escalaPlanoExport(lista)}
+       <div style="display:grid;grid-template-columns:84px 1fr 96px 74px;gap:14px;padding:0 0 8px;border-bottom:1px solid ${EXP.borda}">
+         <span style="font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${EXP.texto2}">ENTREGA</span>
+         <span style="font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${EXP.texto2}">PROJETO</span>
+         <span style="font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${EXP.texto2}">SITUAÇÃO</span>
+         <span style="font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${EXP.texto2}">PROGRESSO</span>
+       </div>
+       ${lista.map(linhaPlanoExport).join("")}`
+    : `<div style="padding:40px 0;text-align:center;font:400 12px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Nenhum projeto encontrado para os filtros selecionados.</div>`;
+
+  const paper = document.createElement("div");
+  paper.className = "export-paper";
+  paper.style.cssText =
+    "width:794px;min-height:1123px;background:#fff;padding:52px 56px 44px;display:flex;flex-direction:column;" +
+    "font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";box-sizing:border-box;";
+
+  paper.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px">
+      <div style="display:flex;align-items:center;gap:14px">
+        ${marcaImg("tcm-lockup.png", 46, "Tribunal de Contas dos Municípios do Estado da Bahia")}
+        ${marcaImg("tcm-55.png", 46, "55 anos de serviços prestados à sociedade")}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;text-align:right">
+        <span style="font:700 13px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">PLANO 100 DIAS</span>
+        <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Gabinete da Presidência</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">SAA · Sistema de Agenda Automatizada</span>
+      </div>
+    </div>
+
+    <div style="display:flex;margin:16px 0 26px">
+      <span style="width:64px;height:3px;background:${EXP.vermelho}"></span>
+      <span style="flex:1;height:3px;background:${EXP.navy}"></span>
+    </div>
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-bottom:22px">
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+        <span style="font:600 10px/1 'IBM Plex Sans',sans-serif;letter-spacing:.13em;color:${EXP.texto2}">PROJETOS EM DESENVOLVIMENTO</span>
+        <h1 style="margin:0;font:700 27px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.015em;text-wrap:pretty">${escapeHtml(subtituloDoPlano())}</h1>
+      </div>
+      <div style="flex:0 0 auto;text-align:right;font:400 10.5px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">
+        Emitido em <span style="font-family:'IBM Plex Mono',monospace;color:${EXP.tinta}">${formatarDataHora(new Date())}</span><br>
+        Fuso horário America/Bahia
+      </div>
+    </div>
+
+    ${indicadoresExtrato(indicadores)}
+
+    <div style="display:flex;flex-direction:column;flex:1">${corpo}</div>
+
+    <div style="margin-top:auto;padding-top:16px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+      <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:460px;text-wrap:pretty">
+        Documento gerado pelo SAA a partir dos projetos lançados no módulo Plano 100 dias, com os filtros em vigor no momento da emissão.
+      </div>
+      <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
+        TCM-BA · SAA<br>${lista.length} projeto${lista.length === 1 ? "" : "s"}
+      </div>
+    </div>
+  `;
+  return paper;
+}
+
+async function exportarPlano(tipo) {
+  await precarregarMarcas();
+  const lista = projetosNoHorizonte();
+  const paper = construirExtratoPlano(lista);
+  const canvas = await renderizarCanvasElemento(paper, 2.5);
+
+  const carimbo = new Date().toISOString().slice(0, 10);
+  const nomeBase = `plano-100-dias-tcm-ba-${carimbo}`;
+
+  if (tipo === "jpeg") {
+    const link = document.createElement("a");
+    link.download = `${nomeBase}.jpg`;
+    link.href = canvas.toDataURL("image/jpeg", 0.95);
+    link.click();
+    return;
+  }
+
+  // Mesma paginação do extrato da agenda: a folha é desenhada inteira e
+  // reposicionada página a página quando passa de uma.
+  const { jsPDF } = window.jspdf;
+  const img = canvas.toDataURL("image/jpeg", 0.95);
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const larguraMm = 210;
+  const alturaPaginaMm = 297;
+  const alturaTotalMm = (canvas.height * larguraMm) / canvas.width;
+  let deslocamento = 0;
+  let primeira = true;
+  while (deslocamento < alturaTotalMm - 1) {
+    if (!primeira) pdf.addPage();
+    pdf.addImage(img, "JPEG", 0, -deslocamento, larguraMm, alturaTotalMm);
+    deslocamento += alturaPaginaMm;
+    primeira = false;
+  }
+  pdf.save(`${nomeBase}.pdf`);
+}
+
+let elementoComFocoAntesDoExportPlano = null;
+
+function abrirDialogoExportPlano() {
+  const lista = projetosNoHorizonte();
+  document.getElementById("plano-export-mensagem").textContent =
+    lista.length === 0
+      ? "Nenhum projeto nos filtros em vigor. O documento sairá com a folha institucional e o aviso de lista vazia."
+      : `${lista.length} ${lista.length === 1 ? "projeto será incluído" : "projetos serão incluídos"}, conforme os filtros em vigor · ${subtituloDoPlano().toLowerCase()}.`;
+
+  elementoComFocoAntesDoExportPlano = document.activeElement;
+  document.getElementById("plano-export-backdrop").hidden = false;
+  document.getElementById("plano-export-modal").hidden = false;
+  document.getElementById("btn-plano-pdf").focus();
+}
+
+function fecharDialogoExportPlano() {
+  document.getElementById("plano-export-backdrop").hidden = true;
+  document.getElementById("plano-export-modal").hidden = true;
+  if (elementoComFocoAntesDoExportPlano) elementoComFocoAntesDoExportPlano.focus();
+}
+
+async function baixarPlano(tipo, btn) {
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = tipo === "pdf" ? "Gerando PDF…" : "Gerando JPEG…";
+  try {
+    await exportarPlano(tipo);
+    fecharDialogoExportPlano();
+  } catch (erro) {
+    console.error("Erro ao exportar o plano:", erro);
+    window.alert("Não foi possível gerar o arquivo: " + erro.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Filtro de prazo (calendário da barra lateral)
+   -------------------------------------------------------------------------- */
+
+// Intervalo e chips de horizonte descrevem a mesma janela por dois caminhos;
+// deixar os dois ativos ao mesmo tempo produziria listas que não correspondem
+// a nenhum dos controles. Quem foi mexido por último manda.
+function sincronizarChipsHorizonte() {
+  const porIntervalo = filtroDePrazoAtivo();
+  document.querySelectorAll("#horizonte-group .chip").forEach((chip) => {
+    const ativo = !porIntervalo && Number(chip.dataset.horizonte) === state.filtrosProjeto.horizonte;
+    chip.classList.toggle("is-active", ativo);
+  });
+}
+
+function atualizarVisibilidadeBtnLimparPrazo() {
+  const btn = document.getElementById("btn-limpar-prazo");
+  if (btn) btn.hidden = !filtroDePrazoAtivo();
+}
+
+function mostrarErroPrazo(mensagem) {
+  const el = document.getElementById("proj-erro-data");
+  if (!el) return;
+  el.textContent = mensagem;
+  el.hidden = !mensagem;
+}
+
+function aplicarFiltroDePrazo() {
+  const campoDe = document.getElementById("proj-filtro-de");
+  const campoAte = document.getElementById("proj-filtro-ate");
+  const de = campoDe.value || null;
+  const ate = campoAte.value || null;
+
+  if (de && ate && de > ate) {
+    mostrarErroPrazo("A data inicial não pode ser posterior à final.");
+    return;
+  }
+  mostrarErroPrazo("");
+
+  state.filtrosProjeto.prazoInicio = de;
+  state.filtrosProjeto.prazoFim = ate;
+  sincronizarChipsHorizonte();
+  atualizarVisibilidadeBtnLimparPrazo();
+  renderizarProjetos();
+}
+
+function limparFiltroDePrazo() {
+  state.filtrosProjeto.prazoInicio = null;
+  state.filtrosProjeto.prazoFim = null;
+  document.getElementById("proj-filtro-de").value = "";
+  document.getElementById("proj-filtro-ate").value = "";
+  mostrarErroPrazo("");
+  sincronizarChipsHorizonte();
+  atualizarVisibilidadeBtnLimparPrazo();
+  renderizarProjetos();
 }
 
 /* --------------------------------------------------------------------------
@@ -4691,12 +5070,29 @@ function inicializarModuloProjetos() {
 
   document.querySelectorAll("#horizonte-group .chip").forEach((chip) => {
     chip.addEventListener("click", () => {
-      document.querySelectorAll("#horizonte-group .chip").forEach((c) => c.classList.remove("is-active"));
-      chip.classList.add("is-active");
       state.filtrosProjeto.horizonte = Number(chip.dataset.horizonte) || HORIZONTE_PADRAO;
+      // Escolher um horizonte descarta o intervalo do calendário: são dois
+      // caminhos para a mesma janela, e o último a ser usado é o que vale.
+      state.filtrosProjeto.prazoInicio = null;
+      state.filtrosProjeto.prazoFim = null;
+      document.getElementById("proj-filtro-de").value = "";
+      document.getElementById("proj-filtro-ate").value = "";
+      mostrarErroPrazo("");
+      sincronizarChipsHorizonte();
+      atualizarVisibilidadeBtnLimparPrazo();
       renderizarProjetos();
     });
   });
+
+  document.getElementById("btn-exportar-plano").addEventListener("click", abrirDialogoExportPlano);
+  document.getElementById("btn-fechar-plano-export").addEventListener("click", fecharDialogoExportPlano);
+  document.getElementById("plano-export-backdrop").addEventListener("click", fecharDialogoExportPlano);
+  document.getElementById("btn-plano-pdf").addEventListener("click", (ev) => baixarPlano("pdf", ev.currentTarget));
+  document.getElementById("btn-plano-jpeg").addEventListener("click", (ev) => baixarPlano("jpeg", ev.currentTarget));
+
+  document.getElementById("proj-filtro-de").addEventListener("change", aplicarFiltroDePrazo);
+  document.getElementById("proj-filtro-ate").addEventListener("change", aplicarFiltroDePrazo);
+  document.getElementById("btn-limpar-prazo").addEventListener("click", limparFiltroDePrazo);
 
   document.getElementById("btn-exportar-projetos").addEventListener("click", exportarProjetos);
   document.getElementById("input-importar-projetos").addEventListener("change", (ev) => {
@@ -4707,7 +5103,8 @@ function inicializarModuloProjetos() {
 
   document.addEventListener("keydown", (ev) => {
     if (ev.key !== "Escape") return;
-    if (!document.getElementById("proj-form").hidden) fecharFormProjeto();
+    if (!document.getElementById("plano-export-modal").hidden) fecharDialogoExportPlano();
+    else if (!document.getElementById("proj-form").hidden) fecharFormProjeto();
     else if (state.projetoAberto) fecharPainelProjeto();
   });
 }

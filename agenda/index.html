@@ -147,6 +147,22 @@
 
       <div class="sidebar__filters" id="filtros-projetos" hidden>
         <div class="filters__group">
+          <span class="filters__label" id="label-filtrar-prazo">Filtrar por prazo</span>
+          <div class="date-range" role="group" aria-labelledby="label-filtrar-prazo">
+            <label class="date-range__field">
+              <span>De</span>
+              <input id="proj-filtro-de" class="input" type="date" />
+            </label>
+            <label class="date-range__field">
+              <span>Até</span>
+              <input id="proj-filtro-ate" class="input" type="date" />
+            </label>
+          </div>
+          <p id="proj-erro-data" class="form-error" role="alert" hidden></p>
+          <button id="btn-limpar-prazo" class="link-button" type="button" hidden>Limpar prazos</button>
+        </div>
+
+        <div class="filters__group">
           <span class="filters__label" id="label-situacao">Situação</span>
           <div class="cat-list" id="situacao-lista" role="group" aria-labelledby="label-situacao"></div>
         </div>
@@ -428,10 +444,16 @@
             <h2 class="page-title" id="proj-titulo">Projetos em desenvolvimento</h2>
             <p class="page-subtitle" id="proj-subtitulo"></p>
           </div>
-          <button id="btn-novo-projeto" class="btn btn--primary" type="button">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span class="btn__label">Novo projeto</span>
-          </button>
+          <div class="page-header__acoes">
+            <button id="btn-exportar-plano" class="btn btn--secondary" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span class="btn__label">Exportar plano</span>
+            </button>
+            <button id="btn-novo-projeto" class="btn btn--primary" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span class="btn__label">Novo projeto</span>
+            </button>
+          </div>
         </div>
 
         <section class="day-stats" id="proj-stats" aria-label="Resumo dos projetos">
@@ -725,6 +747,17 @@
     <div class="confirm-modal__acoes">
       <button id="confirm-cancelar" class="btn btn--ghost" type="button">Cancelar</button>
       <button id="confirm-continuar" class="btn btn--primary" type="button">Continuar</button>
+    </div>
+  </div>
+
+  <div id="plano-export-backdrop" class="panel-backdrop" hidden></div>
+  <div id="plano-export-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="plano-export-titulo" aria-describedby="plano-export-mensagem" hidden>
+    <h2 id="plano-export-titulo">Exportar plano 100 dias</h2>
+    <p id="plano-export-mensagem"></p>
+    <div class="confirm-modal__acoes">
+      <button id="btn-fechar-plano-export" class="btn btn--ghost" type="button">Cancelar</button>
+      <button id="btn-plano-jpeg" class="btn btn--secondary" type="button">Baixar JPEG</button>
+      <button id="btn-plano-pdf" class="btn btn--primary" type="button">Baixar PDF</button>
     </div>
   </div>
 

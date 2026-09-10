@@ -137,6 +137,20 @@ nota do que mudou, e entra no topo da pilha sem apagar o anterior. Editar
 dados cadastrais não inventa lançamento — só entra registro quando situação,
 progresso ou nota mudam de fato.
 
+**Filtro de prazo:** um calendário De/Até na barra lateral recorta os projetos
+pelo **prazo de entrega**. Intervalo e chips de horizonte (100/30/7 dias)
+descrevem a mesma janela por dois caminhos, então **o último a ser usado
+manda**: escolher datas desativa os chips, escolher um chip limpa as datas.
+Diferente do horizonte, o intervalo puxa também o que entrega **além dos 100
+dias** e o que **já venceu** dentro da janela — quem pede "entregas de março"
+quer exatamente isso.
+
+**Exportar plano:** gera um documento A4 institucional em **PDF ou JPEG** com
+os projetos em tela, respeitando os filtros em vigor. Traz os indicadores, a
+linha de entrega e a lista com prazo, situação, responsável, progresso e o
+último lançamento de cada projeto. Passa pelo mesmo ponto de construção nos
+dois formatos, então PDF e JPEG não divergem entre si nem da tela.
+
 **Linha de entrega:** uma barra por projeto posicionada numa escala de datas,
 com a linha vertical do "hoje" atravessando todas. A barra é preenchida na
 proporção do progresso e colorida pela situação — vermelho quando o prazo

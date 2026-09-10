@@ -608,8 +608,11 @@ button, input {
 .input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 
 .date-range { display: flex; gap: 8px; }
-.date-range__field { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 600; }
-.date-range__field .input { padding: 7px 8px; font-size: 0.78rem; }
+/* min-width:0 é o que permite a coluna encolher: o seletor de data nativo
+   tem largura intrínseca maior que a metade da barra lateral e, sem isso,
+   o campo "Até" fica com o ícone de calendário cortado na borda. */
+.date-range__field { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 600; }
+.date-range__field .input { width: 100%; min-width: 0; padding: 7px 8px; font-size: 0.78rem; }
 
 .form-error {
   margin: 6px 0 0;
@@ -1921,10 +1924,18 @@ html, body { overflow-x: hidden; }
   position: absolute;
   top: 0;
   transform: translateX(-50%);
+  /* As marcas das pontas são ancoradas pela borda em vez de centradas: em 0%
+     e 100% o translate joga metade do rótulo para fora da régua. */
   font: 500 11px/1 var(--font-mono, "IBM Plex Mono", monospace);
   color: var(--color-text-tertiary);
   white-space: nowrap;
 }
+
+.proj-escala__marca--inicio { transform: none; }
+.proj-escala__marca--fim { transform: none; }
+/* O tracinho da régua acompanha a âncora do rótulo, não o seu centro. */
+.proj-escala__marca--inicio::after { left: 0; }
+.proj-escala__marca--fim::after { left: auto; right: 0; }
 
 .proj-escala__marca::after {
   content: "";
@@ -2426,4 +2437,27 @@ html, body { overflow-x: hidden; }
   .portal-card__cta svg { transition: none; }
   .portal-card:hover,
   .portal-card:focus-visible { transform: none; }
+}
+
+/* Ações do cabeçalho do Plano 100 dias — exportar e novo projeto lado a lado,
+   quebrando para baixo quando não couberem. */
+.page-header__acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* No celular os rótulos de botão somem para poupar espaço na topbar, mas
+   aqui isso deixaria duas ações azuis lado a lado distinguidas só por um
+   ícone de seta e um de mais — o rótulo volta. */
+@media (max-width: 860px) {
+  .page-header__acoes .btn__label { display: inline; }
+}
+
+/* O diálogo de exportação do plano tem três ações; no celular elas passam a
+   ocupar a largura toda em vez de espremer o rótulo. */
+@media (max-width: 560px) {
+  .page-header__acoes { width: 100%; }
+  .page-header__acoes .btn { flex: 1 1 auto; justify-content: center; }
+  /* Empilhadas e em largura cheia. column-reverse porque a ordem no HTML
+     põe "Cancelar" primeiro — no celular a ação principal deve ficar no
+     topo da pilha, não escondida embaixo. */
+  .confirm-modal__acoes { flex-direction: column-reverse; align-items: stretch; }
+  .confirm-modal__acoes .btn { width: 100%; justify-content: center; }
 }
