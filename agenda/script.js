@@ -3842,6 +3842,7 @@ window.saaGerarCard = async function ({ formato = "mobile", proporcao = "story",
    ========================================================================== */
 
 const PROJETOS_STORAGE_KEY = "saaTcm.projetos.v1";
+const SEMENTE_STORAGE_KEY = "saaTcm.projetos.semente";
 const HORIZONTE_PADRAO = 100;
 
 const SITUACOES = {
@@ -4050,6 +4051,16 @@ function seloSituacao(p) {
   return `<span class="situacao-selo" style="color:${s.cor};background:${s.bg};border:1px solid ${s.borda}">${escapeHtml(s.label)}</span>`;
 }
 
+// O contador do menu conta a base inteira, não o recorte filtrado, e por isso
+// não pertence a nenhum módulo em particular — quem abre o sistema no portal
+// precisa vê-lo tanto quanto quem está na tela do plano.
+function atualizarBadgeProjetos() {
+  const badge = document.getElementById("nav-badge-projetos");
+  if (!badge) return;
+  badge.textContent = state.projetos.length;
+  badge.hidden = state.projetos.length === 0;
+}
+
 function renderizarResumoProjetos(lista) {
   const emAndamento = lista.filter((p) => situacaoEfetiva(p) === "em-andamento").length;
   const risco = lista.filter(exigeProvidencia).length;
@@ -4081,9 +4092,7 @@ function renderizarResumoProjetos(lista) {
     alerta.hidden = true;
   }
 
-  const badge = document.getElementById("nav-badge-projetos");
-  badge.textContent = state.projetos.length;
-  badge.hidden = state.projetos.length === 0;
+  atualizarBadgeProjetos();
 
   document.getElementById("proj-resumo").textContent =
     `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"}`;
@@ -5025,6 +5034,7 @@ function renderizarPortal() {
   }
   renderizarPortalAgenda();
   renderizarPortalProjetos();
+  atualizarBadgeProjetos();
 }
 
 function inicializarPortal() {
@@ -5132,8 +5142,52 @@ function trocarModulo(modulo) {
    Ligação com a interface
    -------------------------------------------------------------------------- */
 
+// Carrega a carteira que vem com o sistema (dados/contratos.js) na primeira
+// abertura de cada navegador. Sem isto, os contratos só existiriam para quem
+// importasse o arquivo à mão, em cada dispositivo.
+//
+// Uma vez por navegador, e mesclada por id: quem editar ou apagar um contrato
+// não o vê ressurgir no carregamento seguinte. A versão gravada é a do arquivo
+// de dados, então acrescentar contratos lá alcança quem já usa o sistema, sem
+// desfazer o que a pessoa mexeu nos que já tinha.
+function semearContratos() {
+  const semente = Array.isArray(window.SAA_CONTRATOS) ? window.SAA_CONTRATOS : [];
+  const versao = String(window.SAA_CONTRATOS_VERSAO || "");
+  if (!semente.length || !versao) return false;
+
+  let aplicada = "";
+  try {
+    aplicada = localStorage.getItem(SEMENTE_STORAGE_KEY) || "";
+  } catch (e) {
+    // Navegador sem armazenamento: semeia em memória a cada carga, que é
+    // melhor do que o painel abrir vazio.
+  }
+  if (aplicada === versao) return false;
+
+  const validos = semente.filter(projetoValido);
+  if (!validos.length) return false;
+
+  const porId = new Map(state.projetos.map((p) => [p.id, p]));
+  let novos = 0;
+  validos.forEach((p) => {
+    if (porId.has(p.id)) return; // já existe: o que está gravado manda
+    porId.set(p.id, p);
+    novos++;
+  });
+  state.projetos = [...porId.values()];
+
+  try {
+    localStorage.setItem(SEMENTE_STORAGE_KEY, versao);
+  } catch (e) {
+    /* sem armazenamento: segue sem marcar */
+  }
+  if (novos) gravarProjetos(state.projetos);
+  return novos > 0;
+}
+
 function inicializarModuloProjetos() {
   state.projetos = lerProjetos();
+  semearContratos();
 
   preencherSelectSituacoes(document.getElementById("status-situacao"), SITUACAO_PADRAO);
 
