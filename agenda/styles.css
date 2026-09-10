@@ -2495,3 +2495,23 @@ html, body { overflow-x: hidden; }
   color: var(--color-text-secondary);
 }
 .proj-ocultos .link-button { font-size: 0.8rem; }
+
+/* Ações rápidas do painel do projeto: concluir e trocar de categoria sem
+   passar pelo formulário de lançamento. */
+.proj-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+.proj-acoes__linha { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn--concluir { background: var(--color-success); color: #fff; }
+.btn--concluir:hover:not(:disabled) { box-shadow: var(--sombra-media); }
+.btn--concluir:disabled { opacity: 0.45; }
+
+/* Chip de categoria pintado com a cor da própria situação, para que a
+   escolha e o selo do cartão falem a mesma língua. */
+#proj-categoria-chips .chip { border-color: currentColor; }
+#proj-categoria-chips .chip.is-active { color: #fff; }

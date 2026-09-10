@@ -76,6 +76,12 @@ const state = {
   },
 };
 
+// Horizonte de entrega, em dias. "Todas" é sem teto de data — existe, e é o
+// padrão, porque a base guarda contratos que correm até 2031: abrir cortando
+// em 100 dias esconderia a maior parte do que está cadastrado.
+const HORIZONTE_PADRAO = 100;
+const HORIZONTE_TODAS = 0;
+
 // Estado do portal e do módulo Plano 100 dias. Fica junto do resto para que
 // haja um só lugar onde olhar quando a tela não corresponde ao esperado.
 state.modulo = "portal"; // portal | agenda | projetos
@@ -83,7 +89,7 @@ state.projetos = [];
 state.projetoAberto = null;
 state.projetoEditando = null;
 state.filtrosProjeto = {
-  horizonte: 100,
+  horizonte: HORIZONTE_TODAS,
   situacoes: new Set(),
   busca: "",
   // Intervalo explícito de prazo de entrega. Quando preenchido, manda no que
@@ -3812,7 +3818,6 @@ function aplicarFiltrosDaURL() {
 
 const PROJETOS_STORAGE_KEY = "saaTcm.projetos.v1";
 const SEMENTE_STORAGE_KEY = "saaTcm.projetos.semente";
-const HORIZONTE_PADRAO = 100;
 
 const SITUACOES = {
   "nao-iniciado": { label: "Não iniciado", cor: "#5F6E88", bg: "#EFF2F7", borda: "#DCE3EE" },
@@ -3827,9 +3832,6 @@ const SITUACOES = {
 // licitação — e essa antecedência é a janela de 90 dias.
 const RISCO_CONTRATO_DIAS = 90;
 
-// Horizonte "Todas": sem teto de data. Existe porque os contratos correm até
-// 2031 e a janela de 100 dias esconderia a maioria deles.
-const HORIZONTE_TODAS = 0;
 
 // Contrato não tem situação digitada: ela decorre da vigência. Derivar em vez
 // de gravar é o que impede o painel de envelhecer — no dia em que a vigência
@@ -3837,7 +3839,10 @@ const HORIZONTE_TODAS = 0;
 // sem depender de alguém lembrar de atualizar.
 function situacaoEfetiva(p) {
   if (!p) return SITUACAO_PADRAO;
-  if (p.tipo !== "contrato") return p.situacao || SITUACAO_PADRAO;
+  // Escolha explícita vence a regra: quem marcou a categoria à mão tem uma
+  // razão que a vigência não conhece — contrato prorrogado, encerrado antes do
+  // prazo, suspenso por decisão. A volta ao automático é um clique.
+  if (p.tipo !== "contrato" || p.situacaoManual) return p.situacao || SITUACAO_PADRAO;
   const dias = diasRestantes(p);
   if (dias < 0) return "vencido";
   if (dias <= RISCO_CONTRATO_DIAS) return "em-risco";
@@ -3913,6 +3918,11 @@ function chaveMaisDias(chave, dias) {
 function projetoAtrasado(p) {
   // "Concluído" e "Vencido" já são a palavra final sobre o prazo; sobrepor
   // "Atrasado" a eles seria dizer duas vezes a mesma coisa, e errado.
+  //
+  // A categoria escolhida à mão também tem a palavra final: quem marcou um
+  // contrato de data vencida como "em andamento" sabe de uma prorrogação que a
+  // data não conta. Sobrepor "Atrasado" seria contradizer a própria escolha.
+  if (p.situacaoManual) return false;
   const situacao = situacaoEfetiva(p);
   if (situacao === "concluido" || situacao === "vencido") return false;
   return diasEntreChaves(hojeChave(), p.prazoEntrega) < 0;
@@ -4040,6 +4050,10 @@ function renderizarResumoProjetos(lista) {
   const concluidos = lista.filter((p) => situacaoEfetiva(p) === "concluido").length;
 
   document.getElementById("proj-stat-total").textContent = lista.length;
+  // "No horizonte" só é verdade quando existe um horizonte; sem recorte, o
+  // número é simplesmente o que está cadastrado.
+  document.getElementById("proj-stat-total-rotulo").textContent =
+    filtroDePrazoAtivo() || state.filtrosProjeto.horizonte !== HORIZONTE_TODAS ? "no recorte" : "cadastrados";
   document.getElementById("proj-stat-andamento").textContent = emAndamento;
   document.getElementById("proj-stat-andamento-rotulo").textContent = emAndamento === 1 ? "projeto" : "projetos";
   document.getElementById("proj-stat-risco").textContent = risco;
@@ -4708,6 +4722,7 @@ function abrirPainelProjeto(id) {
   const selectStatus = document.getElementById("status-situacao");
   selectStatus.value = situacaoEfetiva(p);
   aplicarTravaDeContrato(p, selectStatus, document.getElementById("status-situacao-nota"));
+  renderizarAcoesDoProjeto(p);
   const faixa = document.getElementById("status-progresso");
   faixa.value = Math.max(0, Math.min(100, Number(p.progresso) || 0));
   document.getElementById("status-progresso-valor").textContent = `${faixa.value}%`;
@@ -4735,7 +4750,8 @@ function lancarStatus() {
 
   // Num contrato a situação vem da vigência; gravar a escolha do campo criaria
   // um histórico contando uma versão que a tela não mostra.
-  const situacao = p.tipo === "contrato" ? situacaoEfetiva(p) : document.getElementById("status-situacao").value;
+  const automatico = p.tipo === "contrato" && !p.situacaoManual;
+  const situacao = automatico ? situacaoEfetiva(p) : document.getElementById("status-situacao").value;
   const progresso = Number(document.getElementById("status-progresso").value) || 0;
   const nota = document.getElementById("status-nota").value.trim();
 
@@ -4750,6 +4766,123 @@ function lancarStatus() {
 }
 
 /* --------------------------------------------------------------------------
+   Ações rápidas do painel: concluir e alterar categoria
+   --------------------------------------------------------------------------
+   Trocar a categoria pelo formulário de lançamento exige três passos e uma
+   nota. Estas ações resolvem em um clique o que se faz o tempo todo — marcar
+   uma entrega como concluída e corrigir a categoria — e ainda assim gravam
+   histórico, porque mudança de situação sem registro é mudança que ninguém
+   consegue explicar depois.
+   -------------------------------------------------------------------------- */
+
+function renderizarAcoesDoProjeto(p) {
+  const chips = document.getElementById("proj-categoria-chips");
+  const nota = document.getElementById("proj-categoria-nota");
+  const btnConcluir = document.getElementById("btn-concluir-projeto");
+  const btnReabrir = document.getElementById("btn-reabrir-projeto");
+  const btnAuto = document.getElementById("btn-auto-projeto");
+  if (!chips) return;
+
+  const atual = situacaoEfetiva(p);
+  const concluido = atual === "concluido";
+  const contratoAutomatico = p.tipo === "contrato" && !p.situacaoManual;
+
+  chips.innerHTML = Object.entries(SITUACOES)
+    .map(([chave, s]) => {
+      const ativo = chave === atual;
+      const estilo = ativo
+        ? `background:${s.cor};border-color:${s.cor};color:#fff`
+        : `color:${s.cor};background:${s.bg};border-color:${s.borda}`;
+      return `<button class="chip${ativo ? " is-active" : ""}" type="button" data-situacao="${chave}" style="${estilo}" aria-pressed="${ativo}">${escapeHtml(s.label)}</button>`;
+    })
+    .join("");
+
+  btnConcluir.hidden = concluido;
+  btnConcluir.disabled = concluido;
+  btnReabrir.hidden = !concluido;
+  btnAuto.hidden = !(p.tipo === "contrato" && p.situacaoManual);
+
+  nota.hidden = !contratoAutomatico;
+  nota.textContent = contratoAutomatico
+    ? "Este contrato está no automático: a categoria acompanha a vigência. Escolher uma acima passa a valer sobre a regra."
+    : "";
+}
+
+// Grava a nova situação e registra no histórico o que mudou e por quê.
+function definirSituacaoDoProjeto(situacao, { progresso, motivo } = {}) {
+  const p = projetoPorId(state.projetoAberto);
+  if (!p || !SITUACOES[situacao]) return;
+
+  const anterior = situacaoEfetiva(p);
+  const novoProgresso =
+    progresso === undefined ? Math.max(0, Math.min(100, Number(p.progresso) || 0)) : progresso;
+  if (anterior === situacao && novoProgresso === Number(p.progresso)) return;
+
+  // Definir a categoria à mão num contrato desliga a derivação; sem isto a
+  // escolha seria gravada e a tela continuaria mostrando a regra.
+  if (p.tipo === "contrato") p.situacaoManual = true;
+
+  p.situacao = situacao;
+  p.progresso = novoProgresso;
+  p.atualizadoEm = new Date().toISOString();
+  p.historico = [
+    {
+      em: p.atualizadoEm,
+      situacao,
+      progresso: novoProgresso,
+      nota: motivo || `Categoria alterada de "${(SITUACOES[anterior] || {}).label || anterior}" para "${SITUACOES[situacao].label}".`,
+    },
+    ...(p.historico || []),
+  ];
+
+  if (!gravarProjetos(state.projetos)) return;
+  renderizarProjetos();
+  abrirPainelProjeto(p.id);
+}
+
+function concluirProjetoAberto() {
+  const p = projetoPorId(state.projetoAberto);
+  if (!p) return;
+  // Concluir leva o progresso a 100%: uma entrega concluída com barra pela
+  // metade é uma contradição que ninguém vai voltar para arrumar.
+  definirSituacaoDoProjeto("concluido", {
+    progresso: 100,
+    motivo: p.tipo === "contrato" ? "Contrato encerrado." : "Entrega concluída.",
+  });
+}
+
+function reabrirProjetoAberto() {
+  const p = projetoPorId(state.projetoAberto);
+  if (!p) return;
+  definirSituacaoDoProjeto("em-andamento", {
+    progresso: Math.min(95, Math.max(0, Number(p.progresso) || 0)),
+    motivo: "Reaberto para acompanhamento.",
+  });
+}
+
+// Devolve o contrato à regra da vigência.
+function voltarAoAutomatico() {
+  const p = projetoPorId(state.projetoAberto);
+  if (!p || p.tipo !== "contrato") return;
+  delete p.situacaoManual;
+  p.atualizadoEm = new Date().toISOString();
+  const derivada = situacaoEfetiva(p);
+  p.situacao = derivada;
+  p.historico = [
+    {
+      em: p.atualizadoEm,
+      situacao: derivada,
+      progresso: Math.max(0, Math.min(100, Number(p.progresso) || 0)),
+      nota: "Categoria devolvida ao automático: volta a acompanhar a vigência.",
+    },
+    ...(p.historico || []),
+  ];
+  if (!gravarProjetos(state.projetos)) return;
+  renderizarProjetos();
+  abrirPainelProjeto(p.id);
+}
+
+/* --------------------------------------------------------------------------
    Cadastro e edição
    -------------------------------------------------------------------------- */
 
@@ -4757,12 +4890,12 @@ function lancarStatus() {
 // Deixar o campo editável e ignorar o que for escolhido seria pior do que
 // desabilitá-lo: a pessoa lançaria uma situação e nada mudaria na tela.
 function aplicarTravaDeContrato(p, select, nota) {
-  const ehContrato = Boolean(p && p.tipo === "contrato");
-  if (select) select.disabled = ehContrato;
+  const automatico = Boolean(p && p.tipo === "contrato" && !p.situacaoManual);
+  if (select) select.disabled = automatico;
   if (!nota) return;
-  nota.hidden = !ehContrato;
-  nota.textContent = ehContrato
-    ? `Situação de contrato vem da vigência: vencido quando a data passa, em risco a ${RISCO_CONTRATO_DIAS} dias ou menos do fim, em andamento antes disso.`
+  nota.hidden = !automatico;
+  nota.textContent = automatico
+    ? `Situação de contrato vem da vigência: vencido quando a data passa, em risco a ${RISCO_CONTRATO_DIAS} dias ou menos do fim, em andamento antes disso. Use "Alterar categoria" para definir à mão.`
     : "";
 }
 
@@ -5004,13 +5137,10 @@ function renderizarPortalAgenda() {
 }
 
 function renderizarPortalProjetos() {
-  // Conta sobre a base inteira dentro do horizonte padrão, sem os filtros de
-  // situação e busca do módulo — o portal não deve variar conforme o recorte
-  // que ficou selecionado na outra tela.
-  const limite = chaveMaisDias(hojeChave(), HORIZONTE_PADRAO);
-  const lista = state.projetos
-    .filter((p) => p.prazoEntrega <= limite)
-    .sort((a, b) => a.prazoEntrega.localeCompare(b.prazoEntrega));
+  // Conta a base inteira: sem recorte de data e sem os filtros de situação e
+  // busca do módulo. O portal responde "quanto existe cadastrado", e um número
+  // que variasse conforme o recorte deixado na outra tela não responderia isso.
+  const lista = [...state.projetos].sort((a, b) => a.prazoEntrega.localeCompare(b.prazoEntrega));
 
   const andamento = lista.filter((p) => situacaoEfetiva(p) === "em-andamento").length;
   const risco = lista.filter(exigeProvidencia).length;
@@ -5048,7 +5178,7 @@ function renderizarPortalProjetos() {
     const concluidos = lista.filter((p) => situacaoEfetiva(p) === "concluido").length;
     selo.textContent = lista.length
       ? `${concluidos} de ${plural(lista.length, "entrega concluída", "entregas concluídas")}`
-      : "Horizonte de 100 dias";
+      : "Nenhum registro cadastrado";
     selo.classList.remove("portal-card__selo--aviso");
   }
 }
@@ -5266,6 +5396,13 @@ function inicializarModuloProjetos() {
   });
 
   document.getElementById("btn-lancar-status").addEventListener("click", lancarStatus);
+  document.getElementById("btn-concluir-projeto").addEventListener("click", concluirProjetoAberto);
+  document.getElementById("btn-reabrir-projeto").addEventListener("click", reabrirProjetoAberto);
+  document.getElementById("btn-auto-projeto").addEventListener("click", voltarAoAutomatico);
+  document.getElementById("proj-categoria-chips").addEventListener("click", (ev) => {
+    const chip = ev.target.closest("[data-situacao]");
+    if (chip) definirSituacaoDoProjeto(chip.dataset.situacao);
+  });
   document.getElementById("btn-editar-projeto").addEventListener("click", () => {
     if (state.projetoAberto) abrirFormProjeto(state.projetoAberto);
   });
