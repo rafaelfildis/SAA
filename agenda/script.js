@@ -2874,22 +2874,130 @@ function cartaoMobile(bloco, analise, escala) {
 
 /**
  * Card de compartilhamento em JPEG, 1080 × 1920 (story 9:16) ou 1080 × 1350
- * (feed 4:5). No formato feed há 570px a menos de altura: o cabeçalho
- * comprime e os blocos opcionais saem, senão os compromissos do fim do dia
- * seriam cortados.
+ * (feed 4:5).
+ *
+ * O dia é desenhado como LINHA DO TEMPO EM ESCALA, não como lista de cartões.
+ * A lista desperdiçava a imagem: com quatro compromissos de uma hora, dois
+ * terços do card ficavam em branco e os vazios da agenda — que são a
+ * informação mais útil de quem olha o card para marcar algo — não apareciam.
+ * Na pista, cada hora ocupa a mesma altura, um compromisso de 3h ocupa o
+ * triplo de um de 1h, e as janelas livres aparecem no lugar e no tamanho
+ * reais, hachuradas e rotuladas.
+ *
+ * A pista cobre 08:00–18:00 e se estende quando há compromisso fora dessa
+ * faixa — senão um compromisso às 19h simplesmente sumiria do card.
+ *
+ * Períodos de vários dias não têm pista: uma escala de horas só significa
+ * alguma coisa dentro de um dia. Nesse caso o card cai para a lista, que
+ * continua sendo a leitura correta para semana e mês.
  */
+
+const CARD_PISTA_INI = 8 * 60; // 08:00
+const CARD_PISTA_FIM = 18 * 60; // 18:00
+
+// Alturas fixas do card, em px do artefato final (1080 de largura).
+const CARD_HERO_STORY = 500;
+const CARD_HERO_FEED = 400;
+const CARD_RODAPE = 123;
+const CARD_PISTA_PAD = 68; // padding vertical da área da pista (36 + 32)
+
+// Abaixo desta altura o compromisso não comporta local e modalidade, e colapsa
+// para uma linha só — decidido em pixels disponíveis, não em minutos, porque
+// um compromisso de 1h em coluna dividida tem menos espaço que um em coluna
+// cheia.
+const CARD_ALTURA_COLAPSO = 100;
+const CARD_ALTURA_MINIMA = 56;
+
+function cardFaixaDoDia(blocos) {
+  if (!blocos.length) return "—";
+  const ini = Math.min(...blocos.map((b) => b.ini));
+  const fim = Math.max(...blocos.map((b) => b.fim));
+  return `${hhmmDeMinutos(ini)} – ${hhmmDeMinutos(fim)}`;
+}
+
+// Régua de horas: uma linha e um rótulo por hora cheia da pista.
+function cardReguaHoras(t0, t1, y, px) {
+  let saida = "";
+  for (let m = t0; m <= t1; m += 60) {
+    saida += `<div style="position:absolute;left:${px(96)};right:0;top:${px(y(m))};height:1px;background:${EXP.borda}"></div>`;
+    saida += `<div style="position:absolute;left:0;width:${px(84)};top:${px(y(m) - 11)};text-align:right;font:500 ${px(19)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">${hhmmDeMinutos(m)}</div>`;
+  }
+  return saida;
+}
+
+// Janelas livres desenhadas no lugar e no tamanho reais. O rótulo diz duração
+// e horário juntos ("2h30 livre · 12:00 – 14:30"): só a duração obrigaria a
+// conferir a régua para saber quando.
+function cardJanelasLivres(janelas, t0, t1, y, px) {
+  return janelas
+    .map(([ji, jf]) => {
+      const ini = Math.max(ji, t0);
+      const fim = Math.min(jf, t1);
+      if (fim - ini < JANELA_MINIMA_MIN) return "";
+      const altura = y(fim) - y(ini) - 8;
+      const compacta = altura < 60;
+      const rotulo = `${duracaoCurta(fim - ini)} livre · ${hhmmDeMinutos(ini)} – ${hhmmDeMinutos(fim)}`;
+      return `
+        <div style="position:absolute;left:0;right:0;top:${px(y(ini) + 4)};height:${px(altura)};border-radius:${px(14)};border:2px dashed #C9DED6;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#F4F8F6 0 ${px(12)},#EEF5F1 ${px(12)} ${px(24)})">
+          <span style="font:600 ${px(compacta ? 17 : 20)}/1 'IBM Plex Mono',monospace;color:${EXP.verde};background:#fff;border:1px solid #C9DED6;border-radius:999px;padding:${compacta ? `${px(7)} ${px(14)}` : `${px(11)} ${px(20)}`}">${escapeHtml(rotulo)}</span>
+        </div>`;
+    })
+    .join("");
+}
+
+function cardBlocoNaPista(bloco, analise, t0, t1, y, px) {
+  const { evento } = bloco;
+  const ini = Math.max(bloco.ini, t0);
+  const fim = Math.min(bloco.fim, t1);
+  const altura = Math.max(y(fim) - y(ini) - 8, CARD_ALTURA_MINIMA);
+
+  const { col, total } = analise.colunaDe.get(evento.id) || { col: 0, total: 1 };
+  const larguraCol = 100 / total;
+  const estreito = total > 1;
+  const curto = altura < CARD_ALTURA_COLAPSO;
+
+  const cat = EXP_CAT[evento.categoria] || EXP_CAT["pauta-presencial"];
+  const cancelado = evento.cancelado;
+  const emConflito = analise.idsConflito.has(evento.id);
+  const corFaixa = cancelado ? EXP.cancelTitulo : cat.cor;
+
+  const selo = (texto, cor, bg, borda) =>
+    `<span style="font:600 ${px(14)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:${cor};background:${bg};border:1px solid ${borda};border-radius:${px(7)};padding:${px(6)} ${px(10)};flex:0 0 auto">${texto}</span>`;
+
+  const meta = curto
+    ? ""
+    : `<div style="display:flex;align-items:center;gap:${px(10)};min-width:0">
+         ${cancelado ? selo("Cancelado", EXP.vermelhoForte, "#FDECEF", "#F6C4CE") : selo(cat.label, cat.cor, cat.bg, cat.borda)}
+         ${evento.local ? `<span style="font:400 ${px(20)}/1.2 'IBM Plex Sans',sans-serif;color:${EXP.texto2};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${escapeHtml(evento.local)}</span>` : ""}
+         ${emConflito ? selo("Conflito", EXP.vermelhoForte, "#FDECEF", "#F6C4CE") : ""}
+       </div>`;
+
+  return `
+    <div style="position:absolute;top:${px(y(ini) + 4)};height:${px(altura)};left:${col * larguraCol}%;width:${total > 1 ? `calc(${larguraCol}% - ${px(8)})` : "100%"};background:#fff;border:1px solid ${EXP.borda};border-radius:${px(14)};overflow:hidden;display:flex;align-items:${curto ? "center" : "flex-start"};gap:${px(20)};padding:${curto ? `${px(10)} ${px(20)} ${px(10)} ${px(26)}` : `${px(18)} ${px(22)} ${px(16)} ${px(28)}`};box-shadow:0 ${px(2)} ${px(10)} rgba(11,49,99,.06)">
+      <span style="position:absolute;left:0;top:0;bottom:0;width:${px(8)};background:${corFaixa}"></span>
+      <div style="display:flex;flex-direction:column;gap:${px(2)};flex:0 0 auto;min-width:0">
+        <span style="font:600 ${px(curto ? 26 : 32)}/1 'IBM Plex Mono',monospace;color:${corFaixa};white-space:nowrap">${hhmmDeMinutos(bloco.ini)}</span>
+        <span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3};display:${curto ? "none" : "block"}">${duracaoCurta(bloco.dur)}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:${px(6)};min-width:0;flex:1">
+        <span style="font:700 ${px(estreito || curto ? 22 : 27)}/1.25 'IBM Plex Sans',sans-serif;color:${cancelado ? EXP.cancelTitulo : EXP.tinta}${cancelado ? ";text-decoration:line-through" : ""};text-wrap:pretty;overflow:hidden;max-height:${px(curto ? 28 : 68)};white-space:${curto ? "nowrap" : "normal"};text-overflow:ellipsis">${escapeHtml(evento.titulo)}</span>
+        ${meta}
+      </div>
+    </div>`;
+}
+
 function construirCardMobile(grupos, totalFiltrados, opcoes) {
   const { proporcao, incluirCancelados, incluirJanelas } = opcoes;
   const feed = proporcao === "feed";
   const largura = 1080;
-  const alturaMinima = feed ? 1350 : 1920;
+  const altura = feed ? 1350 : 1920;
   const escala = 1;
   const px = (v) => `${Math.round(v * escala)}px`;
 
   const gruposVisiveis = grupos
     .map((g) => ({
       ...g,
-      eventos: incluirCancelados && !feed ? g.eventos : g.eventos.filter((it) => !it.evento.cancelado),
+      eventos: incluirCancelados ? g.eventos : g.eventos.filter((it) => !it.evento.cancelado),
     }))
     .filter((g) => g.eventos.length > 0);
 
@@ -2908,82 +3016,118 @@ function construirCardMobile(grupos, totalFiltrados, opcoes) {
 
   const totalDoCard = gruposVisiveis.reduce((a, g) => a + g.eventos.length, 0);
   const ocupacao = analise ? duracaoCurta(analise.ocupadoMin) : "—";
+  const livre = analise ? duracaoCurta(analise.livreMin) : "—";
   const conflitos = analise ? analise.paresConflito.length : 0;
+  const faixaDia = analise && diaUnico ? cardFaixaDoDia(analise.blocos) : "—";
+
+  const alturaHero = feed ? CARD_HERO_FEED : CARD_HERO_STORY;
 
   const indicador = (rotulo, valor, alerta) => `
-    <div style="flex:1;padding:${px(20)} ${px(22)};border-radius:${px(16)};background:${alerta ? "rgba(216,4,37,.26)" : "rgba(255,255,255,.1)"};border:1px solid ${alerta ? "rgba(243,179,190,.4)" : "rgba(255,255,255,.18)"};display:flex;flex-direction:column;gap:${px(8)}">
-      <span style="font:600 ${px(18)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${alerta ? "#F3B3BE" : "#9FB6D8"}">${rotulo}</span>
-      <span style="font:600 ${px(40)}/1 'IBM Plex Mono',monospace;color:#fff">${valor}</span>
+    <div style="flex:1;padding:${px(18)} ${px(22)};border-radius:${px(16)};background:${alerta ? "rgba(216,4,37,.26)" : "rgba(255,255,255,.1)"};border:1px solid ${alerta ? "rgba(243,179,190,.4)" : "rgba(255,255,255,.18)"};display:flex;flex-direction:column;gap:${px(8)}">
+      <span style="font:600 ${px(17)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${alerta ? "#F3B3BE" : "#9FB6D8"}">${rotulo}</span>
+      <span style="font:600 ${px(38)}/1 'IBM Plex Mono',monospace;color:#fff">${valor}</span>
     </div>`;
 
-  let listaCards = "";
-  if (!gruposVisiveis.length) {
-    listaCards = `<div style="padding:${px(60)} 0;text-align:center;font:400 ${px(26)}/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Nenhum compromisso encontrado para os filtros selecionados.</div>`;
-  } else {
-    gruposVisiveis.forEach((grupo) => {
-      const analiseGrupo = analisarDia(grupo.eventos, grupo.chave);
-      if (!diaUnico) {
-        listaCards += `<div style="font:600 ${px(20)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:${EXP.texto2};padding-top:${px(10)};flex:0 0 auto">${escapeHtml(dataLongaDaChave(grupo.chave).toUpperCase())}</div>`;
-      }
-      listaCards += analiseGrupo.contínuos
-        .map((it) => cartaoMobile({ ...it, ini: 0, fim: 1440, dur: 1440 }, analiseGrupo, escala))
-        .join("");
-      listaCards += analiseGrupo.blocos.map((bloco) => cartaoMobile(bloco, analiseGrupo, escala)).join("");
-    });
-  }
+  // ---- corpo: pista em escala (um dia) ou lista (vários dias) -------------
+  let corpo = "";
 
-  const blocoJanelas =
-    !feed && incluirJanelas && analise && diaUnico && analise.janelas.length
-      ? `<div style="display:flex;flex-direction:column;gap:${px(12)};padding-top:${px(6)};flex:0 0 auto">
-           <span style="font:600 ${px(17)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:${EXP.texto2}">JANELAS LIVRES</span>
-           <div style="display:flex;gap:${px(12)};flex-wrap:wrap">
-             ${analise.janelas
-               .map(
-                 (j) =>
-                   `<span style="font:500 ${px(21)}/1 'IBM Plex Mono',monospace;color:${EXP.verde};background:#F4F8F6;border:1px dashed #C9DED6;border-radius:999px;padding:${px(12)} ${px(20)}">${hhmmDeMinutos(j[0])} – ${hhmmDeMinutos(j[1])}</span>`
-               )
-               .join("")}
-           </div>
-         </div>`
+  if (!gruposVisiveis.length) {
+    corpo = `<div style="padding:${px(60)} 0;text-align:center;font:400 ${px(26)}/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Nenhum compromisso encontrado para os filtros selecionados.</div>`;
+  } else if (diaUnico) {
+    let t0 = CARD_PISTA_INI;
+    let t1 = CARD_PISTA_FIM;
+    analise.blocos.forEach((b) => {
+      t0 = Math.min(t0, Math.floor(b.ini / 60) * 60);
+      t1 = Math.max(t1, Math.ceil(b.fim / 60) * 60);
+    });
+
+    // Compromissos de dia inteiro ou de vários dias não têm posição na escala:
+    // vão numa faixa acima da pista, que também encolhe a pista na medida.
+    const continuos = analise.contínuos
+      .map((it) => {
+        const cat = EXP_CAT[it.evento.categoria] || EXP_CAT["pauta-presencial"];
+        return `<span style="display:flex;align-items:center;gap:${px(10)};background:#fff;border:1px solid ${EXP.borda};border-left:${px(6)} solid ${cat.cor};border-radius:${px(10)};padding:${px(12)} ${px(18)};font:600 ${px(21)}/1.2 'IBM Plex Sans',sans-serif;color:${EXP.tinta}">${escapeHtml(it.evento.titulo)}<span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">${duracaoLegivel(it.evento)}</span></span>`;
+      })
+      .join("");
+    const faixaContinuos = continuos
+      ? `<div style="display:flex;flex-direction:column;gap:${px(10)};padding-bottom:${px(18)};flex:0 0 auto">${continuos}</div>`
       : "";
+    const alturaContinuos = analise.contínuos.length * 62 + (continuos ? 18 : 0);
+
+    const alturaPista = altura - alturaHero - CARD_RODAPE - CARD_PISTA_PAD - alturaContinuos;
+    const pxPorMinuto = alturaPista / (t1 - t0);
+    const y = (m) => (m - t0) * pxPorMinuto;
+
+    corpo = `
+      ${faixaContinuos}
+      <div style="position:relative;flex:0 0 auto;height:${px(alturaPista)}">
+        ${cardReguaHoras(t0, t1, y, px)}
+        <div style="position:absolute;left:${px(112)};right:0;top:0;bottom:0">
+          ${incluirJanelas ? cardJanelasLivres(analise.janelas, t0, t1, y, px) : ""}
+          ${analise.blocos.map((b) => cardBlocoNaPista(b, analise, t0, t1, y, px)).join("")}
+        </div>
+      </div>`;
+  } else {
+    corpo = gruposVisiveis
+      .map((grupo) => {
+        const analiseGrupo = analisarDia(grupo.eventos, grupo.chave);
+        const titulo = `<div style="font:600 ${px(20)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:${EXP.texto2};padding-top:${px(10)};flex:0 0 auto">${escapeHtml(dataLongaDaChave(grupo.chave).toUpperCase())}</div>`;
+        const continuos = analiseGrupo.contínuos
+          .map((it) => cartaoMobile({ ...it, ini: 0, fim: 1440, dur: 1440 }, analiseGrupo, escala))
+          .join("");
+        const blocos = analiseGrupo.blocos.map((bloco) => cartaoMobile(bloco, analiseGrupo, escala)).join("");
+        return titulo + continuos + blocos;
+      })
+      .join("");
+  }
 
   const paper = document.createElement("div");
   paper.className = "export-paper";
   paper.style.cssText =
-    `width:${largura}px;min-height:${alturaMinima}px;display:flex;flex-direction:column;background:${EXP.painel};` +
+    `width:${largura}px;height:${altura}px;display:flex;flex-direction:column;background:${EXP.painel};` +
     "overflow:hidden;box-sizing:border-box;font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";";
 
   paper.innerHTML = `
-    <div style="background:linear-gradient(150deg,${EXP.navy} 0%,${EXP.navyMid} 55%,${EXP.navyEscuro} 100%);padding:${feed ? `${px(44)} ${px(60)} ${px(38)}` : `${px(64)} ${px(60)} ${px(52)}`};display:flex;flex-direction:column;gap:${feed ? px(26) : px(38)};flex:0 0 auto">
-      <div style="display:flex;align-items:center;gap:${px(22)}">
-        <div style="width:${px(96)};height:${px(96)};border-radius:${px(20)};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto">
-          ${marcaImg("tcm-mark.png", 78, "TCM-BA")}
+    <div style="background:linear-gradient(150deg,${EXP.navy} 0%,${EXP.navyMid} 55%,${EXP.navyEscuro} 100%);padding:${feed ? `${px(40)} ${px(60)} ${px(36)}` : `${px(56)} ${px(60)} ${px(48)}`};display:flex;flex-direction:column;justify-content:space-between;flex:0 0 auto;height:${px(alturaHero)};overflow:hidden">
+      <div style="display:flex;align-items:center;gap:${px(20)}">
+        <div style="width:${px(84)};height:${px(84)};border-radius:${px(18)};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto">
+          ${marcaImg("tcm-mark.png", 68, "TCM-BA")}
         </div>
-        <div style="display:flex;flex-direction:column;gap:${px(8)}">
-          <span style="font:700 ${px(34)}/1 'IBM Plex Sans',sans-serif;color:#fff;letter-spacing:-.01em">Agenda Institucional</span>
-          <span style="font:400 ${px(24)}/1.3 'IBM Plex Sans',sans-serif;color:#9FB6D8">Tribunal de Contas dos Municípios<br>do Estado da Bahia</span>
+        <div style="display:flex;flex-direction:column;gap:${px(7)}">
+          <span style="font:700 ${px(30)}/1 'IBM Plex Sans',sans-serif;color:#fff;letter-spacing:-.01em">Agenda Institucional</span>
+          <span style="font:400 ${px(21)}/1.3 'IBM Plex Sans',sans-serif;color:#9FB6D8">Tribunal de Contas dos Municípios do Estado da Bahia</span>
         </div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:${px(10)}">
-        <span style="font:600 ${px(22)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#7B95BF">${diaUnico ? escapeHtml(diaSemana) : escapeHtml(subtituloDaPagina().toUpperCase())}</span>
-        <span style="font:700 ${feed ? px(68) : px(92)}/1 Bitter,Georgia,serif;color:#fff;letter-spacing:-.03em">${diaUnico ? escapeHtml(diaMes) : `${totalDoCard} COMPROMISSOS`}</span>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:${px(24)}">
+        <div style="display:flex;flex-direction:column;gap:${px(10)}">
+          <span style="font:600 ${px(21)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#9FB6D8">${diaUnico ? escapeHtml(diaSemana) : escapeHtml(subtituloDaPagina().toUpperCase())}</span>
+          <span style="font:700 ${px(feed ? 64 : 80)}/1 Bitter,Georgia,serif;color:#fff;letter-spacing:-.03em">${diaUnico ? escapeHtml(diaMes) : `${totalDoCard} COMPROMISSOS`}</span>
+        </div>
+        ${
+          diaUnico
+            ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:${px(8)};padding-bottom:${px(8)}">
+                 <span style="font:600 ${px(17)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#9FB6D8">EXPEDIENTE OCUPADO</span>
+                 <span style="font:600 ${px(34)}/1 'IBM Plex Mono',monospace;color:#fff">${faixaDia}</span>
+               </div>`
+            : ""
+        }
       </div>
 
       <div style="display:flex;gap:${px(14)}">
         ${indicador("COMPROMISSOS", totalDoCard, false)}
         ${indicador("OCUPAÇÃO", ocupacao, false)}
+        ${indicador("LIVRE", livre, false)}
         ${indicador("CONFLITOS", conflitos, conflitos > 0)}
       </div>
     </div>
 
-    <div style="flex:1;background:${EXP.painel};padding:${px(44)} ${px(60)} ${px(44)};display:flex;flex-direction:column;gap:${px(20)}">
-      ${listaCards}
-      ${blocoJanelas}
+    <div style="flex:1;min-height:0;background:${EXP.painel};padding:${px(36)} ${px(52)} ${px(32)} ${px(44)};display:flex;flex-direction:column;overflow:hidden">
+      ${corpo}
     </div>
 
-    <div style="flex:0 0 auto;background:#fff;border-top:1px solid ${EXP.borda};padding:${px(30)} ${px(60)};display:flex;align-items:center;gap:${px(22)}">
-      ${marcaImg("tcm-lockup.png", 62, "Tribunal de Contas dos Municípios do Estado da Bahia")}
+    <div style="flex:0 0 auto;background:#fff;border-top:1px solid ${EXP.borda};padding:${px(26)} ${px(60)};display:flex;align-items:center;gap:${px(22)}">
+      ${marcaImg("tcm-lockup.png", 58, "Tribunal de Contas dos Municípios do Estado da Bahia")}
       <div style="margin-left:auto;display:flex;flex-direction:column;gap:${px(5)};align-items:flex-end">
         <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;color:${EXP.navy}">SAA · Agenda Institucional</span>
         <span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto2}">atualizado às ${formatarHora(new Date())}</span>
