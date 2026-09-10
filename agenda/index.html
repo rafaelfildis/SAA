@@ -39,7 +39,7 @@
         <img src="img/tcm-mark.png" alt="Tribunal de Contas dos Municípios do Estado da Bahia" class="topbar__marca" />
         <div class="topbar__titles">
           <h1>SAA — Agenda Institucional</h1>
-          <p>TCM-BA — compromissos sincronizados do Google Agenda</p>
+          <p id="topbar-sub">TCM-BA — compromissos sincronizados do Google Agenda</p>
         </div>
       </div>
     </div>
@@ -70,18 +70,22 @@
 
     <aside id="sidebar" class="sidebar" aria-label="Navegação e filtros">
       <nav class="sidebar__nav" aria-label="Navegação principal">
-        <button class="sidebar__nav-item is-active" data-modulo="agenda" type="button" aria-current="page">
+        <button class="sidebar__nav-item is-active" data-modulo="portal" type="button" aria-current="page">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+          <span class="sidebar__nav-label">Portal</span>
+        </button>
+        <button class="sidebar__nav-item" data-modulo="agenda" type="button">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           <span class="sidebar__nav-label">Agenda</span>
         </button>
         <button class="sidebar__nav-item" data-modulo="projetos" type="button">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h13"></path><path d="M3 12h9"></path><path d="M3 18h6"></path><circle cx="19" cy="6" r="2"></circle><circle cx="16" cy="12" r="2"></circle><circle cx="12" cy="18" r="2"></circle></svg>
-          <span class="sidebar__nav-label">Calendário 100 dias</span>
+          <span class="sidebar__nav-label">Plano 100 dias</span>
           <span class="sidebar__nav-badge" id="nav-badge-projetos" hidden>0</span>
         </button>
       </nav>
 
-      <div class="sidebar__filters" id="filtros-agenda">
+      <div class="sidebar__filters" id="filtros-agenda" hidden>
         <div class="filters__group">
           <span class="filters__label" id="label-filtrar-data">Filtrar por data</span>
           <div class="date-range" role="group" aria-labelledby="label-filtrar-data">
@@ -184,12 +188,99 @@
     <main id="conteudo-principal" class="main" tabindex="-1">
       <nav class="breadcrumbs" aria-label="Trilha de navegação">
         <ol>
-          <li><a href="#conteudo-principal">Início</a></li>
+          <li><a href="#conteudo-principal" data-ir="portal">Início</a></li>
           <li aria-current="page">Agenda</li>
         </ol>
       </nav>
 
-      <div id="modulo-agenda">
+      <section id="modulo-portal" class="portal" aria-label="Portal de módulos">
+        <div class="portal__hero">
+          <img src="img/tcm-mark.png" alt="" class="portal__marca" aria-hidden="true" />
+          <div class="portal__hero-texto">
+            <span class="portal__eyebrow">Tribunal de Contas dos Municípios do Estado da Bahia</span>
+            <h2 class="portal__titulo">SAA — Sistema de Agenda Automatizada</h2>
+            <p class="portal__subtitulo" id="portal-data">Carregando…</p>
+          </div>
+        </div>
+
+        <h3 class="portal__secao">Módulos</h3>
+
+        <div class="portal__grid">
+          <article class="portal-card portal-card--agenda" data-ir="agenda" role="button" tabindex="0" aria-label="Abrir o módulo Agenda">
+            <header class="portal-card__topo">
+              <span class="portal-card__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              </span>
+              <div>
+                <h4 class="portal-card__titulo">Agenda</h4>
+                <p class="portal-card__descricao">Compromissos institucionais sincronizados do Google Agenda, com rota do dia e exportação para JPEG e PDF.</p>
+              </div>
+            </header>
+
+            <dl class="portal-card__metricas">
+              <div class="portal-metrica">
+                <dt>Hoje</dt>
+                <dd id="portal-agenda-hoje">—</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Próximos 7 dias</dt>
+                <dd id="portal-agenda-semana">—</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Total na base</dt>
+                <dd id="portal-agenda-total">—</dd>
+              </div>
+            </dl>
+
+            <p class="portal-card__destaque" id="portal-agenda-destaque"></p>
+
+            <footer class="portal-card__rodape">
+              <span class="portal-card__cta">Abrir agenda
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </span>
+              <span class="portal-card__selo" id="portal-agenda-selo">—</span>
+            </footer>
+          </article>
+
+          <article class="portal-card portal-card--projetos" data-ir="projetos" role="button" tabindex="0" aria-label="Abrir o módulo Plano 100 dias">
+            <header class="portal-card__topo">
+              <span class="portal-card__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13"></path><path d="M3 12h9"></path><path d="M3 18h6"></path><circle cx="19" cy="6" r="2"></circle><circle cx="16" cy="12" r="2"></circle><circle cx="12" cy="18" r="2"></circle></svg>
+              </span>
+              <div>
+                <h4 class="portal-card__titulo">Plano 100 dias</h4>
+                <p class="portal-card__descricao">Projetos em desenvolvimento com prazo de entrega no horizonte de 100 dias e histórico de status de cada um.</p>
+              </div>
+            </header>
+
+            <dl class="portal-card__metricas">
+              <div class="portal-metrica">
+                <dt>No horizonte</dt>
+                <dd id="portal-proj-total">0</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Em andamento</dt>
+                <dd id="portal-proj-andamento">0</dd>
+              </div>
+              <div class="portal-metrica portal-metrica--alerta" id="portal-proj-cel-risco">
+                <dt>Em risco ou atrasados</dt>
+                <dd id="portal-proj-risco">0</dd>
+              </div>
+            </dl>
+
+            <p class="portal-card__destaque" id="portal-proj-destaque"></p>
+
+            <footer class="portal-card__rodape">
+              <span class="portal-card__cta">Abrir plano
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </span>
+              <span class="portal-card__selo" id="portal-proj-selo">—</span>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <div id="modulo-agenda" hidden>
 
       <div class="page-header">
         <div class="page-header__titles">
@@ -333,7 +424,7 @@
       <div id="modulo-projetos" hidden>
         <div class="page-header">
           <div class="page-header__titles">
-            <span class="page-header__eyebrow">Calendário 100 dias</span>
+            <span class="page-header__eyebrow">Plano 100 dias</span>
             <h2 class="page-title" id="proj-titulo">Projetos em desenvolvimento</h2>
             <p class="page-subtitle" id="proj-subtitulo"></p>
           </div>
