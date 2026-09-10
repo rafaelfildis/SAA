@@ -173,6 +173,7 @@
             <button class="chip is-active" data-horizonte="100" type="button">100 dias</button>
             <button class="chip" data-horizonte="30" type="button">30 dias</button>
             <button class="chip" data-horizonte="7" type="button">7 dias</button>
+            <button class="chip" data-horizonte="0" type="button">Todas</button>
           </div>
         </div>
 
@@ -279,7 +280,7 @@
                 <dd id="portal-proj-andamento">0</dd>
               </div>
               <div class="portal-metrica portal-metrica--alerta" id="portal-proj-cel-risco">
-                <dt>Em risco ou atrasados</dt>
+                <dt>Em risco ou vencidos</dt>
                 <dd id="portal-proj-risco">0</dd>
               </div>
             </dl>
@@ -472,7 +473,7 @@
             </span>
           </div>
           <div class="day-stats__cel day-stats__cel--conflito" id="proj-cel-risco">
-            <span class="day-stats__rotulo">Em risco ou atrasados</span>
+            <span class="day-stats__rotulo">Em risco ou vencidos</span>
             <span class="day-stats__linha">
               <span class="day-stats__valor" id="proj-stat-risco">0</span>
               <span class="day-stats__unidade" id="proj-stat-risco-rotulo">nenhum</span>
@@ -680,6 +681,8 @@
         </label>
       </div>
 
+      <p id="proj-situacao-nota" class="campo__ajuda" hidden></p>
+
       <label class="campo">
         <span class="campo__rotulo">Nota do lançamento</span>
         <textarea id="proj-nota" class="input input--area" rows="2" maxlength="400" placeholder="Registrada como primeiro item do histórico"></textarea>
@@ -718,6 +721,7 @@
           <input id="status-progresso" class="input input--range" type="range" min="0" max="100" step="5" value="0" />
         </label>
       </div>
+      <p id="status-situacao-nota" class="campo__ajuda" hidden></p>
       <label class="campo">
         <span class="campo__rotulo">O que mudou</span>
         <textarea id="status-nota" class="input input--area" rows="2" maxlength="400" placeholder="Ex.: homologação concluída, aguardando publicação"></textarea>

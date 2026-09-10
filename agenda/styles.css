@@ -2461,3 +2461,24 @@ html, body { overflow-x: hidden; }
   .confirm-modal__acoes { flex-direction: column-reverse; align-items: stretch; }
   .confirm-modal__acoes .btn { width: 100%; justify-content: center; }
 }
+
+/* Texto de apoio de um campo — explica por que ele está desabilitado, sem o
+   peso visual de uma mensagem de erro. */
+.campo__ajuda {
+  margin: -4px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+/* Marco de prazo: usado quando o registro não tem data de início e portanto
+   não há período a desenhar. Largura dada pelo rótulo, ancorada na data. */
+.proj-barra--marco { width: auto; max-width: 46%; }
+.proj-barra--marco::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: rgba(255, 255, 255, .55);
+}
+.proj-barra--marco[style*="right:"]::before { left: auto; right: 0; }
