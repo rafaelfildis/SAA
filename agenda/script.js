@@ -3850,7 +3850,29 @@ const SITUACOES = {
   "em-risco": { label: "Em risco", cor: "#A65A05", bg: "#FDF1E3", borda: "#F0DCBE" },
   concluido: { label: "Concluído", cor: "#0F7B5F", bg: "#E7F4F0", borda: "#C4E3D9" },
   suspenso: { label: "Suspenso", cor: "#B00320", bg: "#FDECEF", borda: "#F6C4CE" },
+  vencido: { label: "Vencido", cor: "#7C0518", bg: "#FBE4E8", borda: "#EFB3C0" },
 };
+
+// Contrato próximo do fim da vigência exige providência — prorrogação ou nova
+// licitação — e essa antecedência é a janela de 90 dias.
+const RISCO_CONTRATO_DIAS = 90;
+
+// Horizonte "Todas": sem teto de data. Existe porque os contratos correm até
+// 2031 e a janela de 100 dias esconderia a maioria deles.
+const HORIZONTE_TODAS = 0;
+
+// Contrato não tem situação digitada: ela decorre da vigência. Derivar em vez
+// de gravar é o que impede o painel de envelhecer — no dia em que a vigência
+// passa, o mesmo registro deixa de ser "em risco" e passa a "vencido" sozinho,
+// sem depender de alguém lembrar de atualizar.
+function situacaoEfetiva(p) {
+  if (!p) return SITUACAO_PADRAO;
+  if (p.tipo !== "contrato") return p.situacao || SITUACAO_PADRAO;
+  const dias = diasRestantes(p);
+  if (dias < 0) return "vencido";
+  if (dias <= RISCO_CONTRATO_DIAS) return "em-risco";
+  return "em-andamento";
+}
 
 const SITUACAO_PADRAO = "nao-iniciado";
 
@@ -3919,7 +3941,11 @@ function chaveMaisDias(chave, dias) {
 // Deixar o usuário marcar "atrasado" à mão produziria projetos vencidos ainda
 // exibidos como em dia.
 function projetoAtrasado(p) {
-  return p.situacao !== "concluido" && diasEntreChaves(hojeChave(), p.prazoEntrega) < 0;
+  // "Concluído" e "Vencido" já são a palavra final sobre o prazo; sobrepor
+  // "Atrasado" a eles seria dizer duas vezes a mesma coisa, e errado.
+  const situacao = situacaoEfetiva(p);
+  if (situacao === "concluido" || situacao === "vencido") return false;
+  return diasEntreChaves(hojeChave(), p.prazoEntrega) < 0;
 }
 
 function diasRestantes(p) {
@@ -3928,7 +3954,16 @@ function diasRestantes(p) {
 
 function rotuloPrazo(p) {
   const dias = diasRestantes(p);
-  if (p.situacao === "concluido") return "entregue";
+  const situacao = situacaoEfetiva(p);
+  if (situacao === "concluido") return "entregue";
+  // Contrato não atrasa: a vigência vence. A palavra muda porque o fato é
+  // outro — não há entrega em mora, há cobertura contratual encerrada.
+  if (p.tipo === "contrato") {
+    if (dias < 0) return `vigência vencida há ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"}`;
+    if (dias === 0) return "vigência encerra hoje";
+    if (dias === 1) return "vigência encerra amanhã";
+    return `${dias} dias de vigência`;
+  }
   if (dias < 0) return `${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"} de atraso`;
   if (dias === 0) return "vence hoje";
   if (dias === 1) return "vence amanhã";
@@ -3946,12 +3981,13 @@ function subtituloDoPlano() {
   if (prazoInicio && prazoFim) return `Entregas de ${dataCurtaDaChave(prazoInicio)} a ${dataCurtaDaChave(prazoFim)}`;
   if (prazoInicio) return `Entregas a partir de ${dataCurtaDaChave(prazoInicio)}`;
   if (prazoFim) return `Entregas até ${dataCurtaDaChave(prazoFim)}`;
+  if (horizonte === HORIZONTE_TODAS) return "Todas as entregas lançadas, sem recorte de data";
   return `Entregas até ${dataCurtaDaChave(chaveMaisDias(hojeChave(), horizonte))} · horizonte de ${horizonte} dias`;
 }
 
 function corDoProjeto(p) {
   if (projetoAtrasado(p)) return SITUACOES.suspenso.cor;
-  return (SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO]).cor;
+  return (SITUACOES[situacaoEfetiva(p)] || SITUACOES[SITUACAO_PADRAO]).cor;
 }
 
 // Há um intervalo de prazo escolhido no calendário da barra lateral?
@@ -3973,13 +4009,13 @@ function projetosNoHorizonte() {
       if (porIntervalo) {
         if (prazoInicio && p.prazoEntrega < prazoInicio) return false;
         if (prazoFim && p.prazoEntrega > prazoFim) return false;
-      } else if (p.prazoEntrega > limite) {
+      } else if (horizonte !== HORIZONTE_TODAS && p.prazoEntrega > limite) {
         // Fora do horizonte só some quem entrega depois dele. O que já venceu
         // e não foi entregue continua na lista — sumir com um projeto
         // atrasado seria esconder justamente o que precisa de atenção.
         return false;
       }
-      if (situacoes.size && !situacoes.has(p.situacao)) return false;
+      if (situacoes.size && !situacoes.has(situacaoEfetiva(p))) return false;
       if (busca) {
         const alvo = normalizarTexto(`${p.nome} ${p.descricao || ""} ${p.responsavel || ""} ${p.area || ""}`);
         if (!alvo.includes(normalizarTexto(busca))) return false;
@@ -3993,18 +4029,31 @@ function projetosNoHorizonte() {
    Renderização
    -------------------------------------------------------------------------- */
 
+// Três estados diferentes pedem a mesma coisa — providência agora: prazo de
+// entrega estourado, vigência encerrada e prazo curto demais. Reuni-los num
+// predicado evita que um contrato vencido suma do contador e do alerta por
+// não ser tecnicamente "atrasado".
+function exigeProvidencia(p) {
+  const situacao = situacaoEfetiva(p);
+  return projetoAtrasado(p) || situacao === "em-risco" || situacao === "vencido";
+}
+
+function prazoEstourado(p) {
+  return projetoAtrasado(p) || situacaoEfetiva(p) === "vencido";
+}
+
 function seloSituacao(p) {
   const atrasado = projetoAtrasado(p);
   const s = atrasado
     ? { label: "Atrasado", cor: SITUACOES.suspenso.cor, bg: SITUACOES.suspenso.bg, borda: SITUACOES.suspenso.borda }
-    : SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO];
+    : SITUACOES[situacaoEfetiva(p)] || SITUACOES[SITUACAO_PADRAO];
   return `<span class="situacao-selo" style="color:${s.cor};background:${s.bg};border:1px solid ${s.borda}">${escapeHtml(s.label)}</span>`;
 }
 
 function renderizarResumoProjetos(lista) {
-  const emAndamento = lista.filter((p) => p.situacao === "em-andamento").length;
-  const risco = lista.filter((p) => projetoAtrasado(p) || p.situacao === "em-risco").length;
-  const concluidos = lista.filter((p) => p.situacao === "concluido").length;
+  const emAndamento = lista.filter((p) => situacaoEfetiva(p) === "em-andamento").length;
+  const risco = lista.filter(exigeProvidencia).length;
+  const concluidos = lista.filter((p) => situacaoEfetiva(p) === "concluido").length;
 
   document.getElementById("proj-stat-total").textContent = lista.length;
   document.getElementById("proj-stat-andamento").textContent = emAndamento;
@@ -4014,12 +4063,16 @@ function renderizarResumoProjetos(lista) {
   document.getElementById("proj-stat-concluidos").textContent = concluidos;
   document.getElementById("proj-cel-risco").classList.toggle("is-alerta", risco > 0);
 
-  const atrasados = lista.filter(projetoAtrasado);
+  const estourados = lista.filter(prazoEstourado);
   const alerta = document.getElementById("proj-alerta");
-  if (atrasados.length) {
+  if (estourados.length) {
+    const soContratos = estourados.every((p) => p.tipo === "contrato");
+    const substantivo = soContratos ? "contrato" : "registro";
     document.getElementById("proj-alerta-titulo").textContent =
-      atrasados.length === 1 ? "1 projeto com prazo vencido" : `${atrasados.length} projetos com prazo vencido`;
-    document.getElementById("proj-alerta-detalhe").textContent = atrasados
+      estourados.length === 1
+        ? `1 ${substantivo} com prazo vencido`
+        : `${estourados.length} ${substantivo}s com prazo vencido`;
+    document.getElementById("proj-alerta-detalhe").textContent = estourados
       .slice(0, 3)
       .map((p) => `${p.nome} (${rotuloPrazo(p)})`)
       .join(" · ");
@@ -4059,7 +4112,9 @@ function renderizarPistaProjetos(lista) {
   // grudadas na borda ou fora dela. Com intervalo escolhido no calendário a
   // janela é o próprio intervalo, esticado até caber a entrega mais distante.
   let inicioJanela = prazoInicio || hoje;
-  let fimJanela = prazoFim || chaveMaisDias(hoje, horizonte);
+  // Sem teto de data a escala nasce da própria lista, senão "Todas" abriria
+  // uma régua de dez anos com as barras de curto prazo espremidas na esquerda.
+  let fimJanela = prazoFim || (horizonte === HORIZONTE_TODAS ? lista[0].prazoEntrega : chaveMaisDias(hoje, horizonte));
   lista.forEach((p) => {
     if (p.dataInicio && p.dataInicio < inicioJanela) inicioJanela = p.dataInicio;
     if (p.prazoEntrega < inicioJanela) inicioJanela = p.prazoEntrega;
@@ -4081,17 +4136,34 @@ function renderizarPistaProjetos(lista) {
 
   const linhas = lista
     .map((p) => {
-      const ini = p.dataInicio && p.dataInicio > inicioJanela ? p.dataInicio : inicioJanela;
-      const esq = pct(ini);
-      const dir = pct(p.prazoEntrega);
-      const largura = Math.max(dir - esq, 1.5);
       const cor = corDoProjeto(p);
       const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+      const dir = pct(p.prazoEntrega);
+      const titulo = escapeAttr(`${p.nome} — ${p.dataInicio ? "entrega" : "prazo"} ${dataCurtaDaChave(p.prazoEntrega)}`);
+
+      // Sem data de início não há período a desenhar. Esticar a barra da borda
+      // da janela até o prazo inventaria um começo — e um que mudaria de lugar
+      // a cada troca de filtro. Nesse caso a data vira um marco no prazo, com
+      // o rótulo do lado de dentro da régua.
+      if (!p.dataInicio) {
+        const daDireita = dir > 55;
+        const ancora = daDireita ? `right:${(100 - dir).toFixed(3)}%` : `left:${dir.toFixed(3)}%`;
+        return `
+          <div class="proj-barra-linha">
+            <button class="proj-barra proj-barra--marco" type="button" data-projeto="${escapeAttr(p.id)}"
+                    style="${ancora};background:${cor};color:#fff" title="${titulo}">
+              <span class="proj-barra__rotulo">${escapeHtml(p.nome)}</span>
+            </button>
+          </div>`;
+      }
+
+      const ini = p.dataInicio > inicioJanela ? p.dataInicio : inicioJanela;
+      const esq = pct(ini);
+      const largura = Math.max(dir - esq, 1.5);
       return `
         <div class="proj-barra-linha">
           <button class="proj-barra" type="button" data-projeto="${escapeAttr(p.id)}"
-                  style="left:${esq}%;width:${largura}%;background:${cor};color:#fff"
-                  title="${escapeAttr(`${p.nome} — entrega ${formatarDataCurta(new Date(`${p.prazoEntrega}T12:00:00${offsetBahia()}`))}`)}">
+                  style="left:${esq}%;width:${largura}%;background:${cor};color:#fff" title="${titulo}">
             <span class="proj-barra__progresso" style="width:${progresso}%"></span>
             <span class="proj-barra__rotulo">${escapeHtml(p.nome)}</span>
           </button>
@@ -4126,7 +4198,10 @@ function renderizarListaProjetos(lista) {
     .map((p) => {
       const cor = corDoProjeto(p);
       const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
-      const atrasado = projetoAtrasado(p);
+      const ehContrato = p.tipo === "contrato";
+      // Contrato não tem progresso a exibir: o que importa é quanto resta de
+      // vigência. Uma barra parada em 0% em trinta cartões só faria ruído.
+      const alerta = projetoAtrasado(p) || situacaoEfetiva(p) === "vencido";
       const ultima = (p.historico || [])[0];
       return `
         <button class="proj-card" type="button" data-projeto="${escapeAttr(p.id)}">
@@ -4139,12 +4214,12 @@ function renderizarListaProjetos(lista) {
               ${p.area ? `<span>${escapeHtml(p.area)}</span>` : ""}
               ${ultima && ultima.nota ? `<span>${escapeHtml(ultima.nota.slice(0, 90))}</span>` : ""}
             </span>
-            <span class="proj-progresso-barra"><i style="width:${progresso}%;background:${cor}"></i></span>
+            ${ehContrato ? "" : `<span class="proj-progresso-barra"><i style="width:${progresso}%;background:${cor}"></i></span>`}
           </span>
           <span class="proj-card__lado">
-            <span class="proj-prazo">${formatarDataCurta(new Date(`${p.prazoEntrega}T12:00:00${offsetBahia()}`))}</span>
-            <span class="proj-restante ${atrasado ? "proj-restante--alerta" : ""}" style="display:block">${escapeHtml(rotuloPrazo(p))}</span>
-            <span class="proj-restante" style="display:block">${progresso}% concluído</span>
+            <span class="proj-prazo">${dataCurtaDaChave(p.prazoEntrega)}</span>
+            <span class="proj-restante ${alerta ? "proj-restante--alerta" : ""}" style="display:block">${escapeHtml(rotuloPrazo(p))}</span>
+            ${ehContrato ? "" : `<span class="proj-restante" style="display:block">${progresso}% concluído</span>`}
           </span>
         </button>`;
     })
@@ -4165,7 +4240,7 @@ function renderizarFiltrosSituacao(lista) {
     btn.innerHTML = `
       <span class="cat-list__dot" style="background:${s.cor};"></span>
       <span class="cat-list__label">${s.label}</span>
-      <span class="cat-list__count">${lista.filter((p) => p.situacao === chave).length}</span>`;
+      <span class="cat-list__count">${lista.filter((p) => situacaoEfetiva(p) === chave).length}</span>`;
     container.appendChild(btn);
   });
 }
@@ -4202,7 +4277,7 @@ function dataPlenaDaChave(chave) {
 // atraso. A ordem do espalhamento importa: o label vem depois.
 function situacaoDoProjeto(p) {
   if (projetoAtrasado(p)) return { ...SITUACOES.suspenso, label: "Atrasado" };
-  return SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO];
+  return SITUACOES[situacaoEfetiva(p)] || SITUACOES[SITUACAO_PADRAO];
 }
 
 // Janela da escala: a mesma conta da pista em tela, para que a barra impressa
@@ -4211,7 +4286,7 @@ function janelaDoPlano(lista) {
   const hoje = hojeChave();
   const { horizonte, prazoInicio, prazoFim } = state.filtrosProjeto;
   let inicio = prazoInicio || hoje;
-  let fim = prazoFim || chaveMaisDias(hoje, horizonte);
+  let fim = prazoFim || (horizonte === HORIZONTE_TODAS && lista.length ? lista[0].prazoEntrega : chaveMaisDias(hoje, horizonte));
   lista.forEach((p) => {
     if (p.dataInicio && p.dataInicio < inicio) inicio = p.dataInicio;
     if (p.prazoEntrega < inicio) inicio = p.prazoEntrega;
@@ -4236,14 +4311,26 @@ function escalaPlanoExport(lista) {
 
   const barras = lista
     .map((p) => {
-      const ini = p.dataInicio && p.dataInicio > inicio ? p.dataInicio : inicio;
-      const esq = pct(ini);
-      const largura = Math.max(pct(p.prazoEntrega) - esq, 1.5);
       const s = situacaoDoProjeto(p);
       const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+      const trilho = `<span style="position:absolute;left:0;right:0;top:6px;height:3px;background:${EXP.bordaSuave};border-radius:2px"></span>`;
+
+      // Sem data de início, um marco no prazo — a mesma escolha da tela, pelo
+      // mesmo motivo: não desenhar um período que ninguém informou.
+      if (!p.dataInicio) {
+        const x = pct(p.prazoEntrega);
+        return `
+          <div style="position:relative;height:15px;margin-bottom:5px">
+            ${trilho}
+            <span style="position:absolute;left:${x}%;top:1px;width:9px;height:13px;margin-left:-4px;background:${s.cor};border-radius:3px"></span>
+          </div>`;
+      }
+
+      const esq = pct(p.dataInicio > inicio ? p.dataInicio : inicio);
+      const largura = Math.max(pct(p.prazoEntrega) - esq, 1.5);
       return `
         <div style="position:relative;height:15px;margin-bottom:5px">
-          <span style="position:absolute;left:0;right:0;top:6px;height:3px;background:${EXP.bordaSuave};border-radius:2px"></span>
+          ${trilho}
           <span style="position:absolute;left:${esq}%;width:${largura}%;top:0;height:15px;background:${s.cor};border-radius:4px;overflow:hidden">
             <span style="position:absolute;left:0;top:0;bottom:0;width:${progresso}%;background:rgba(255,255,255,.28)"></span>
           </span>
@@ -4294,26 +4381,30 @@ function linhaPlanoExport(p) {
         <span style="display:inline-block;font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.04em;color:${s.cor};background:${s.bg};border:1px solid ${s.borda};border-radius:999px;padding:5px 9px">${escapeHtml(s.label.toUpperCase())}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px">
-        <span style="font:600 11px/1 'IBM Plex Mono',monospace;color:${EXP.tinta}">${progresso}%</span>
-        <span style="display:block;height:4px;background:${EXP.bordaSuave};border-radius:2px;overflow:hidden">
-          <span style="display:block;height:4px;width:${progresso}%;background:${s.cor}"></span>
-        </span>
+        ${
+          p.tipo === "contrato"
+            ? `<span style="font:400 9.5px/1.4 'IBM Plex Sans',sans-serif;color:${EXP.texto3}">contrato</span>`
+            : `<span style="font:600 11px/1 'IBM Plex Mono',monospace;color:${EXP.tinta}">${progresso}%</span>
+               <span style="display:block;height:4px;background:${EXP.bordaSuave};border-radius:2px;overflow:hidden">
+                 <span style="display:block;height:4px;width:${progresso}%;background:${s.cor}"></span>
+               </span>`
+        }
       </div>
     </div>`;
 }
 
 function construirExtratoPlano(lista) {
-  const emAndamento = lista.filter((p) => p.situacao === "em-andamento").length;
-  const risco = lista.filter((p) => projetoAtrasado(p) || p.situacao === "em-risco").length;
-  const concluidos = lista.filter((p) => p.situacao === "concluido").length;
+  const emAndamento = lista.filter((p) => situacaoEfetiva(p) === "em-andamento").length;
+  const risco = lista.filter(exigeProvidencia).length;
+  const concluidos = lista.filter((p) => situacaoEfetiva(p) === "concluido").length;
 
   const indicadores = [
     { rotulo: "PROJETOS", valor: lista.length },
     { rotulo: "EM ANDAMENTO", valor: emAndamento },
     {
-      // Cela de ~140px: "Em risco ou atrasados" quebraria em duas linhas e
+      // Cela de ~140px: "Em risco ou vencidos" quebraria em duas linhas e
       // desalinharia este número dos demais da fileira.
-      rotulo: "RISCO OU ATRASO",
+      rotulo: "RISCO OU VENCIDO",
       valor: risco,
       cor: risco ? EXP.vermelho : EXP.navy,
       destaque: risco > 0,
@@ -4567,7 +4658,7 @@ function abrirPainelProjeto(id) {
 
   document.getElementById("proj-painel-corpo").innerHTML = `
     ${p.descricao ? `<p class="detail-panel__descricao">${escapeHtml(p.descricao)}</p>` : ""}
-    ${linha("Situação", projetoAtrasado(p) ? "Atrasado" : (SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO]).label)}
+    ${linha("Situação", projetoAtrasado(p) ? "Atrasado" : (SITUACOES[situacaoEfetiva(p)] || SITUACOES[SITUACAO_PADRAO]).label)}
     ${linha("Progresso", `${Math.max(0, Math.min(100, Number(p.progresso) || 0))}%`)}
     ${linha("Lançamento", dataLegivel(p.dataInicio))}
     ${linha("Prazo de entrega", `${dataLegivel(p.prazoEntrega)} — ${rotuloPrazo(p)}`)}
@@ -4578,7 +4669,9 @@ function abrirPainelProjeto(id) {
 
   // O formulário abre já com a situação corrente, para que lançar só a nota
   // não mude a situação sem querer.
-  document.getElementById("status-situacao").value = p.situacao || SITUACAO_PADRAO;
+  const selectStatus = document.getElementById("status-situacao");
+  selectStatus.value = situacaoEfetiva(p);
+  aplicarTravaDeContrato(p, selectStatus, document.getElementById("status-situacao-nota"));
   const faixa = document.getElementById("status-progresso");
   faixa.value = Math.max(0, Math.min(100, Number(p.progresso) || 0));
   document.getElementById("status-progresso-valor").textContent = `${faixa.value}%`;
@@ -4604,7 +4697,9 @@ function lancarStatus() {
   const p = projetoPorId(state.projetoAberto);
   if (!p) return;
 
-  const situacao = document.getElementById("status-situacao").value;
+  // Num contrato a situação vem da vigência; gravar a escolha do campo criaria
+  // um histórico contando uma versão que a tela não mostra.
+  const situacao = p.tipo === "contrato" ? situacaoEfetiva(p) : document.getElementById("status-situacao").value;
   const progresso = Number(document.getElementById("status-progresso").value) || 0;
   const nota = document.getElementById("status-nota").value.trim();
 
@@ -4621,6 +4716,19 @@ function lancarStatus() {
 /* --------------------------------------------------------------------------
    Cadastro e edição
    -------------------------------------------------------------------------- */
+
+// Trava o campo de situação quando o registro é um contrato, dizendo por quê.
+// Deixar o campo editável e ignorar o que for escolhido seria pior do que
+// desabilitá-lo: a pessoa lançaria uma situação e nada mudaria na tela.
+function aplicarTravaDeContrato(p, select, nota) {
+  const ehContrato = Boolean(p && p.tipo === "contrato");
+  if (select) select.disabled = ehContrato;
+  if (!nota) return;
+  nota.hidden = !ehContrato;
+  nota.textContent = ehContrato
+    ? `Situação de contrato vem da vigência: vencido quando a data passa, em risco a ${RISCO_CONTRATO_DIAS} dias ou menos do fim, em andamento antes disso.`
+    : "";
+}
 
 function preencherSelectSituacoes(select, valor) {
   select.innerHTML = Object.entries(SITUACOES)
@@ -4655,7 +4763,9 @@ function abrirFormProjeto(id) {
   // dias" quer dizer, e evita abrir o seletor de datas no vazio.
   document.getElementById("proj-prazo").value = p ? p.prazoEntrega : chaveMaisDias(hojeChave(), HORIZONTE_PADRAO);
 
-  preencherSelectSituacoes(document.getElementById("proj-situacao"), p ? p.situacao : SITUACAO_PADRAO);
+  const selectForm = document.getElementById("proj-situacao");
+  preencherSelectSituacoes(selectForm, p ? situacaoEfetiva(p) : SITUACAO_PADRAO);
+  aplicarTravaDeContrato(p, selectForm, document.getElementById("proj-situacao-nota"));
   const faixa = document.getElementById("proj-progresso");
   faixa.value = p ? Math.max(0, Math.min(100, Number(p.progresso) || 0)) : 0;
   document.getElementById("proj-progresso-valor").textContent = `${faixa.value}%`;
@@ -4866,8 +4976,8 @@ function renderizarPortalProjetos() {
     .filter((p) => p.prazoEntrega <= limite)
     .sort((a, b) => a.prazoEntrega.localeCompare(b.prazoEntrega));
 
-  const andamento = lista.filter((p) => p.situacao === "em-andamento").length;
-  const risco = lista.filter((p) => projetoAtrasado(p) || p.situacao === "em-risco").length;
+  const andamento = lista.filter((p) => situacaoEfetiva(p) === "em-andamento").length;
+  const risco = lista.filter(exigeProvidencia).length;
 
   const definir = (id, texto) => {
     const el = document.getElementById(id);
@@ -4883,7 +4993,7 @@ function renderizarPortalProjetos() {
 
   const destaque = document.getElementById("portal-proj-destaque");
   if (destaque) {
-    const pendentes = lista.filter((p) => p.situacao !== "concluido");
+    const pendentes = lista.filter((p) => situacaoEfetiva(p) !== "concluido");
     if (!state.projetos.length) {
       destaque.textContent = "Nenhum projeto lançado. Comece cadastrando as entregas dos próximos 100 dias.";
       destaque.classList.remove("portal-card__destaque--forte");
@@ -4899,7 +5009,7 @@ function renderizarPortalProjetos() {
 
   const selo = document.getElementById("portal-proj-selo");
   if (selo) {
-    const concluidos = lista.filter((p) => p.situacao === "concluido").length;
+    const concluidos = lista.filter((p) => situacaoEfetiva(p) === "concluido").length;
     selo.textContent = lista.length
       ? `${concluidos} de ${plural(lista.length, "entrega concluída", "entregas concluídas")}`
       : "Horizonte de 100 dias";
@@ -5070,7 +5180,8 @@ function inicializarModuloProjetos() {
 
   document.querySelectorAll("#horizonte-group .chip").forEach((chip) => {
     chip.addEventListener("click", () => {
-      state.filtrosProjeto.horizonte = Number(chip.dataset.horizonte) || HORIZONTE_PADRAO;
+      const valor = Number(chip.dataset.horizonte);
+      state.filtrosProjeto.horizonte = Number.isFinite(valor) ? valor : HORIZONTE_PADRAO;
       // Escolher um horizonte descarta o intervalo do calendário: são dois
       // caminhos para a mesma janela, e o último a ser usado é o que vale.
       state.filtrosProjeto.prazoInicio = null;

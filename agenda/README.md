@@ -127,10 +127,39 @@ Projetos em desenvolvimento com entrega prevista dentro de um horizonte
 **Cadastro do projeto:** nome, objetivo/escopo, responsável, área, data de
 lançamento, prazo de entrega, situação e progresso.
 
-**Situações:** não iniciado, em andamento, em risco, concluído e suspenso.
-*Atrasado* não é uma delas: é derivado do prazo vencido sem entrega. Deixar
-alguém marcar "atrasado" à mão produziria projetos vencidos ainda exibidos
-como em dia.
+**Situações:** não iniciado, em andamento, em risco, concluído, suspenso e
+vencido. *Atrasado* não é uma delas: é derivado do prazo vencido sem entrega.
+Deixar alguém marcar "atrasado" à mão produziria projetos vencidos ainda
+exibidos como em dia. *Concluído* e *vencido* são a palavra final sobre o
+prazo, e por isso não recebem "atrasado" por cima.
+
+#### Contratos
+
+Um registro com `tipo: "contrato"` não tem situação digitada: ela **decorre da
+vigência**, e o campo aparece travado com a regra escrita ao lado.
+
+| Vigência | Situação |
+| --- | --- |
+| já passou | **Vencido** |
+| faltam 90 dias ou menos | **Em risco** |
+| mais que isso | **Em andamento** |
+
+A antecedência de 90 dias é a janela para prorrogar ou abrir nova licitação.
+Derivar em vez de gravar é o que impede o painel de envelhecer: no dia em que
+a vigência passa, o mesmo registro deixa de ser "em risco" e passa a
+"vencido" sozinho, sem depender de alguém lembrar de atualizar.
+
+Contrato não mostra barra de progresso nem "% concluído" — o que importa é
+quanto resta de vigência — e o rótulo de prazo fala a língua do registro:
+"vigência vencida há 32 dias", não "32 dias de atraso".
+
+**Sem data de início não há período a desenhar.** Na linha de entrega esses
+registros viram um **marco no prazo**, não uma barra esticada da borda da
+janela até a data: a barra inventaria um começo, e um que mudaria de lugar a
+cada troca de filtro.
+
+**Horizonte "Todas":** os chips de entrega incluem uma opção sem teto de data,
+porque contratos correm por anos e a janela de 100 dias esconderia a maioria.
 
 **Histórico:** cada lançamento registra data e hora, situação, progresso e uma
 nota do que mudou, e entra no topo da pilha sem apagar o anterior. Editar
