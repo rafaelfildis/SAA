@@ -76,9 +76,9 @@ const state = {
   },
 };
 
-// Estado do módulo Calendário 100 dias. Fica junto do resto para que haja um
-// só lugar onde olhar quando a tela não corresponde ao esperado.
-state.modulo = "agenda"; // agenda | projetos
+// Estado do portal e do módulo Plano 100 dias. Fica junto do resto para que
+// haja um só lugar onde olhar quando a tela não corresponde ao esperado.
+state.modulo = "portal"; // portal | agenda | projetos
 state.projetos = [];
 state.projetoAberto = null;
 state.projetoEditando = null;
@@ -2444,6 +2444,10 @@ function mostrarAvisoCache() {
 function renderizarTudo() {
   renderizarConteudo();
   renderizarUltimaAtualizacao();
+
+  // O portal resume os mesmos dados; sem isto ele ficaria com os números
+  // do carregamento anterior depois de cada sincronização.
+  if (state.modulo === "portal") renderizarPortal();
 }
 
 /* ==========================================================================
@@ -3741,6 +3745,11 @@ function aplicarFiltrosDaURL() {
   const params = new URLSearchParams(window.location.search);
   const dataValida = (v) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
+  // "?modulo=" abre o sistema direto em um módulo. Aceita "plano" como
+  // sinônimo de "projetos" para que o link acompanhe o nome exibido na tela.
+  const pedido = (params.get("modulo") || "").toLowerCase();
+  const moduloPedido = pedido === "plano" || pedido === "plano100" ? "projetos" : pedido;
+
   const dia = dataValida(params.get("data"));
   const de = dia || dataValida(params.get("de"));
   const ate = dia || dataValida(params.get("ate"));
@@ -3757,6 +3766,9 @@ function aplicarFiltrosDaURL() {
     if (campoFim) campoFim.value = ate || "";
     atualizarVisibilidadeBtnLimparDatas();
     sincronizarChipsPeriodo();
+    // Um intervalo explícito na URL é um pedido pela agenda — é o formato dos
+    // links do envio diário. Abrir o portal aqui esconderia o que foi pedido.
+    trocarModulo(moduloPedido || "agenda");
     return;
   }
 
@@ -3764,7 +3776,11 @@ function aplicarFiltrosDaURL() {
   if (["dia", "semana", "mes", "todos"].includes(periodo)) {
     state.filtros.periodo = periodo;
     sincronizarChipsPeriodo();
+    trocarModulo(moduloPedido || "agenda");
+    return;
   }
+
+  trocarModulo(moduloPedido || "portal");
 }
 
 // Ponto de automação. Expõe a geração do artefato para processos que abrem
@@ -4383,37 +4399,244 @@ function importarProjetos(arquivo) {
 }
 
 /* --------------------------------------------------------------------------
+   Portal
+   --------------------------------------------------------------------------
+   Tela de entrada do sistema. Não é uma capa decorativa: cada cartão mostra o
+   estado real do seu módulo, lido das mesmas fontes que as telas internas
+   usam — os eventos já carregados e os projetos gravados. Assim a página
+   inicial responde "o que exige atenção agora?" antes de qualquer clique, em
+   vez de obrigar a entrar em cada módulo para descobrir.
+   -------------------------------------------------------------------------- */
+
+// Compromissos de um dia específico, ignorando os filtros da tela — o portal
+// resume a base inteira, não o recorte que estiver em vigor na agenda.
+function eventosDoDia(chave) {
+  return state.eventos.filter((e) => chaveDia(new Date(e.inicio)) === chave);
+}
+
+function eventosNaJanela(chaveInicio, dias) {
+  const fim = chaveMaisDias(chaveInicio, dias);
+  return state.eventos.filter((e) => {
+    const c = chaveDia(new Date(e.inicio));
+    return c >= chaveInicio && c <= fim;
+  });
+}
+
+function plural(n, singular, pluralPalavra) {
+  return `${n} ${n === 1 ? singular : pluralPalavra}`;
+}
+
+function renderizarPortalAgenda() {
+  const hoje = hojeChave();
+  const doDia = eventosDoDia(hoje);
+  const semana = eventosNaJanela(hoje, 7);
+
+  const definir = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  };
+
+  definir("portal-agenda-hoje", String(doDia.length));
+  definir("portal-agenda-semana", String(semana.length));
+  definir("portal-agenda-total", String(state.eventos.length));
+
+  // O destaque aponta o próximo compromisso ainda por acontecer. Quando o dia
+  // já venceu, olha adiante em vez de dizer apenas "nada hoje" — a pergunta
+  // real de quem abre o sistema é qual é o próximo passo.
+  const agora = Date.now();
+  const proximo = state.eventos
+    .filter((e) => new Date(e.fim).getTime() > agora)
+    .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))[0];
+
+  const destaque = document.getElementById("portal-agenda-destaque");
+  if (destaque) {
+    if (!state.eventos.length) {
+      destaque.textContent = "Nenhum compromisso sincronizado até o momento.";
+      destaque.classList.remove("portal-card__destaque--forte");
+    } else if (proximo) {
+      const mesmoDia = chaveDia(new Date(proximo.inicio)) === hoje;
+      const quando = mesmoDia
+        ? `hoje, ${formatarHora(new Date(proximo.inicio))}`
+        : `${formatarDataLonga(new Date(proximo.inicio))}, ${formatarHora(new Date(proximo.inicio))}`;
+      destaque.textContent = `Próximo: ${proximo.titulo} — ${quando}.`;
+      destaque.classList.add("portal-card__destaque--forte");
+    } else {
+      destaque.textContent = "Sem compromissos futuros na base sincronizada.";
+      destaque.classList.remove("portal-card__destaque--forte");
+    }
+  }
+
+  const selo = document.getElementById("portal-agenda-selo");
+  if (selo) {
+    if (state.ultimaAtualizacao) {
+      selo.textContent = `Sincronizado ${formatarHora(state.ultimaAtualizacao)}`;
+      selo.classList.toggle("portal-card__selo--aviso", Boolean(state.usandoCache));
+    } else {
+      selo.textContent = "Sincronizando…";
+      selo.classList.remove("portal-card__selo--aviso");
+    }
+  }
+}
+
+function renderizarPortalProjetos() {
+  // Conta sobre a base inteira dentro do horizonte padrão, sem os filtros de
+  // situação e busca do módulo — o portal não deve variar conforme o recorte
+  // que ficou selecionado na outra tela.
+  const limite = chaveMaisDias(hojeChave(), HORIZONTE_PADRAO);
+  const lista = state.projetos
+    .filter((p) => p.prazoEntrega <= limite)
+    .sort((a, b) => a.prazoEntrega.localeCompare(b.prazoEntrega));
+
+  const andamento = lista.filter((p) => p.situacao === "em-andamento").length;
+  const risco = lista.filter((p) => projetoAtrasado(p) || p.situacao === "em-risco").length;
+
+  const definir = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  };
+
+  definir("portal-proj-total", String(lista.length));
+  definir("portal-proj-andamento", String(andamento));
+  definir("portal-proj-risco", String(risco));
+
+  const celRisco = document.getElementById("portal-proj-cel-risco");
+  if (celRisco) celRisco.classList.toggle("portal-metrica--acesa", risco > 0);
+
+  const destaque = document.getElementById("portal-proj-destaque");
+  if (destaque) {
+    const pendentes = lista.filter((p) => p.situacao !== "concluido");
+    if (!state.projetos.length) {
+      destaque.textContent = "Nenhum projeto lançado. Comece cadastrando as entregas dos próximos 100 dias.";
+      destaque.classList.remove("portal-card__destaque--forte");
+    } else if (!pendentes.length) {
+      destaque.textContent = "Todas as entregas do horizonte estão concluídas.";
+      destaque.classList.remove("portal-card__destaque--forte");
+    } else {
+      const p = pendentes[0];
+      destaque.textContent = `Próxima entrega: ${p.nome} — ${rotuloPrazo(p)}.`;
+      destaque.classList.add("portal-card__destaque--forte");
+    }
+  }
+
+  const selo = document.getElementById("portal-proj-selo");
+  if (selo) {
+    const concluidos = lista.filter((p) => p.situacao === "concluido").length;
+    selo.textContent = lista.length
+      ? `${concluidos} de ${plural(lista.length, "entrega concluída", "entregas concluídas")}`
+      : "Horizonte de 100 dias";
+    selo.classList.remove("portal-card__selo--aviso");
+  }
+}
+
+function renderizarPortal() {
+  const data = document.getElementById("portal-data");
+  if (data) {
+    const hoje = formatarDataLonga(new Date());
+    data.textContent = hoje.charAt(0).toUpperCase() + hoje.slice(1);
+  }
+  renderizarPortalAgenda();
+  renderizarPortalProjetos();
+}
+
+function inicializarPortal() {
+  // Delegação no documento: os gatilhos do portal são cartões e também o
+  // "Início" da trilha de navegação, que vivem em partes diferentes da página.
+  document.addEventListener("click", (ev) => {
+    const gatilho = ev.target.closest("[data-ir]");
+    if (!gatilho) return;
+    ev.preventDefault();
+    trocarModulo(gatilho.dataset.ir);
+  });
+
+  // Os cartões são <article> com role="button": o teclado precisa do mesmo
+  // comportamento que o mouse tem.
+  document.querySelectorAll(".portal-card[data-ir]").forEach((card) => {
+    card.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      ev.preventDefault();
+      trocarModulo(card.dataset.ir);
+    });
+  });
+}
+
+/* --------------------------------------------------------------------------
    Troca de módulo
    -------------------------------------------------------------------------- */
 
+const MODULOS = ["portal", "agenda", "projetos"];
+
+const ROTULO_MODULO = {
+  portal: "Portal",
+  agenda: "Agenda",
+  projetos: "Plano 100 dias",
+};
+
+// A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
+// do Google Agenda" descreve a agenda, não o plano de entregas.
+const SUBTITULO_MODULO = {
+  portal: "TCM-BA — Agenda institucional e Plano 100 dias",
+  agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
+  projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
+};
+
 function trocarModulo(modulo) {
-  state.modulo = modulo === "projetos" ? "projetos" : "agenda";
-  const ehProjetos = state.modulo === "projetos";
+  state.modulo = MODULOS.includes(modulo) ? modulo : "portal";
+  const atual = state.modulo;
 
-  document.getElementById("modulo-agenda").hidden = ehProjetos;
-  document.getElementById("modulo-projetos").hidden = !ehProjetos;
-  document.getElementById("filtros-agenda").hidden = ehProjetos;
-  document.getElementById("filtros-projetos").hidden = !ehProjetos;
+  document.getElementById("modulo-portal").hidden = atual !== "portal";
+  document.getElementById("modulo-agenda").hidden = atual !== "agenda";
+  document.getElementById("modulo-projetos").hidden = atual !== "projetos";
+  document.getElementById("filtros-agenda").hidden = atual !== "agenda";
+  document.getElementById("filtros-projetos").hidden = atual !== "projetos";
 
-  // A busca do topo e a exportação pertencem à agenda; no outro módulo elas
-  // não teriam o que fazer e só confundiriam.
+  // Busca, exportação e atualização pertencem a módulos específicos; onde não
+  // teriam o que fazer, saem da tela em vez de ficarem inertes.
   const busca = document.getElementById("busca");
-  if (busca) busca.placeholder = ehProjetos ? "Buscar por projeto, responsável ou área…" : "Buscar por título, descrição ou local…";
-  document.getElementById("btn-abrir-export").hidden = ehProjetos;
-  document.getElementById("btn-atualizar").hidden = ehProjetos;
+  const campoBusca = busca && busca.closest(".topbar__search");
+  if (campoBusca) campoBusca.hidden = atual === "portal";
+  if (busca) {
+    busca.placeholder =
+      atual === "projetos"
+        ? "Buscar por projeto, responsável ou área…"
+        : "Buscar por título, descrição ou local…";
+  }
+  document.getElementById("btn-abrir-export").hidden = atual !== "agenda";
+  document.getElementById("btn-atualizar").hidden = atual !== "agenda";
 
-  document.querySelectorAll("#modulo-projetos, #modulo-agenda").forEach(() => {});
   document.querySelectorAll(".sidebar__nav-item").forEach((b) => {
-    const ativo = b.dataset.modulo === state.modulo;
+    const ativo = b.dataset.modulo === atual;
     b.classList.toggle("is-active", ativo);
     if (ativo) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   });
 
-  const trilha = document.querySelector(".breadcrumbs li[aria-current]");
-  if (trilha) trilha.textContent = ehProjetos ? "Calendário 100 dias" : "Agenda";
+  // No portal a trilha se resume ao próprio início; nos módulos ela ganha o
+  // segundo nível e o "Início" volta a ser um link de retorno.
+  const trilhaLista = document.querySelector(".breadcrumbs ol");
+  const trilhaInicio = document.querySelector('.breadcrumbs [data-ir="portal"]');
+  const trilhaAtual = document.querySelector(".breadcrumbs li[aria-current]");
+  if (trilhaAtual) trilhaAtual.textContent = ROTULO_MODULO[atual];
+  if (trilhaLista) trilhaLista.classList.toggle("breadcrumbs--raiz", atual === "portal");
+  if (trilhaInicio) trilhaInicio.setAttribute("aria-disabled", atual === "portal" ? "true" : "false");
 
-  if (ehProjetos) renderizarProjetos();
+  const sub = document.getElementById("topbar-sub");
+  if (sub) sub.textContent = SUBTITULO_MODULO[atual];
+
+  // A assinatura de rodapé repete a marca que o cabeçalho do portal já
+  // apresenta; nos módulos ela continua fechando o conteúdo.
+  const assinatura = document.querySelector(".content-signature");
+  if (assinatura) assinatura.hidden = atual === "portal";
+
+  // Fechar a gaveta ao navegar evita que o menu fique aberto por cima do
+  // módulo recém-aberto no celular.
+  if (window.innerWidth <= 860) fecharSidebarMobile();
+
+  const principal = document.getElementById("conteudo-principal");
+  if (principal) principal.scrollTop = 0;
+  window.scrollTo({ top: 0, behavior: "auto" });
+
+  if (atual === "projetos") renderizarProjetos();
+  if (atual === "portal") renderizarPortal();
 }
 
 /* --------------------------------------------------------------------------
@@ -4492,6 +4715,7 @@ function inicializarModuloProjetos() {
 function iniciar() {
   inicializarInterface();
   inicializarModuloProjetos();
+  inicializarPortal();
   aplicarFiltrosDaURL();
 
   // Pré-carrega as marcas institucionais em data URL: o html2canvas só

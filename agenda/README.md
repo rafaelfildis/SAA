@@ -79,16 +79,47 @@ publicar a marca do Tribunal cortada.
 - **Modal de confirmação** antes de exportações grandes (>40 compromissos) e **validação inline** do filtro de datas.
 - Acessibilidade: skip-link, `:focus-visible`, landmarks (`header`/`nav`/`main`/`aside`), `aria-live`/`aria-invalid`/`aria-expanded`, tecla Esc fecha painéis/drawer/modal na ordem correta.
 
+## Portal
+
+A tela de entrada é um portal com um cartão por módulo. Não é uma capa
+decorativa: cada cartão lê o estado real do seu módulo — os compromissos já
+sincronizados e os projetos gravados — e responde "o que exige atenção agora?"
+antes de qualquer clique.
+
+**Cartão da Agenda:** compromissos de hoje, dos próximos 7 dias, total na base,
+o próximo compromisso ainda por acontecer e o horário da última sincronização.
+Quando o dia já venceu, o destaque olha adiante em vez de dizer apenas "nada
+hoje".
+
+**Cartão do Plano 100 dias:** projetos no horizonte, em andamento, em risco ou
+atrasados, e a próxima entrega com o prazo em dias. A cela de risco só acende
+quando existe algo a alertar — uma cela vermelha permanente deixa de ser sinal
+e vira ruído.
+
+Os números do portal ignoram os filtros em vigor nas telas internas: a página
+inicial resume a base, não o recorte que ficou selecionado em outro módulo.
+
+**Navegação:** cartões (clique, Enter ou espaço), a barra lateral e o "Início"
+da trilha de navegação levam de um lado a outro. Busca, atualização e
+exportação pertencem a módulos específicos e saem da tela onde não teriam o que
+fazer, em vez de ficarem inertes.
+
+**Links diretos:** `?modulo=agenda`, `?modulo=plano` (ou `?modulo=projetos`) e
+`?modulo=portal` abrem o sistema direto em um módulo. Um intervalo explícito de
+datas na URL (`?data=`, `?de=`/`?ate=`) continua caindo na agenda — é o formato
+dos links do envio diário, e abrir o portal ali esconderia o que foi pedido.
+
 ## Módulos
 
-O sistema tem dois módulos, alternados pela navegação da barra lateral.
+O sistema tem dois módulos, alcançados pelo portal ou pela navegação da barra
+lateral.
 
 ### Agenda
 
 Compromissos do dia lidos do Google Agenda. **Somente leitura** — a origem é o
 calendário, e o painel não grava nada.
 
-### Calendário 100 dias
+### Plano 100 dias
 
 Projetos em desenvolvimento com entrega prevista dentro de um horizonte
 (100, 30 ou 7 dias), e o histórico de status de cada um.
