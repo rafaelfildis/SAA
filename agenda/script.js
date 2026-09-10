@@ -76,6 +76,18 @@ const state = {
   },
 };
 
+// Estado do módulo Calendário 100 dias. Fica junto do resto para que haja um
+// só lugar onde olhar quando a tela não corresponde ao esperado.
+state.modulo = "agenda"; // agenda | projetos
+state.projetos = [];
+state.projetoAberto = null;
+state.projetoEditando = null;
+state.filtrosProjeto = {
+  horizonte: 100,
+  situacoes: new Set(),
+  busca: "",
+};
+
 const SIDEBAR_RECOLHIDA_STORAGE_KEY = "saaTcm.sidebarRecolhida";
 
 /* ==========================================================================
@@ -3403,7 +3415,14 @@ function inicializarInterface() {
   document.getElementById("btn-atualizar").addEventListener("click", () => atualizarAgenda());
   document.getElementById("btn-tentar-novamente").addEventListener("click", () => atualizarAgenda());
 
+  // A busca do topo é única, mas cada módulo tem o seu conjunto de dados: ela
+  // filtra o que estiver em tela, em vez de existir duas caixas de busca.
   document.getElementById("busca").addEventListener("input", (ev) => {
+    if (state.modulo === "projetos") {
+      state.filtrosProjeto.busca = ev.target.value;
+      renderizarProjetos();
+      return;
+    }
     state.filtros.busca = ev.target.value;
     renderizarConteudo();
   });
@@ -3779,8 +3798,700 @@ window.saaGerarCard = async function ({ formato = "mobile", proporcao = "story",
   };
 };
 
+/* ==========================================================================
+   MÓDULO CALENDÁRIO 100 DIAS
+   --------------------------------------------------------------------------
+   Projetos em desenvolvimento com prazo de entrega dentro de um horizonte de
+   100 dias, e o histórico de status de cada um.
+
+   Diferença essencial em relação à agenda: a agenda é SOMENTE LEITURA — ela
+   busca um ICS e não grava nada. Aqui os dados nascem no próprio sistema, o
+   que exige um lugar para persistir.
+
+   Persistência: localStorage, isto é, no navegador de quem usa. É o único
+   destino possível sem servidor de dados e sem autenticação — e o site é
+   público, então um banco compartilhado deixaria qualquer visitante criar,
+   editar e apagar projetos do gabinete. A consequência (os projetos não
+   aparecem em outro dispositivo) está dita na própria tela, não escondida
+   aqui no código, e há exportação/importação em JSON para levar os dados de
+   uma máquina a outra enquanto não houver back-end.
+
+   Toda a leitura e gravação passa por lerProjetos/gravarProjetos: trocar o
+   destino depois é mexer nessas duas funções, não na tela.
+   ========================================================================== */
+
+const PROJETOS_STORAGE_KEY = "saaTcm.projetos.v1";
+const HORIZONTE_PADRAO = 100;
+
+const SITUACOES = {
+  "nao-iniciado": { label: "Não iniciado", cor: "#5F6E88", bg: "#EFF2F7", borda: "#DCE3EE" },
+  "em-andamento": { label: "Em andamento", cor: "#2C63B0", bg: "#EAF2FC", borda: "#C9DCF4" },
+  "em-risco": { label: "Em risco", cor: "#A65A05", bg: "#FDF1E3", borda: "#F0DCBE" },
+  concluido: { label: "Concluído", cor: "#0F7B5F", bg: "#E7F4F0", borda: "#C4E3D9" },
+  suspenso: { label: "Suspenso", cor: "#B00320", bg: "#FDECEF", borda: "#F6C4CE" },
+};
+
+const SITUACAO_PADRAO = "nao-iniciado";
+
+/* --------------------------------------------------------------------------
+   Persistência
+   -------------------------------------------------------------------------- */
+
+function lerProjetos() {
+  try {
+    const bruto = localStorage.getItem(PROJETOS_STORAGE_KEY);
+    if (!bruto) return [];
+    const dados = JSON.parse(bruto);
+    return Array.isArray(dados) ? dados.filter(projetoValido) : [];
+  } catch (e) {
+    console.warn("Não foi possível ler os projetos salvos:", e);
+    return [];
+  }
+}
+
+function gravarProjetos(projetos) {
+  try {
+    localStorage.setItem(PROJETOS_STORAGE_KEY, JSON.stringify(projetos));
+    return true;
+  } catch (e) {
+    console.error("Não foi possível gravar os projetos:", e);
+    mostrarErroProjeto("Não foi possível salvar. O armazenamento do navegador pode estar cheio ou bloqueado.");
+    return false;
+  }
+}
+
+// Um registro vindo do armazenamento (ou de um arquivo restaurado) só é aceito
+// com o mínimo que a tela precisa para não quebrar ao renderizar.
+function projetoValido(p) {
+  return Boolean(
+    p &&
+      typeof p.id === "string" &&
+      typeof p.nome === "string" &&
+      p.nome.trim() &&
+      /^\d{4}-\d{2}-\d{2}$/.test(p.prazoEntrega || "")
+  );
+}
+
+/* --------------------------------------------------------------------------
+   Cálculos derivados
+   -------------------------------------------------------------------------- */
+
+function hojeChave() {
+  return chaveDia(new Date());
+}
+
+// Diferença em dias entre duas datas "YYYY-MM-DD". Meio-dia como referência
+// evita que o horário de gravação faça a conta pular um dia.
+function diasEntreChaves(de, ate) {
+  const a = new Date(`${de}T12:00:00${offsetBahia()}`).getTime();
+  const b = new Date(`${ate}T12:00:00${offsetBahia()}`).getTime();
+  return Math.round((b - a) / 86400000);
+}
+
+function chaveMaisDias(chave, dias) {
+  const d = new Date(`${chave}T12:00:00${offsetBahia()}`);
+  d.setDate(d.getDate() + dias);
+  return chaveDia(d);
+}
+
+// Atraso é derivado, nunca digitado: o prazo passou e a entrega não aconteceu.
+// Deixar o usuário marcar "atrasado" à mão produziria projetos vencidos ainda
+// exibidos como em dia.
+function projetoAtrasado(p) {
+  return p.situacao !== "concluido" && diasEntreChaves(hojeChave(), p.prazoEntrega) < 0;
+}
+
+function diasRestantes(p) {
+  return diasEntreChaves(hojeChave(), p.prazoEntrega);
+}
+
+function rotuloPrazo(p) {
+  const dias = diasRestantes(p);
+  if (p.situacao === "concluido") return "entregue";
+  if (dias < 0) return `${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"} de atraso`;
+  if (dias === 0) return "vence hoje";
+  if (dias === 1) return "vence amanhã";
+  return `faltam ${dias} dias`;
+}
+
+function corDoProjeto(p) {
+  if (projetoAtrasado(p)) return SITUACOES.suspenso.cor;
+  return (SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO]).cor;
+}
+
+function projetosNoHorizonte() {
+  const { horizonte, situacoes, busca } = state.filtrosProjeto;
+  const hoje = hojeChave();
+  const limite = chaveMaisDias(hoje, horizonte);
+
+  return state.projetos
+    .filter((p) => {
+      // Fora do horizonte só some quem entrega depois dele. O que já venceu e
+      // não foi entregue continua na lista — sumir com um projeto atrasado
+      // seria esconder justamente o que precisa de atenção.
+      if (p.prazoEntrega > limite) return false;
+      if (situacoes.size && !situacoes.has(p.situacao)) return false;
+      if (busca) {
+        const alvo = normalizarTexto(`${p.nome} ${p.descricao || ""} ${p.responsavel || ""} ${p.area || ""}`);
+        if (!alvo.includes(normalizarTexto(busca))) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => a.prazoEntrega.localeCompare(b.prazoEntrega) || a.nome.localeCompare(b.nome));
+}
+
+/* --------------------------------------------------------------------------
+   Renderização
+   -------------------------------------------------------------------------- */
+
+function seloSituacao(p) {
+  const atrasado = projetoAtrasado(p);
+  const s = atrasado
+    ? { label: "Atrasado", cor: SITUACOES.suspenso.cor, bg: SITUACOES.suspenso.bg, borda: SITUACOES.suspenso.borda }
+    : SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO];
+  return `<span class="situacao-selo" style="color:${s.cor};background:${s.bg};border:1px solid ${s.borda}">${escapeHtml(s.label)}</span>`;
+}
+
+function renderizarResumoProjetos(lista) {
+  const emAndamento = lista.filter((p) => p.situacao === "em-andamento").length;
+  const risco = lista.filter((p) => projetoAtrasado(p) || p.situacao === "em-risco").length;
+  const concluidos = lista.filter((p) => p.situacao === "concluido").length;
+
+  document.getElementById("proj-stat-total").textContent = lista.length;
+  document.getElementById("proj-stat-andamento").textContent = emAndamento;
+  document.getElementById("proj-stat-andamento-rotulo").textContent = emAndamento === 1 ? "projeto" : "projetos";
+  document.getElementById("proj-stat-risco").textContent = risco;
+  document.getElementById("proj-stat-risco-rotulo").textContent = risco === 0 ? "nenhum" : risco === 1 ? "projeto" : "projetos";
+  document.getElementById("proj-stat-concluidos").textContent = concluidos;
+  document.getElementById("proj-cel-risco").classList.toggle("is-alerta", risco > 0);
+
+  const atrasados = lista.filter(projetoAtrasado);
+  const alerta = document.getElementById("proj-alerta");
+  if (atrasados.length) {
+    document.getElementById("proj-alerta-titulo").textContent =
+      atrasados.length === 1 ? "1 projeto com prazo vencido" : `${atrasados.length} projetos com prazo vencido`;
+    document.getElementById("proj-alerta-detalhe").textContent = atrasados
+      .slice(0, 3)
+      .map((p) => `${p.nome} (${rotuloPrazo(p)})`)
+      .join(" · ");
+    alerta.hidden = false;
+  } else {
+    alerta.hidden = true;
+  }
+
+  const badge = document.getElementById("nav-badge-projetos");
+  badge.textContent = state.projetos.length;
+  badge.hidden = state.projetos.length === 0;
+
+  document.getElementById("proj-resumo").textContent =
+    `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"}`;
+
+  const horizonte = state.filtrosProjeto.horizonte;
+  document.getElementById("proj-subtitulo").textContent =
+    `Entregas até ${formatarDataCurta(new Date(`${chaveMaisDias(hojeChave(), horizonte)}T12:00:00${offsetBahia()}`))} · horizonte de ${horizonte} dias`;
+}
+
+// Barras posicionadas numa escala de datas: início e prazo viram porcentagem
+// da janela, do mesmo jeito que a linha do tempo da agenda converte minutos.
+function renderizarPistaProjetos(lista) {
+  const card = document.getElementById("proj-pista-card");
+  const pista = document.getElementById("proj-pista");
+  const escala = document.getElementById("proj-escala");
+
+  if (!lista.length) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+
+  const hoje = hojeChave();
+  const horizonte = state.filtrosProjeto.horizonte;
+  // A janela começa no início mais antigo (ou hoje) para que projetos já em
+  // curso apareçam com a parte já percorrida, não colados na borda.
+  let inicioJanela = hoje;
+  lista.forEach((p) => {
+    if (p.dataInicio && p.dataInicio < inicioJanela) inicioJanela = p.dataInicio;
+  });
+  const fimJanela = chaveMaisDias(hoje, horizonte);
+  const total = Math.max(diasEntreChaves(inicioJanela, fimJanela), 1);
+  const pct = (chave) => (Math.min(Math.max(diasEntreChaves(inicioJanela, chave), 0), total) / total) * 100;
+
+  const passos = Math.min(6, total);
+  escala.innerHTML = Array.from({ length: passos + 1 }, (_, i) => {
+    const chave = chaveMaisDias(inicioJanela, Math.round((total / passos) * i));
+    const posicao = pct(chave);
+    return `<span class="proj-escala__marca" style="left:${posicao}%">${formatarDataCurta(new Date(`${chave}T12:00:00${offsetBahia()}`))}</span>`;
+  }).join("");
+
+  const linhas = lista
+    .map((p) => {
+      const ini = p.dataInicio && p.dataInicio > inicioJanela ? p.dataInicio : inicioJanela;
+      const esq = pct(ini);
+      const dir = pct(p.prazoEntrega);
+      const largura = Math.max(dir - esq, 1.5);
+      const cor = corDoProjeto(p);
+      const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+      return `
+        <div class="proj-barra-linha">
+          <button class="proj-barra" type="button" data-projeto="${escapeAttr(p.id)}"
+                  style="left:${esq}%;width:${largura}%;background:${cor};color:#fff"
+                  title="${escapeAttr(`${p.nome} — entrega ${formatarDataCurta(new Date(`${p.prazoEntrega}T12:00:00${offsetBahia()}`))}`)}">
+            <span class="proj-barra__progresso" style="width:${progresso}%"></span>
+            <span class="proj-barra__rotulo">${escapeHtml(p.nome)}</span>
+          </button>
+        </div>`;
+    })
+    .join("");
+
+  pista.innerHTML = `<div class="proj-pista__hoje" style="left:${pct(hoje)}%"></div>${linhas}`;
+  document.getElementById("proj-pista-contagem").textContent =
+    `${lista.length} ${lista.length === 1 ? "barra" : "barras"} · ${formatarDataCurta(new Date(`${inicioJanela}T12:00:00${offsetBahia()}`))} a ${formatarDataCurta(new Date(`${fimJanela}T12:00:00${offsetBahia()}`))}`;
+}
+
+function renderizarListaProjetos(lista) {
+  const alvo = document.getElementById("proj-lista");
+  const vazio = document.getElementById("proj-vazio");
+
+  if (!lista.length) {
+    alvo.innerHTML = "";
+    vazio.hidden = false;
+    document.getElementById("proj-vazio-msg").innerHTML = state.projetos.length
+      ? "Nenhum projeto corresponde aos filtros selecionados."
+      : "Nenhum projeto lançado ainda. Use <strong>Novo projeto</strong> para registrar o primeiro.";
+    return;
+  }
+  vazio.hidden = true;
+
+  alvo.innerHTML = lista
+    .map((p) => {
+      const cor = corDoProjeto(p);
+      const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+      const atrasado = projetoAtrasado(p);
+      const ultima = (p.historico || [])[0];
+      return `
+        <button class="proj-card" type="button" data-projeto="${escapeAttr(p.id)}">
+          <span class="proj-card__faixa" style="background:${cor}"></span>
+          <span class="proj-card__corpo">
+            <span class="proj-card__titulo">${escapeHtml(p.nome)}</span>
+            <span class="proj-card__meta">
+              ${seloSituacao(p)}
+              ${p.responsavel ? `<span>${escapeHtml(p.responsavel)}</span>` : ""}
+              ${p.area ? `<span>${escapeHtml(p.area)}</span>` : ""}
+              ${ultima && ultima.nota ? `<span>${escapeHtml(ultima.nota.slice(0, 90))}</span>` : ""}
+            </span>
+            <span class="proj-progresso-barra"><i style="width:${progresso}%;background:${cor}"></i></span>
+          </span>
+          <span class="proj-card__lado">
+            <span class="proj-prazo">${formatarDataCurta(new Date(`${p.prazoEntrega}T12:00:00${offsetBahia()}`))}</span>
+            <span class="proj-restante ${atrasado ? "proj-restante--alerta" : ""}" style="display:block">${escapeHtml(rotuloPrazo(p))}</span>
+            <span class="proj-restante" style="display:block">${progresso}% concluído</span>
+          </span>
+        </button>`;
+    })
+    .join("");
+}
+
+function renderizarFiltrosSituacao(lista) {
+  const container = document.getElementById("situacao-lista");
+  if (!container) return;
+  container.innerHTML = "";
+  Object.entries(SITUACOES).forEach(([chave, s]) => {
+    const ativo = state.filtrosProjeto.situacoes.has(chave);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cat-list__item" + (ativo ? " is-active" : "");
+    btn.dataset.situacao = chave;
+    btn.setAttribute("aria-pressed", String(ativo));
+    btn.innerHTML = `
+      <span class="cat-list__dot" style="background:${s.cor};"></span>
+      <span class="cat-list__label">${s.label}</span>
+      <span class="cat-list__count">${lista.filter((p) => p.situacao === chave).length}</span>`;
+    container.appendChild(btn);
+  });
+}
+
+function renderizarProjetos() {
+  const lista = projetosNoHorizonte();
+  renderizarResumoProjetos(lista);
+  renderizarPistaProjetos(lista);
+  renderizarListaProjetos(lista);
+  renderizarFiltrosSituacao(lista);
+}
+
+/* --------------------------------------------------------------------------
+   Painel do projeto: histórico e lançamento de status
+   -------------------------------------------------------------------------- */
+
+function projetoPorId(id) {
+  return state.projetos.find((p) => p.id === id) || null;
+}
+
+function formatarCarimbo(iso) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: DISPLAY_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+function abrirPainelProjeto(id) {
+  const p = projetoPorId(id);
+  if (!p) return;
+  state.projetoAberto = id;
+
+  document.getElementById("proj-painel-titulo").textContent = p.nome;
+
+  const linha = (rotulo, valor) =>
+    valor
+      ? `<div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">${rotulo}</span><span class="detail-panel__linha-valor">${escapeHtml(valor)}</span></div>`
+      : "";
+
+  const dataLegivel = (chave) =>
+    chave ? formatarDataLonga(new Date(`${chave}T12:00:00${offsetBahia()}`)) : "";
+
+  const historico = (p.historico || []).length
+    ? `<div class="historico">${(p.historico || [])
+        .map((h) => {
+          const s = SITUACOES[h.situacao] || SITUACOES[SITUACAO_PADRAO];
+          return `
+            <div class="historico__item">
+              <span class="historico__ponto" style="background:${s.cor}"></span>
+              <div class="historico__quando">${formatarCarimbo(h.em)}</div>
+              <div class="historico__linha">
+                <span class="situacao-selo" style="color:${s.cor};background:${s.bg};border:1px solid ${s.borda}">${s.label}</span>
+                <span class="historico__quando">${Number(h.progresso) || 0}% concluído</span>
+              </div>
+              ${h.nota ? `<div class="historico__nota">${escapeHtml(h.nota)}</div>` : ""}
+            </div>`;
+        })
+        .join("")}</div>`
+    : `<p class="historico__nota" style="color:var(--color-text-secondary)">Nenhum lançamento ainda. Use o formulário abaixo para registrar o primeiro status.</p>`;
+
+  document.getElementById("proj-painel-corpo").innerHTML = `
+    ${p.descricao ? `<p class="detail-panel__descricao">${escapeHtml(p.descricao)}</p>` : ""}
+    ${linha("Situação", projetoAtrasado(p) ? "Atrasado" : (SITUACOES[p.situacao] || SITUACOES[SITUACAO_PADRAO]).label)}
+    ${linha("Progresso", `${Math.max(0, Math.min(100, Number(p.progresso) || 0))}%`)}
+    ${linha("Lançamento", dataLegivel(p.dataInicio))}
+    ${linha("Prazo de entrega", `${dataLegivel(p.prazoEntrega)} — ${rotuloPrazo(p)}`)}
+    ${linha("Responsável", p.responsavel)}
+    ${linha("Área", p.area)}
+    <div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">Histórico</span></div>
+    ${historico}`;
+
+  // O formulário abre já com a situação corrente, para que lançar só a nota
+  // não mude a situação sem querer.
+  document.getElementById("status-situacao").value = p.situacao || SITUACAO_PADRAO;
+  const faixa = document.getElementById("status-progresso");
+  faixa.value = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+  document.getElementById("status-progresso-valor").textContent = `${faixa.value}%`;
+  document.getElementById("status-nota").value = "";
+
+  document.getElementById("proj-painel").classList.add("is-aberto");
+  document.getElementById("proj-painel").setAttribute("aria-hidden", "false");
+  document.getElementById("proj-painel-backdrop").hidden = false;
+  document.getElementById("btn-fechar-proj-painel").focus();
+}
+
+function fecharPainelProjeto() {
+  state.projetoAberto = null;
+  document.getElementById("proj-painel").classList.remove("is-aberto");
+  document.getElementById("proj-painel").setAttribute("aria-hidden", "true");
+  document.getElementById("proj-painel-backdrop").hidden = true;
+}
+
+// Um lançamento nunca substitui o anterior: ele entra no topo da pilha e passa
+// a ser a situação corrente. O histórico é a razão de ser do módulo, então
+// nada nele é editado ou apagado pela tela.
+function lancarStatus() {
+  const p = projetoPorId(state.projetoAberto);
+  if (!p) return;
+
+  const situacao = document.getElementById("status-situacao").value;
+  const progresso = Number(document.getElementById("status-progresso").value) || 0;
+  const nota = document.getElementById("status-nota").value.trim();
+
+  p.historico = [{ em: new Date().toISOString(), situacao, progresso, nota }, ...(p.historico || [])];
+  p.situacao = situacao;
+  p.progresso = progresso;
+  p.atualizadoEm = new Date().toISOString();
+
+  if (!gravarProjetos(state.projetos)) return;
+  renderizarProjetos();
+  abrirPainelProjeto(p.id);
+}
+
+/* --------------------------------------------------------------------------
+   Cadastro e edição
+   -------------------------------------------------------------------------- */
+
+function preencherSelectSituacoes(select, valor) {
+  select.innerHTML = Object.entries(SITUACOES)
+    .map(([chave, s]) => `<option value="${chave}">${s.label}</option>`)
+    .join("");
+  select.value = valor || SITUACAO_PADRAO;
+}
+
+function mostrarErroProjeto(mensagem) {
+  const alvo = document.getElementById("proj-form-erro");
+  if (!alvo) return;
+  alvo.textContent = mensagem;
+  alvo.hidden = false;
+}
+
+function esconderErroProjeto() {
+  const alvo = document.getElementById("proj-form-erro");
+  if (alvo) alvo.hidden = true;
+}
+
+function abrirFormProjeto(id) {
+  const p = id ? projetoPorId(id) : null;
+  state.projetoEditando = p ? p.id : null;
+
+  document.getElementById("proj-form-titulo").textContent = p ? "Editar projeto" : "Novo projeto";
+  document.getElementById("proj-nome").value = p ? p.nome : "";
+  document.getElementById("proj-descricao").value = p ? p.descricao || "" : "";
+  document.getElementById("proj-responsavel").value = p ? p.responsavel || "" : "";
+  document.getElementById("proj-area").value = p ? p.area || "" : "";
+  document.getElementById("proj-inicio").value = p ? p.dataInicio || hojeChave() : hojeChave();
+  // Sem prazo digitado, o padrão é o fim do horizonte: é o que "próximos 100
+  // dias" quer dizer, e evita abrir o seletor de datas no vazio.
+  document.getElementById("proj-prazo").value = p ? p.prazoEntrega : chaveMaisDias(hojeChave(), HORIZONTE_PADRAO);
+
+  preencherSelectSituacoes(document.getElementById("proj-situacao"), p ? p.situacao : SITUACAO_PADRAO);
+  const faixa = document.getElementById("proj-progresso");
+  faixa.value = p ? Math.max(0, Math.min(100, Number(p.progresso) || 0)) : 0;
+  document.getElementById("proj-progresso-valor").textContent = `${faixa.value}%`;
+  document.getElementById("proj-nota").value = "";
+
+  document.getElementById("btn-excluir-projeto").hidden = !p;
+  esconderErroProjeto();
+
+  document.getElementById("proj-form").hidden = false;
+  document.getElementById("proj-form-backdrop").hidden = false;
+  document.getElementById("proj-nome").focus();
+}
+
+function fecharFormProjeto() {
+  state.projetoEditando = null;
+  document.getElementById("proj-form").hidden = true;
+  document.getElementById("proj-form-backdrop").hidden = true;
+}
+
+function salvarProjeto() {
+  const nome = document.getElementById("proj-nome").value.trim();
+  const inicio = document.getElementById("proj-inicio").value;
+  const prazo = document.getElementById("proj-prazo").value;
+
+  if (!nome) return mostrarErroProjeto("Informe o nome do projeto.");
+  if (!prazo) return mostrarErroProjeto("Informe o prazo de entrega.");
+  if (inicio && prazo < inicio) {
+    return mostrarErroProjeto("O prazo de entrega não pode ser anterior ao lançamento.");
+  }
+  esconderErroProjeto();
+
+  const situacao = document.getElementById("proj-situacao").value;
+  const progresso = Number(document.getElementById("proj-progresso").value) || 0;
+  const nota = document.getElementById("proj-nota").value.trim();
+  const agora = new Date().toISOString();
+
+  const campos = {
+    nome,
+    descricao: document.getElementById("proj-descricao").value.trim(),
+    responsavel: document.getElementById("proj-responsavel").value.trim(),
+    area: document.getElementById("proj-area").value.trim(),
+    dataInicio: inicio,
+    prazoEntrega: prazo,
+    situacao,
+    progresso,
+    atualizadoEm: agora,
+  };
+
+  const existente = projetoPorId(state.projetoEditando);
+  if (existente) {
+    // Editar dados cadastrais não inventa lançamento no histórico. Só entra
+    // registro quando a situação, o progresso ou uma nota mudam de fato.
+    const mudouSituacao = existente.situacao !== situacao || Number(existente.progresso) !== progresso;
+    Object.assign(existente, campos);
+    if (mudouSituacao || nota) {
+      existente.historico = [{ em: agora, situacao, progresso, nota }, ...(existente.historico || [])];
+    }
+  } else {
+    state.projetos.push({
+      id: `prj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      ...campos,
+      criadoEm: agora,
+      historico: [{ em: agora, situacao, progresso, nota: nota || "Projeto lançado." }],
+    });
+  }
+
+  if (!gravarProjetos(state.projetos)) return;
+  fecharFormProjeto();
+  renderizarProjetos();
+}
+
+function excluirProjeto() {
+  const p = projetoPorId(state.projetoEditando);
+  if (!p) return;
+  if (!window.confirm(`Excluir "${p.nome}" e todo o seu histórico? Esta ação não pode ser desfeita.`)) return;
+  state.projetos = state.projetos.filter((x) => x.id !== p.id);
+  if (!gravarProjetos(state.projetos)) return;
+  fecharFormProjeto();
+  fecharPainelProjeto();
+  renderizarProjetos();
+}
+
+/* --------------------------------------------------------------------------
+   Cópia de segurança — enquanto os dados vivem só neste navegador, é o que
+   permite levá-los a outro dispositivo ou recuperá-los depois de uma limpeza
+   de cache.
+   -------------------------------------------------------------------------- */
+
+function exportarProjetos() {
+  const conteudo = JSON.stringify(state.projetos, null, 2);
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([conteudo], { type: "application/json" }));
+  link.download = `saa-projetos-${hojeChave()}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function importarProjetos(arquivo) {
+  const leitor = new FileReader();
+  leitor.onload = () => {
+    try {
+      const dados = JSON.parse(String(leitor.result));
+      const validos = Array.isArray(dados) ? dados.filter(projetoValido) : [];
+      if (!validos.length) {
+        window.alert("O arquivo não contém projetos em formato reconhecido.");
+        return;
+      }
+      // Mescla por id: restaurar uma cópia não apaga o que já existe aqui.
+      const porId = new Map(state.projetos.map((p) => [p.id, p]));
+      validos.forEach((p) => porId.set(p.id, p));
+      state.projetos = [...porId.values()];
+      if (!gravarProjetos(state.projetos)) return;
+      renderizarProjetos();
+      window.alert(`${validos.length} projeto(s) restaurado(s).`);
+    } catch (e) {
+      window.alert("Não foi possível ler o arquivo: " + e.message);
+    }
+  };
+  leitor.readAsText(arquivo);
+}
+
+/* --------------------------------------------------------------------------
+   Troca de módulo
+   -------------------------------------------------------------------------- */
+
+function trocarModulo(modulo) {
+  state.modulo = modulo === "projetos" ? "projetos" : "agenda";
+  const ehProjetos = state.modulo === "projetos";
+
+  document.getElementById("modulo-agenda").hidden = ehProjetos;
+  document.getElementById("modulo-projetos").hidden = !ehProjetos;
+  document.getElementById("filtros-agenda").hidden = ehProjetos;
+  document.getElementById("filtros-projetos").hidden = !ehProjetos;
+
+  // A busca do topo e a exportação pertencem à agenda; no outro módulo elas
+  // não teriam o que fazer e só confundiriam.
+  const busca = document.getElementById("busca");
+  if (busca) busca.placeholder = ehProjetos ? "Buscar por projeto, responsável ou área…" : "Buscar por título, descrição ou local…";
+  document.getElementById("btn-abrir-export").hidden = ehProjetos;
+  document.getElementById("btn-atualizar").hidden = ehProjetos;
+
+  document.querySelectorAll("#modulo-projetos, #modulo-agenda").forEach(() => {});
+  document.querySelectorAll(".sidebar__nav-item").forEach((b) => {
+    const ativo = b.dataset.modulo === state.modulo;
+    b.classList.toggle("is-active", ativo);
+    if (ativo) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
+
+  const trilha = document.querySelector(".breadcrumbs li[aria-current]");
+  if (trilha) trilha.textContent = ehProjetos ? "Calendário 100 dias" : "Agenda";
+
+  if (ehProjetos) renderizarProjetos();
+}
+
+/* --------------------------------------------------------------------------
+   Ligação com a interface
+   -------------------------------------------------------------------------- */
+
+function inicializarModuloProjetos() {
+  state.projetos = lerProjetos();
+
+  preencherSelectSituacoes(document.getElementById("status-situacao"), SITUACAO_PADRAO);
+
+  document.querySelectorAll(".sidebar__nav-item").forEach((btn) => {
+    btn.addEventListener("click", () => trocarModulo(btn.dataset.modulo));
+  });
+
+  document.getElementById("btn-novo-projeto").addEventListener("click", () => abrirFormProjeto(null));
+  document.getElementById("btn-salvar-proj").addEventListener("click", salvarProjeto);
+  document.getElementById("btn-cancelar-proj").addEventListener("click", fecharFormProjeto);
+  document.getElementById("btn-fechar-proj-form").addEventListener("click", fecharFormProjeto);
+  document.getElementById("proj-form-backdrop").addEventListener("click", fecharFormProjeto);
+  document.getElementById("btn-excluir-projeto").addEventListener("click", excluirProjeto);
+
+  document.getElementById("proj-progresso").addEventListener("input", (ev) => {
+    document.getElementById("proj-progresso-valor").textContent = `${ev.target.value}%`;
+  });
+  document.getElementById("status-progresso").addEventListener("input", (ev) => {
+    document.getElementById("status-progresso-valor").textContent = `${ev.target.value}%`;
+  });
+
+  document.getElementById("btn-lancar-status").addEventListener("click", lancarStatus);
+  document.getElementById("btn-editar-projeto").addEventListener("click", () => {
+    if (state.projetoAberto) abrirFormProjeto(state.projetoAberto);
+  });
+  document.getElementById("btn-fechar-proj-painel").addEventListener("click", fecharPainelProjeto);
+  document.getElementById("proj-painel-backdrop").addEventListener("click", fecharPainelProjeto);
+
+  // Delegação: barras e cartões são recriados a cada render.
+  document.getElementById("modulo-projetos").addEventListener("click", (ev) => {
+    const alvo = ev.target.closest("[data-projeto]");
+    if (alvo) abrirPainelProjeto(alvo.dataset.projeto);
+  });
+
+  document.getElementById("situacao-lista").addEventListener("click", (ev) => {
+    const item = ev.target.closest(".cat-list__item");
+    if (!item) return;
+    const chave = item.dataset.situacao;
+    const set = state.filtrosProjeto.situacoes;
+    if (set.has(chave)) set.delete(chave);
+    else set.add(chave);
+    renderizarProjetos();
+  });
+
+  document.querySelectorAll("#horizonte-group .chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll("#horizonte-group .chip").forEach((c) => c.classList.remove("is-active"));
+      chip.classList.add("is-active");
+      state.filtrosProjeto.horizonte = Number(chip.dataset.horizonte) || HORIZONTE_PADRAO;
+      renderizarProjetos();
+    });
+  });
+
+  document.getElementById("btn-exportar-projetos").addEventListener("click", exportarProjetos);
+  document.getElementById("input-importar-projetos").addEventListener("change", (ev) => {
+    const arquivo = ev.target.files && ev.target.files[0];
+    if (arquivo) importarProjetos(arquivo);
+    ev.target.value = "";
+  });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (!document.getElementById("proj-form").hidden) fecharFormProjeto();
+    else if (state.projetoAberto) fecharPainelProjeto();
+  });
+}
+
 function iniciar() {
   inicializarInterface();
+  inicializarModuloProjetos();
   aplicarFiltrosDaURL();
 
   // Pré-carrega as marcas institucionais em data URL: o html2canvas só

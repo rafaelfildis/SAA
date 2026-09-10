@@ -552,6 +552,13 @@ button, input {
 
 .sidebar__filters { padding: 16px; display: flex; flex-direction: column; gap: 18px; flex: 1; }
 
+/* O atributo [hidden] do HTML equivale a display:none, mas qualquer regra de
+   classe com `display` explícito vence a do navegador — foi o que deixou os
+   filtros da agenda e os botões do topo visíveis dentro do outro módulo,
+   mesmo com hidden marcado. Esta regra devolve ao atributo o poder que se
+   espera dele. */
+[hidden] { display: none !important; }
+
 .sidebar__collapse-btn {
   display: none;
   align-items: center;
@@ -1399,7 +1406,11 @@ button, input {
 .detail-panel__header h2 { font-size: 1rem; font-weight: 700; }
 .detail-panel__header .icon-btn:hover { background: rgba(255, 255, 255, 0.15); }
 
-.detail-panel__body { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+/* min-height:0 é o que faz o overflow-y funcionar de verdade: sem ele o item
+   flex não encolhe abaixo da altura do conteúdo, o corpo cresce e empurra o
+   que vem depois para fora do painel — foi o que escondeu o botão de lançar
+   status quando o histórico ficou longo. */
+.detail-panel__body { padding: 20px; overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
 .detail-panel__linha { display: flex; flex-direction: column; gap: 3px; }
 .detail-panel__linha-rotulo { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--color-text-secondary); }
 .detail-panel__linha-valor { font-size: 0.9rem; color: var(--color-text-primary); line-height: 1.5; white-space: pre-line; }
@@ -1864,3 +1875,323 @@ html, body { overflow-x: hidden; }
   .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
   body { background: #fff; }
 }
+
+/* ==========================================================================
+   MÓDULO CALENDÁRIO 100 DIAS
+   Projetos em desenvolvimento, prazo de entrega e histórico de status.
+   Reaproveita os tokens e os componentes da agenda (day-stats, pista-card,
+   chip, cat-list, detail-panel) para que os dois módulos não pareçam dois
+   sistemas colados.
+   ========================================================================== */
+
+.sidebar__nav-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar__nav-badge {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--color-secondary-tint);
+  color: var(--color-primary);
+  font: 600 11px/1.5 var(--font-mono, "IBM Plex Mono", monospace);
+  text-align: center;
+}
+
+.sync-box__dot--local { background: var(--color-warning); }
+
+/* --- Escala de 100 dias e barras de entrega ------------------------------ */
+
+.proj-wrap { display: flex; flex-direction: column; gap: 18px; }
+
+.proj-escala {
+  position: relative;
+  height: 26px;
+  margin: 4px 0 2px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.proj-escala__marca {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font: 500 11px/1 var(--font-mono, "IBM Plex Mono", monospace);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.proj-escala__marca::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  width: 1px;
+  height: 8px;
+  background: var(--color-border);
+}
+
+.proj-pista { position: relative; display: flex; flex-direction: column; gap: 10px; }
+
+/* A linha vertical do "hoje" atravessa todas as barras, para que a leitura
+   "isto vence antes ou depois de hoje" seja imediata. */
+.proj-pista__hoje {
+  position: absolute;
+  top: -30px;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-error);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.proj-pista__hoje::before {
+  content: "hoje";
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-error);
+  color: #fff;
+  font: 600 10px/1.4 var(--font-mono, "IBM Plex Mono", monospace);
+  letter-spacing: .06em;
+}
+
+.proj-barra-linha {
+  position: relative;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+}
+
+.proj-barra {
+  position: absolute;
+  top: 5px;
+  height: 24px;
+  min-width: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font: 600 12px/1 var(--font-sans, "IBM Plex Sans", sans-serif);
+  white-space: nowrap;
+}
+
+.proj-barra:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
+
+.proj-barra__progresso {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: rgba(255, 255, 255, .28);
+  pointer-events: none;
+}
+
+.proj-barra__rotulo { position: relative; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- Lista de projetos --------------------------------------------------- */
+
+.proj-lista { display: flex; flex-direction: column; gap: 12px; }
+
+.proj-card {
+  display: grid;
+  grid-template-columns: 4px 1fr auto;
+  gap: 0 16px;
+  align-items: start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+}
+
+.proj-card:hover { border-color: var(--color-accent); }
+.proj-card:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
+
+.proj-card__faixa { grid-row: 1 / -1; align-self: stretch; }
+.proj-card__corpo { padding: 16px 0 16px 4px; min-width: 0; }
+.proj-card__lado { padding: 16px 18px 16px 0; text-align: right; white-space: nowrap; }
+
+.proj-card__titulo {
+  font: 600 16px/1.35 var(--font-sans, "IBM Plex Sans", sans-serif);
+  color: var(--color-text-primary);
+  text-wrap: pretty;
+}
+
+.proj-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 8px;
+  font: 400 13px/1.4 var(--font-sans, "IBM Plex Sans", sans-serif);
+  color: var(--color-text-secondary);
+}
+
+.proj-card__meta span { display: inline-flex; align-items: center; gap: 5px; }
+
+.proj-prazo {
+  font: 600 15px/1.2 var(--font-mono, "IBM Plex Mono", monospace);
+  color: var(--color-primary);
+}
+
+.proj-restante { font: 400 12px/1.5 var(--font-sans, "IBM Plex Sans", sans-serif); color: var(--color-text-tertiary); }
+.proj-restante--alerta { color: var(--color-error-strong); font-weight: 600; }
+
+.proj-progresso-barra {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-border-soft);
+  overflow: hidden;
+}
+.proj-progresso-barra > i { display: block; height: 100%; border-radius: 999px; }
+
+.situacao-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font: 600 11px/1.4 var(--font-sans, "IBM Plex Sans", sans-serif);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* --- Formulários --------------------------------------------------------- */
+
+.proj-modal {
+  position: fixed;
+  z-index: 60;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px -20px rgba(7, 28, 56, .4);
+}
+
+.proj-modal__header,
+.proj-modal__footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 22px;
+  flex: 0 0 auto;
+}
+.proj-modal__header { border-bottom: 1px solid var(--color-border); }
+.proj-modal__header h2 { margin: 0; font: 600 18px/1.3 var(--font-serif, Bitter, Georgia, serif); color: var(--color-heading); }
+.proj-modal__header .icon-btn { margin-left: auto; }
+.proj-modal__footer { border-top: 1px solid var(--color-border); justify-content: flex-end; }
+.proj-modal__footer .btn--perigo { margin-right: auto; color: var(--color-error-strong); }
+
+.proj-modal__body {
+  padding: 20px 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.campo__rotulo {
+  font: 600 11px/1.4 var(--font-sans, "IBM Plex Sans", sans-serif);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.campo__obrigatorio { color: var(--color-error); }
+.campo__valor {
+  margin-left: auto;
+  font: 600 12px/1 var(--font-mono, "IBM Plex Mono", monospace);
+  color: var(--color-primary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.campo-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.input--area { resize: vertical; min-height: 60px; font-family: inherit; }
+.input--range { padding: 0; accent-color: var(--color-primary); }
+
+/* --- Painel de histórico -------------------------------------------------- */
+
+.detail-panel--largo { width: min(560px, 100vw); }
+
+.proj-status-form {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.proj-status-form__acoes { display: flex; gap: 10px; justify-content: flex-end; }
+
+.historico { display: flex; flex-direction: column; gap: 0; margin-top: 6px; }
+
+.historico__item {
+  position: relative;
+  padding: 0 0 18px 26px;
+  border-left: 2px solid var(--color-border);
+}
+.historico__item:last-child { border-left-color: transparent; padding-bottom: 0; }
+
+.historico__ponto {
+  position: absolute;
+  left: -7px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+}
+
+.historico__quando {
+  font: 500 12px/1.4 var(--font-mono, "IBM Plex Mono", monospace);
+  color: var(--color-text-tertiary);
+}
+.historico__linha { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; flex-wrap: wrap; }
+.historico__nota {
+  font: 400 14px/1.55 var(--font-sans, "IBM Plex Sans", sans-serif);
+  color: var(--color-text-primary);
+  text-wrap: pretty;
+}
+
+@media (max-width: 720px) {
+  .campo-linha { grid-template-columns: 1fr; }
+  .proj-card { grid-template-columns: 4px 1fr; }
+  .proj-card__lado { grid-column: 2; padding: 0 18px 16px 4px; text-align: left; }
+  .proj-escala, .proj-pista { display: none; }
+}
+
+/* Classes usadas pelo módulo de projetos que ainda não existiam. */
+.detail-panel__descricao {
+  font: 400 14px/1.6 var(--font-sans, "IBM Plex Sans", sans-serif);
+  color: var(--color-text-primary);
+  text-wrap: pretty;
+  margin: 0 0 14px;
+}
+
+.day-stats__cel.is-alerta .day-stats__valor { color: var(--color-error-strong); }
