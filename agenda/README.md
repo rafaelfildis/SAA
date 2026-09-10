@@ -317,14 +317,32 @@ uma página.
 1080 × 1920 px (story 9:16) ou 1080 × 1350 px (feed 4:5), para enviar por
 mensagem ou publicar.
 
+O dia é desenhado como **linha do tempo em escala**, não como lista de cartões.
+A lista desperdiçava a imagem — com quatro compromissos de uma hora, dois terços
+do card ficavam em branco — e escondia justamente o que interessa a quem abre o
+card para marcar alguma coisa: onde estão os vazios.
+
 - Cabeçalho em gradiente navy com a marca, o dia da semana, a data em corpo
-  grande e três indicadores (compromissos, ocupação, conflitos).
-- Um cartão por compromisso, com faixa de cor da modalidade à esquerda, horário
-  e duração em coluna monoespaçada, selos de AGORA e CONFLITO.
-- Bloco de janelas livres e rodapé com a assinatura institucional.
-- No formato feed há **570px a menos de altura**: o cabeçalho comprime e os
-  blocos opcionais saem automaticamente, senão os compromissos do fim do dia
-  seriam cortados.
+  grande, a faixa **expediente ocupado** (primeiro início → último fim) e quatro
+  indicadores: compromissos, ocupação, livre e conflitos. O de conflitos só fica
+  vermelho quando há conflito.
+- **Pista de 08:00 às 18:00**, com régua de horas e altura idêntica por hora: um
+  compromisso de 3h ocupa o triplo de um de 1h. A faixa se estende sozinha
+  quando há compromisso fora dela — senão um compromisso às 19h sumiria do card.
+- **Janelas livres no lugar e no tamanho reais**, hachuradas, rotuladas com
+  duração e horário juntos ("2h30 livre · 12:00 – 14:30"): só a duração
+  obrigaria a conferir a régua para saber quando.
+- Cada compromisso traz faixa de cor da modalidade, horário e duração em coluna
+  monoespaçada, modalidade, local e selo de conflito quando houver. Blocos com
+  menos de 100px colapsam para uma linha; sobrepostos dividem a pista em
+  colunas. O nível de detalhe é decidido pelos pixels disponíveis, não pela
+  duração em minutos.
+- Compromissos de dia inteiro ou de vários dias não têm posição numa escala de
+  horas: aparecem numa faixa acima da pista, que encolhe na medida.
+- No formato feed, com 570px a menos, a escala é **recalculada** em vez de
+  descartar blocos — todo o dia continua no card, mais comprimido.
+- Períodos de vários dias não têm pista: uma escala de horas só significa algo
+  dentro de um dia, então semana e mês continuam saindo como lista.
 
 Ambos podem ser baixados em **JPEG** ou **PDF**, sempre respeitam os filtros
 ativos (período, categorias, busca, concluídos) e são construídos pela mesma

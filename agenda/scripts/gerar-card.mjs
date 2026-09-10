@@ -43,6 +43,8 @@ const MODULOS = arg("modulos", process.cwd());
 // ela derruba o arquivo de ~290 KB para ~70 KB — o que importa porque o anexo
 // trafega em base64, ocupando um terço a mais.
 const LARGURA_FINAL = Number(arg("largura", "1080"));
+// story 9:16 (1080x1920) ou feed 4:5 (1080x1350)
+const PROPORCAO = arg("proporcao", "story") === "feed" ? "feed" : "story";
 
 if (!/^\d{4}-\d{2}-\d{2}$/.test(DATA_ALVO)) {
   throw new Error(`--data precisa estar em YYYY-MM-DD; recebido: ${DATA_ALVO}`);
@@ -227,7 +229,7 @@ async function main() {
   await pagina.click("#btn-abrir-export");
   await pagina.waitForTimeout(400);
   await pagina.click('#export-formato-group [data-formato="mobile"]');
-  await pagina.click('#export-proporcao-group [data-proporcao="story"]');
+  await pagina.click(`#export-proporcao-group [data-proporcao="${PROPORCAO}"]`);
   await pagina.waitForTimeout(900);
 
   const download = pagina.waitForEvent("download", { timeout: 90000 });
