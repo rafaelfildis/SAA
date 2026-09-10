@@ -70,13 +70,18 @@
 
     <aside id="sidebar" class="sidebar" aria-label="Navegação e filtros">
       <nav class="sidebar__nav" aria-label="Navegação principal">
-        <a class="sidebar__nav-item is-active" href="#conteudo-principal">
+        <button class="sidebar__nav-item is-active" data-modulo="agenda" type="button" aria-current="page">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           <span class="sidebar__nav-label">Agenda</span>
-        </a>
+        </button>
+        <button class="sidebar__nav-item" data-modulo="projetos" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h13"></path><path d="M3 12h9"></path><path d="M3 18h6"></path><circle cx="19" cy="6" r="2"></circle><circle cx="16" cy="12" r="2"></circle><circle cx="12" cy="18" r="2"></circle></svg>
+          <span class="sidebar__nav-label">Calendário 100 dias</span>
+          <span class="sidebar__nav-badge" id="nav-badge-projetos" hidden>0</span>
+        </button>
       </nav>
 
-      <div class="sidebar__filters">
+      <div class="sidebar__filters" id="filtros-agenda">
         <div class="filters__group">
           <span class="filters__label" id="label-filtrar-data">Filtrar por data</span>
           <div class="date-range" role="group" aria-labelledby="label-filtrar-data">
@@ -136,6 +141,40 @@
         </div>
       </div>
 
+      <div class="sidebar__filters" id="filtros-projetos" hidden>
+        <div class="filters__group">
+          <span class="filters__label" id="label-situacao">Situação</span>
+          <div class="cat-list" id="situacao-lista" role="group" aria-labelledby="label-situacao"></div>
+        </div>
+
+        <div class="filters__group">
+          <span class="filters__label">Entregas</span>
+          <div class="chip-group" id="horizonte-group" role="group" aria-label="Horizonte de entrega">
+            <button class="chip is-active" data-horizonte="100" type="button">100 dias</button>
+            <button class="chip" data-horizonte="30" type="button">30 dias</button>
+            <button class="chip" data-horizonte="7" type="button">7 dias</button>
+          </div>
+        </div>
+
+        <div class="sync-box">
+          <div class="sync-box__titulo">Armazenamento</div>
+          <div class="sync-box__status">
+            <span class="sync-box__dot sync-box__dot--local" aria-hidden="true"></span>
+            Neste navegador
+          </div>
+          <div class="sync-box__updated">Os projetos ficam salvos <strong>apenas neste dispositivo</strong>. Não aparecem em outro computador nem no celular.</div>
+          <button id="btn-exportar-projetos" class="sync-box__link" type="button">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Baixar cópia (JSON)
+          </button>
+          <label class="sync-box__link" for="input-importar-projetos" style="cursor:pointer">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Restaurar cópia
+          </label>
+          <input id="input-importar-projetos" type="file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+
       <button id="btn-recolher-sidebar" class="sidebar__collapse-btn" type="button" aria-expanded="true">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
         <span>Recolher menu</span>
@@ -149,6 +188,8 @@
           <li aria-current="page">Agenda</li>
         </ol>
       </nav>
+
+      <div id="modulo-agenda">
 
       <div class="page-header">
         <div class="page-header__titles">
@@ -287,6 +328,85 @@
         </div>
       </section>
 
+      </div><!-- /modulo-agenda -->
+
+      <div id="modulo-projetos" hidden>
+        <div class="page-header">
+          <div class="page-header__titles">
+            <span class="page-header__eyebrow">Calendário 100 dias</span>
+            <h2 class="page-title" id="proj-titulo">Projetos em desenvolvimento</h2>
+            <p class="page-subtitle" id="proj-subtitulo"></p>
+          </div>
+          <button id="btn-novo-projeto" class="btn btn--primary" type="button">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span class="btn__label">Novo projeto</span>
+          </button>
+        </div>
+
+        <section class="day-stats" id="proj-stats" aria-label="Resumo dos projetos">
+          <div class="day-stats__cel">
+            <span class="day-stats__rotulo">Projetos</span>
+            <span class="day-stats__linha">
+              <span class="day-stats__valor" id="proj-stat-total">0</span>
+              <span class="day-stats__unidade">no horizonte</span>
+            </span>
+          </div>
+          <div class="day-stats__cel">
+            <span class="day-stats__rotulo">Em andamento</span>
+            <span class="day-stats__linha">
+              <span class="day-stats__valor" id="proj-stat-andamento">0</span>
+              <span class="day-stats__unidade" id="proj-stat-andamento-rotulo">projetos</span>
+            </span>
+          </div>
+          <div class="day-stats__cel day-stats__cel--conflito" id="proj-cel-risco">
+            <span class="day-stats__rotulo">Em risco ou atrasados</span>
+            <span class="day-stats__linha">
+              <span class="day-stats__valor" id="proj-stat-risco">0</span>
+              <span class="day-stats__unidade" id="proj-stat-risco-rotulo">nenhum</span>
+            </span>
+          </div>
+          <div class="day-stats__cel day-stats__cel--livre">
+            <span class="day-stats__rotulo">Concluídos</span>
+            <span class="day-stats__linha">
+              <span class="day-stats__valor" id="proj-stat-concluidos">0</span>
+              <span class="day-stats__unidade">entregues</span>
+            </span>
+          </div>
+        </section>
+
+        <div id="proj-alerta" class="conflict-alert" role="alert" hidden>
+          <span class="conflict-alert__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+          </span>
+          <div class="conflict-alert__texto">
+            <strong id="proj-alerta-titulo"></strong>
+            <span id="proj-alerta-detalhe"></span>
+          </div>
+        </div>
+
+        <section class="content-toolbar">
+          <div class="filters__summary" id="proj-resumo">0 projetos</div>
+        </section>
+
+        <section class="proj-wrap">
+          <div class="pista-card" id="proj-pista-card" hidden>
+            <div class="pista-card__head">
+              <span class="pista-card__titulo">Linha de entrega</span>
+              <span class="pista-card__contagem" id="proj-pista-contagem"></span>
+            </div>
+            <div class="proj-escala" id="proj-escala" aria-hidden="true"></div>
+            <div class="proj-pista" id="proj-pista"></div>
+          </div>
+
+          <div id="proj-lista" class="proj-lista" aria-live="polite"></div>
+
+          <div id="proj-vazio" class="timeline-vazio" hidden>
+            <svg class="timeline-vazio__icone" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h13"></path><path d="M3 12h9"></path><path d="M3 18h6"></path><circle cx="19" cy="6" r="2"></circle><circle cx="16" cy="12" r="2"></circle><circle cx="12" cy="18" r="2"></circle></svg>
+            <p id="proj-vazio-msg">Nenhum projeto lançado ainda. Use <strong>Novo projeto</strong> para registrar o primeiro.</p>
+          </div>
+        </section>
+      </div><!-- /modulo-projetos -->
+
       <div class="content-signature">
         <img src="img/tcm-lockup.png" alt="Tribunal de Contas dos Municípios do Estado da Bahia" />
         <img src="img/tcm-55.png" alt="55 anos de serviços prestados à sociedade" />
@@ -392,6 +512,109 @@
   </footer>
 
   <div id="export-sandbox" class="export-sandbox" aria-hidden="true"></div>
+
+  <!-- Cadastro / edição de projeto -->
+  <div id="proj-form-backdrop" class="panel-backdrop" hidden></div>
+  <div id="proj-form" class="proj-modal" role="dialog" aria-modal="true" aria-labelledby="proj-form-titulo" hidden>
+    <div class="proj-modal__header">
+      <h2 id="proj-form-titulo">Novo projeto</h2>
+      <button id="btn-fechar-proj-form" class="icon-btn" type="button" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <form id="proj-form-campos" class="proj-modal__body" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">Projeto <span class="campo__obrigatorio">*</span></span>
+        <input id="proj-nome" class="input" type="text" maxlength="120" required placeholder="Ex.: Implantação do e-TCM nos municípios" />
+      </label>
+
+      <label class="campo">
+        <span class="campo__rotulo">Objetivo / escopo</span>
+        <textarea id="proj-descricao" class="input input--area" rows="3" maxlength="600" placeholder="O que precisa estar entregue ao fim do prazo"></textarea>
+      </label>
+
+      <div class="campo-linha">
+        <label class="campo">
+          <span class="campo__rotulo">Responsável</span>
+          <input id="proj-responsavel" class="input" type="text" maxlength="80" placeholder="Nome ou unidade" />
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Área / diretoria</span>
+          <input id="proj-area" class="input" type="text" maxlength="80" placeholder="Ex.: Diretoria de Controle Externo" />
+        </label>
+      </div>
+
+      <div class="campo-linha">
+        <label class="campo">
+          <span class="campo__rotulo">Lançamento <span class="campo__obrigatorio">*</span></span>
+          <input id="proj-inicio" class="input" type="date" required />
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Prazo de entrega <span class="campo__obrigatorio">*</span></span>
+          <input id="proj-prazo" class="input" type="date" required />
+        </label>
+      </div>
+
+      <div class="campo-linha">
+        <label class="campo">
+          <span class="campo__rotulo">Situação atual</span>
+          <select id="proj-situacao" class="input"></select>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Progresso <span id="proj-progresso-valor" class="campo__valor">0%</span></span>
+          <input id="proj-progresso" class="input input--range" type="range" min="0" max="100" step="5" value="0" />
+        </label>
+      </div>
+
+      <label class="campo">
+        <span class="campo__rotulo">Nota do lançamento</span>
+        <textarea id="proj-nota" class="input input--area" rows="2" maxlength="400" placeholder="Registrada como primeiro item do histórico"></textarea>
+      </label>
+
+      <p id="proj-form-erro" class="form-error" role="alert" hidden></p>
+    </form>
+
+    <div class="proj-modal__footer">
+      <button id="btn-excluir-projeto" class="btn btn--ghost btn--perigo" type="button" hidden>Excluir projeto</button>
+      <button id="btn-cancelar-proj" class="btn btn--ghost" type="button">Cancelar</button>
+      <button id="btn-salvar-proj" class="btn btn--primary" type="button">Salvar projeto</button>
+    </div>
+  </div>
+
+  <!-- Painel do projeto: histórico e novo lançamento de status -->
+  <div id="proj-painel-backdrop" class="panel-backdrop" hidden></div>
+  <aside id="proj-painel" class="detail-panel detail-panel--largo" aria-hidden="true" aria-label="Histórico do projeto">
+    <div class="detail-panel__header">
+      <h2 id="proj-painel-titulo">Projeto</h2>
+      <button id="btn-fechar-proj-painel" class="icon-btn" type="button" aria-label="Fechar painel do projeto">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="detail-panel__body" id="proj-painel-corpo"></div>
+
+    <form id="proj-status-form" class="proj-status-form" novalidate>
+      <span class="filters__label">Lançar status</span>
+      <div class="campo-linha">
+        <label class="campo">
+          <span class="campo__rotulo">Situação</span>
+          <select id="status-situacao" class="input"></select>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Progresso <span id="status-progresso-valor" class="campo__valor">0%</span></span>
+          <input id="status-progresso" class="input input--range" type="range" min="0" max="100" step="5" value="0" />
+        </label>
+      </div>
+      <label class="campo">
+        <span class="campo__rotulo">O que mudou</span>
+        <textarea id="status-nota" class="input input--area" rows="2" maxlength="400" placeholder="Ex.: homologação concluída, aguardando publicação"></textarea>
+      </label>
+      <div class="proj-status-form__acoes">
+        <button id="btn-editar-projeto" class="btn btn--ghost" type="button">Editar projeto</button>
+        <button id="btn-lancar-status" class="btn btn--primary" type="button">Lançar no histórico</button>
+      </div>
+    </form>
+  </aside>
 
   <div id="panel-backdrop" class="panel-backdrop" hidden></div>
   <aside id="detail-panel" class="detail-panel" aria-hidden="true" aria-label="Detalhes do compromisso">

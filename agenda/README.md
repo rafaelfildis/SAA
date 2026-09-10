@@ -79,6 +79,57 @@ publicar a marca do Tribunal cortada.
 - **Modal de confirmação** antes de exportações grandes (>40 compromissos) e **validação inline** do filtro de datas.
 - Acessibilidade: skip-link, `:focus-visible`, landmarks (`header`/`nav`/`main`/`aside`), `aria-live`/`aria-invalid`/`aria-expanded`, tecla Esc fecha painéis/drawer/modal na ordem correta.
 
+## Módulos
+
+O sistema tem dois módulos, alternados pela navegação da barra lateral.
+
+### Agenda
+
+Compromissos do dia lidos do Google Agenda. **Somente leitura** — a origem é o
+calendário, e o painel não grava nada.
+
+### Calendário 100 dias
+
+Projetos em desenvolvimento com entrega prevista dentro de um horizonte
+(100, 30 ou 7 dias), e o histórico de status de cada um.
+
+**Cadastro do projeto:** nome, objetivo/escopo, responsável, área, data de
+lançamento, prazo de entrega, situação e progresso.
+
+**Situações:** não iniciado, em andamento, em risco, concluído e suspenso.
+*Atrasado* não é uma delas: é derivado do prazo vencido sem entrega. Deixar
+alguém marcar "atrasado" à mão produziria projetos vencidos ainda exibidos
+como em dia.
+
+**Histórico:** cada lançamento registra data e hora, situação, progresso e uma
+nota do que mudou, e entra no topo da pilha sem apagar o anterior. Editar
+dados cadastrais não inventa lançamento — só entra registro quando situação,
+progresso ou nota mudam de fato.
+
+**Linha de entrega:** uma barra por projeto posicionada numa escala de datas,
+com a linha vertical do "hoje" atravessando todas. A barra é preenchida na
+proporção do progresso e colorida pela situação — vermelho quando o prazo
+venceu.
+
+Projetos com prazo além do horizonte somem da lista; **os vencidos e não
+entregues permanecem**, porque sumir com um projeto atrasado seria esconder
+justamente o que precisa de atenção.
+
+#### Onde os dados ficam
+
+No `localStorage`, isto é, **no navegador de quem usa** — e a tela diz isso,
+na caixa "Armazenamento".
+
+A razão é que o site é público e não tem autenticação: um banco compartilhado
+deixaria qualquer visitante criar, editar e apagar projetos. Enquanto não
+houver back-end com login, o módulo oferece **exportar e restaurar em JSON**
+para levar os dados de uma máquina a outra ou recuperá-los depois de uma
+limpeza de cache. A restauração mescla por id, então não apaga o que já existe
+no dispositivo.
+
+Toda leitura e gravação passa por `lerProjetos()` / `gravarProjetos()`: trocar
+o destino depois é mexer nessas duas funções, não na tela.
+
 ## Stack
 
 - **Frontend**: HTML5 + CSS3 + JavaScript puro (sem framework/bundler), bibliotecas carregadas via CDN:
