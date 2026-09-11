@@ -104,14 +104,15 @@ da trilha de navegação levam de um lado a outro. Busca, atualização e
 exportação pertencem a módulos específicos e saem da tela onde não teriam o que
 fazer, em vez de ficarem inertes.
 
-**Links diretos:** `?modulo=agenda`, `?modulo=plano` (ou `?modulo=projetos`) e
-`?modulo=portal` abrem o sistema direto em um módulo. Um intervalo explícito de
+**Links diretos:** `?modulo=agenda`, `?modulo=plano` (ou `?modulo=projetos`),
+`?modulo=ramais` (ou `?modulo=ramal`) e `?modulo=portal` abrem o sistema direto
+em um módulo. Um intervalo explícito de
 datas na URL (`?data=`, `?de=`/`?ate=`) continua caindo na agenda — é o formato
 dos links do envio diário, e abrir o portal ali esconderia o que foi pedido.
 
 ## Módulos
 
-O sistema tem dois módulos, alcançados pelo portal ou pela navegação da barra
+O sistema tem três módulos, alcançados pelo portal ou pela navegação da barra
 lateral.
 
 ### Agenda
@@ -203,6 +204,31 @@ no dispositivo.
 
 Toda leitura e gravação passa por `lerProjetos()` / `gravarProjetos()`: trocar
 o destino depois é mexer nessas duas funções, não na tela.
+
+### Ramal DTI
+
+Ramais da Diretoria de Tecnologia da Informação, por equipe. Lista de consulta
+que vem com o sistema (`dados/ramais.js`), igual para todo mundo e sem nada a
+gravar por navegador.
+
+**A regra de entrada vem antes da lista.** O bloco do topo traz a porta de
+entrada da operação — Infra e Suporte, ramal 4631 — com o aviso de que chamado,
+incidente e solicitação de rotina passam por ali. Uma lista de telefones que
+começa pelos nomes convida a ligar direto para a pessoa, que é justamente o que
+a norma pede para não fazer na rotina.
+
+**Todo ramal disca.** Cada número é um link `tel:` com DDD e prefixo completos
+(`+55 71 3115-XXXX`), então no celular um toque liga. Na tela fica só o ramal de
+quatro dígitos, que é o que se usa internamente — repetir o prefixo vinte e duas
+vezes esconderia o número que interessa.
+
+**Busca pelo campo do topo**, por nome, por ramal ou por equipe: procurar
+"infra" traz o grupo inteiro, "5667" traz a pessoa. Cada módulo guarda a sua
+própria busca, então trocar de tela não carrega o termo de um para o outro.
+
+O ramal geral de cada equipe fica destacado na lista, e os dois números que se
+procura sem querer procurar — Sessão do Plenário (4665) e Sistema e-TCM (5670)
+— ficam como atalhos logo abaixo da porta de entrada.
 
 ## Stack
 

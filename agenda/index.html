@@ -83,6 +83,10 @@
           <span class="sidebar__nav-label">Plano 100 dias</span>
           <span class="sidebar__nav-badge" id="nav-badge-projetos" hidden>0</span>
         </button>
+        <button class="sidebar__nav-item" data-modulo="ramais" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.07 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+          <span class="sidebar__nav-label">Ramal DTI</span>
+        </button>
       </nav>
 
       <div class="sidebar__filters" id="filtros-agenda" hidden>
@@ -292,6 +296,41 @@
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
               </span>
               <span class="portal-card__selo" id="portal-proj-selo">—</span>
+            </footer>
+          </article>
+          <article class="portal-card portal-card--ramais" data-ir="ramais" role="button" tabindex="0" aria-label="Abrir o módulo Ramal DTI">
+            <header class="portal-card__topo">
+              <span class="portal-card__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.07 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+              </span>
+              <div>
+                <h4 class="portal-card__titulo">Ramal DTI</h4>
+                <p class="portal-card__descricao">Ramais da Diretoria de Tecnologia da Informação, por equipe, com a porta de entrada da operação em destaque.</p>
+              </div>
+            </header>
+
+            <dl class="portal-card__metricas">
+              <div class="portal-metrica">
+                <dt>Porta de entrada</dt>
+                <dd id="portal-ramais-porta">—</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Equipes</dt>
+                <dd id="portal-ramais-grupos">—</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Ramais</dt>
+                <dd id="portal-ramais-total">—</dd>
+              </div>
+            </dl>
+
+            <p class="portal-card__destaque" id="portal-ramais-destaque"></p>
+
+            <footer class="portal-card__rodape">
+              <span class="portal-card__cta">Abrir ramais
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </span>
+              <span class="portal-card__selo" id="portal-ramais-selo">—</span>
             </footer>
           </article>
         </div>
@@ -524,6 +563,37 @@
           </div>
         </section>
       </div><!-- /modulo-projetos -->
+
+      <div id="modulo-ramais" hidden>
+        <div class="page-header">
+          <div class="page-header__titles">
+            <span class="page-header__eyebrow">Ramal DTI</span>
+            <h2 class="page-title">Ramais da DTI</h2>
+            <p class="page-subtitle" id="ramais-subtitulo"></p>
+          </div>
+        </div>
+
+        <section class="porta-entrada" aria-labelledby="porta-titulo">
+          <div class="porta-entrada__topo">
+            <span class="porta-entrada__rotulo" id="porta-rotulo"></span>
+            <h3 class="porta-entrada__titulo" id="porta-titulo"></h3>
+          </div>
+          <a class="porta-entrada__numero" id="porta-numero" href="#"></a>
+          <p class="porta-entrada__nota" id="porta-nota"></p>
+        </section>
+
+        <section class="ramais-atalhos" id="ramais-atalhos" aria-label="Acesso rápido"></section>
+
+        <section class="content-toolbar">
+          <div class="filters__summary" id="ramais-resumo">0 ramais</div>
+          <p class="proj-ocultos" id="ramais-vazio" hidden>
+            <span id="ramais-vazio-texto"></span>
+            <button class="link-button" id="btn-limpar-busca-ramais" type="button">Limpar busca</button>
+          </p>
+        </section>
+
+        <div class="ramais-grupos" id="ramais-grupos" aria-live="polite"></div>
+      </div><!-- /modulo-ramais -->
 
       <div class="content-signature">
         <img src="img/tcm-lockup.png" alt="Tribunal de Contas dos Municípios do Estado da Bahia" />
@@ -801,6 +871,7 @@
 
   <script src="dados/contratos.js"></script>
   <script src="dados/projetos.js"></script>
+  <script src="dados/ramais.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script type="module" src="script.js"></script>

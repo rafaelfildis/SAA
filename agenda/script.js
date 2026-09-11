@@ -87,6 +87,8 @@ const HORIZONTE_TODAS = 0;
 state.modulo = "portal"; // portal | agenda | projetos
 state.projetos = [];
 state.projetoAberto = null;
+// Busca do módulo Ramal DTI, separada da busca da agenda e da do plano.
+state.filtroRamais = "";
 state.projetoEditando = null;
 state.filtrosProjeto = {
   horizonte: HORIZONTE_TODAS,
@@ -3438,6 +3440,11 @@ function inicializarInterface() {
       renderizarProjetos();
       return;
     }
+    if (state.modulo === "ramais") {
+      state.filtroRamais = ev.target.value;
+      renderizarRamais();
+      return;
+    }
     state.filtros.busca = ev.target.value;
     renderizarConteudo();
   });
@@ -3759,7 +3766,8 @@ function aplicarFiltrosDaURL() {
   // "?modulo=" abre o sistema direto em um módulo. Aceita "plano" como
   // sinônimo de "projetos" para que o link acompanhe o nome exibido na tela.
   const pedido = (params.get("modulo") || "").toLowerCase();
-  const moduloPedido = pedido === "plano" || pedido === "plano100" ? "projetos" : pedido;
+  const moduloPedido =
+    pedido === "plano" || pedido === "plano100" ? "projetos" : pedido === "ramal" ? "ramais" : pedido;
 
   const dia = dataValida(params.get("data"));
   const de = dia || dataValida(params.get("de"));
@@ -5072,6 +5080,182 @@ function importarProjetos(arquivo) {
 }
 
 /* --------------------------------------------------------------------------
+   Ramal DTI
+   --------------------------------------------------------------------------
+   Lista de consulta: vem com o sistema, igual para todo mundo, sem nada a
+   gravar. O que a tela precisa fazer bem é achar um ramal depressa — daí a
+   busca ligada ao campo do topo — e não deixar a regra de entrada escondida
+   atrás da lista, que é o erro que uma lista de telefones costuma cometer.
+   -------------------------------------------------------------------------- */
+
+function dadosDeRamais() {
+  const d = window.SAA_RAMAIS;
+  return d && Array.isArray(d.grupos) ? d : null;
+}
+
+// Número discável completo. O ramal de quatro dígitos é o que se usa por
+// dentro; de fora, ou do celular, só serve com DDD e prefixo.
+function telefoneCompleto(ramal) {
+  const d = dadosDeRamais();
+  if (!d) return "";
+  return `+55${d.ddd}3115${ramal}`;
+}
+
+function numeroLegivel(ramal) {
+  const d = dadosDeRamais();
+  return d ? `${d.prefixo}${ramal}` : ramal;
+}
+
+function ramaisDoItem(item) {
+  return Array.isArray(item.ramais) ? item.ramais : [item.ramal];
+}
+
+function totalDeRamais(grupos) {
+  return grupos.reduce((a, g) => a + g.itens.reduce((b, i) => b + ramaisDoItem(i).length, 0), 0);
+}
+
+// Filtra por nome, por ramal e pelo nome da equipe — procurar "infra" deve
+// trazer o grupo inteiro, e procurar "5667" deve trazer a pessoa.
+function gruposFiltrados() {
+  const d = dadosDeRamais();
+  if (!d) return [];
+  const busca = normalizarTexto(state.filtroRamais || "").trim();
+  if (!busca) return d.grupos;
+
+  return d.grupos
+    .map((g) => {
+      const grupoBate = normalizarTexto(g.nome).includes(busca);
+      const itens = grupoBate
+        ? g.itens
+        : g.itens.filter((i) =>
+            normalizarTexto(i.nome).includes(busca) || ramaisDoItem(i).some((r) => r.includes(busca))
+          );
+      return { ...g, itens };
+    })
+    .filter((g) => g.itens.length);
+}
+
+function cartaoDeRamal(item) {
+  const ramais = ramaisDoItem(item);
+  const botoes = ramais
+    .map(
+      (r) => `
+        <a class="ramal-numero" href="tel:${escapeAttr(telefoneCompleto(r))}"
+           title="${escapeAttr(`Ligar para ${numeroLegivel(r)}`)}">
+          <span class="ramal-numero__digitos">${escapeHtml(r)}</span>
+        </a>`
+    )
+    .join("");
+  return `
+    <li class="ramal-item${item.geral ? " ramal-item--geral" : ""}">
+      <span class="ramal-nome">${escapeHtml(item.nome)}</span>
+      <span class="ramal-numeros">${botoes}</span>
+    </li>`;
+}
+
+function renderizarRamais() {
+  const d = dadosDeRamais();
+  const alvo = document.getElementById("ramais-grupos");
+  if (!alvo) return;
+
+  if (!d) {
+    alvo.innerHTML = `<p class="ramais-indisponivel">A lista de ramais não pôde ser carregada.</p>`;
+    return;
+  }
+
+  // Porta de entrada
+  document.getElementById("porta-rotulo").textContent = d.portaDeEntrada.rotulo;
+  document.getElementById("porta-titulo").textContent = d.portaDeEntrada.titulo;
+  document.getElementById("porta-nota").textContent = d.portaDeEntrada.nota;
+  const numero = document.getElementById("porta-numero");
+  numero.textContent = numeroLegivel(d.portaDeEntrada.ramal);
+  numero.href = `tel:${telefoneCompleto(d.portaDeEntrada.ramal)}`;
+
+  // Atalhos
+  document.getElementById("ramais-atalhos").innerHTML = d.atalhos
+    .map(
+      (a) => `
+      <a class="ramal-atalho" href="tel:${escapeAttr(telefoneCompleto(a.ramal))}">
+        <span class="ramal-atalho__rotulo">${escapeHtml(a.rotulo)}</span>
+        <span class="ramal-atalho__ramal">${escapeHtml(a.ramal)}</span>
+      </a>`
+    )
+    .join("");
+
+  const grupos = gruposFiltrados();
+  const visiveis = totalDeRamais(grupos);
+  const total = totalDeRamais(d.grupos);
+
+  document.getElementById("ramais-resumo").textContent =
+    `${visiveis} ${visiveis === 1 ? "ramal" : "ramais"}`;
+  document.getElementById("ramais-subtitulo").textContent =
+    `${total} ramais em ${d.grupos.length} equipes · todos com o prefixo ${d.prefixo}`;
+
+  // O aviso aparece sempre que há busca em vigor, não só quando ela falha:
+  // quem filtrou e achou também precisa de um caminho de volta à lista
+  // inteira que não seja apagar o campo à mão.
+  const aviso = document.getElementById("ramais-vazio");
+  const termo = (state.filtroRamais || "").trim();
+  aviso.hidden = !termo;
+  if (termo) {
+    document.getElementById("ramais-vazio-texto").textContent = visiveis
+      ? `${visiveis} de ${total} ramais, filtrados por "${termo}".`
+      : `Nenhum ramal corresponde a "${termo}".`;
+  }
+
+  alvo.innerHTML = grupos
+    .map(
+      (g) => `
+      <section class="ramal-grupo">
+        <div class="ramal-grupo__cabecalho">
+          <h3 class="ramal-grupo__titulo">${escapeHtml(g.nome)}</h3>
+          <span class="ramal-grupo__contagem">${totalDeRamais([g])}</span>
+        </div>
+        <ul class="ramal-lista">${g.itens.map(cartaoDeRamal).join("")}</ul>
+      </section>`
+    )
+    .join("");
+}
+
+function renderizarPortalRamais() {
+  const d = dadosDeRamais();
+  const definir = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  };
+  if (!d) {
+    definir("portal-ramais-porta", "—");
+    definir("portal-ramais-grupos", "—");
+    definir("portal-ramais-total", "—");
+    definir("portal-ramais-destaque", "A lista de ramais não pôde ser carregada.");
+    definir("portal-ramais-selo", "Indisponível");
+    return;
+  }
+  definir("portal-ramais-porta", d.portaDeEntrada.ramal);
+  definir("portal-ramais-grupos", String(d.grupos.length));
+  definir("portal-ramais-total", String(totalDeRamais(d.grupos)));
+
+  const destaque = document.getElementById("portal-ramais-destaque");
+  if (destaque) {
+    destaque.textContent = `Rotina entra pelo ${numeroLegivel(d.portaDeEntrada.ramal)} — ${d.portaDeEntrada.titulo}.`;
+    destaque.classList.add("portal-card__destaque--forte");
+  }
+  definir("portal-ramais-selo", d.atalhos.map((a) => `${a.rotulo} ${a.ramal}`).join(" · "));
+}
+
+function inicializarModuloRamais() {
+  const limpar = document.getElementById("btn-limpar-busca-ramais");
+  if (limpar) {
+    limpar.addEventListener("click", () => {
+      state.filtroRamais = "";
+      const busca = document.getElementById("busca");
+      if (busca) busca.value = "";
+      renderizarRamais();
+    });
+  }
+}
+
+/* --------------------------------------------------------------------------
    Portal
    --------------------------------------------------------------------------
    Tela de entrada do sistema. Não é uma capa decorativa: cada cartão mostra o
@@ -5206,6 +5390,7 @@ function renderizarPortal() {
   }
   renderizarPortalAgenda();
   renderizarPortalProjetos();
+  renderizarPortalRamais();
   atualizarBadgeProjetos();
 }
 
@@ -5234,12 +5419,13 @@ function inicializarPortal() {
    Troca de módulo
    -------------------------------------------------------------------------- */
 
-const MODULOS = ["portal", "agenda", "projetos"];
+const MODULOS = ["portal", "agenda", "projetos", "ramais"];
 
 const ROTULO_MODULO = {
   portal: "Portal",
   agenda: "Agenda",
   projetos: "Plano 100 dias",
+  ramais: "Ramal DTI",
 };
 
 // A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
@@ -5248,6 +5434,7 @@ const SUBTITULO_MODULO = {
   portal: "TCM-BA — Agenda institucional e Plano 100 dias",
   agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
   projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
+  ramais: "TCM-BA — ramais da Diretoria de Tecnologia da Informação",
 };
 
 function trocarModulo(modulo) {
@@ -5257,6 +5444,7 @@ function trocarModulo(modulo) {
   document.getElementById("modulo-portal").hidden = atual !== "portal";
   document.getElementById("modulo-agenda").hidden = atual !== "agenda";
   document.getElementById("modulo-projetos").hidden = atual !== "projetos";
+  document.getElementById("modulo-ramais").hidden = atual !== "ramais";
   document.getElementById("filtros-agenda").hidden = atual !== "agenda";
   document.getElementById("filtros-projetos").hidden = atual !== "projetos";
 
@@ -5269,7 +5457,16 @@ function trocarModulo(modulo) {
     busca.placeholder =
       atual === "projetos"
         ? "Buscar por projeto, responsável ou área…"
+        : atual === "ramais"
+        ? "Buscar por nome, equipe ou ramal…"
         : "Buscar por título, descrição ou local…";
+    // Cada módulo tem a sua busca. Carregar o texto de um para o outro daria
+    // uma lista filtrada por um termo que não está mais escrito em lugar
+    // nenhum visível.
+    busca.value =
+      atual === "projetos" ? state.filtrosProjeto.busca || ""
+      : atual === "ramais" ? state.filtroRamais || ""
+      : state.filtros.busca || "";
   }
   document.getElementById("btn-abrir-export").hidden = atual !== "agenda";
   document.getElementById("btn-atualizar").hidden = atual !== "agenda";
@@ -5307,6 +5504,7 @@ function trocarModulo(modulo) {
   window.scrollTo({ top: 0, behavior: "auto" });
 
   if (atual === "projetos") renderizarProjetos();
+  if (atual === "ramais") renderizarRamais();
   if (atual === "portal") renderizarPortal();
 }
 
@@ -5486,6 +5684,7 @@ function inicializarModuloProjetos() {
 function iniciar() {
   inicializarInterface();
   inicializarModuloProjetos();
+  inicializarModuloRamais();
   inicializarPortal();
   aplicarFiltrosDaURL();
 

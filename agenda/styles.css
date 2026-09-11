@@ -2515,3 +2515,172 @@ html, body { overflow-x: hidden; }
    escolha e o selo do cartão falem a mesma língua. */
 #proj-categoria-chips .chip { border-color: currentColor; }
 #proj-categoria-chips .chip.is-active { color: #fff; }
+
+/* ==========================================================================
+   RAMAL DTI
+
+   A regra de entrada vem antes da lista, em bloco próprio: uma lista de
+   telefones que começa pelos nomes convida a ligar direto para a pessoa, que
+   é exatamente o que a norma da DTI pede para não fazer na rotina.
+   ========================================================================== */
+
+.porta-entrada {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+}
+.porta-entrada__topo { display: flex; flex-direction: column; gap: 3px; }
+.porta-entrada__rotulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+.porta-entrada__titulo {
+  margin: 0;
+  font-family: "Bitter", Georgia, serif;
+  font-size: 1.06rem;
+  font-weight: 700;
+  color: #fff;
+}
+.porta-entrada__numero {
+  align-self: flex-start;
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 1.72rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-decoration: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.28);
+  padding-bottom: 2px;
+}
+.porta-entrada__numero:hover { border-bottom-color: #fff; }
+.porta-entrada__nota {
+  margin: 2px 0 0;
+  max-width: 68ch;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+  text-wrap: pretty;
+}
+
+/* Atalhos: os dois números que se procura sem querer procurar. */
+.ramais-atalhos { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.ramal-atalho {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ramal-atalho:hover { border-color: var(--color-secondary); box-shadow: var(--sombra-leve); }
+.ramal-atalho__rotulo { font-size: 0.82rem; font-weight: 500; color: var(--color-text-secondary); }
+.ramal-atalho__ramal {
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+.ramais-grupos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.ramal-grupo {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+  overflow: hidden;
+}
+.ramal-grupo__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 18px;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+.ramal-grupo__titulo {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-heading);
+}
+.ramal-grupo__contagem {
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.74rem;
+  color: var(--color-text-tertiary);
+}
+
+.ramal-lista { list-style: none; margin: 0; padding: 0; }
+.ramal-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+.ramal-item:last-child { border-bottom: none; }
+/* O ramal geral da equipe é o primeiro a procurar; fica marcado para não se
+   perder no meio dos nomes. */
+.ramal-item--geral { background: var(--color-secondary-tint); }
+.ramal-item--geral .ramal-nome { font-weight: 600; color: var(--color-primary); }
+
+.ramal-nome { font-size: 0.9rem; color: var(--color-text-primary); min-width: 0; }
+.ramal-numeros { display: flex; gap: 6px; flex-shrink: 0; }
+
+.ramal-numero {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ramal-numero:hover { border-color: var(--color-secondary); background: var(--color-secondary-tint); }
+.ramal-numero:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
+.ramal-numero__digitos {
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.94rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-secondary);
+}
+
+.ramais-indisponivel {
+  padding: 28px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+}
+
+@media (max-width: 860px) {
+  .porta-entrada { padding: 16px 18px; }
+  .porta-entrada__numero { font-size: 1.5rem; }
+  .ramais-grupos { grid-template-columns: 1fr; }
+  .ramal-item { padding: 11px 16px; }
+}
