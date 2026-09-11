@@ -2684,3 +2684,8 @@ html, body { overflow-x: hidden; }
   .ramais-grupos { grid-template-columns: 1fr; }
   .ramal-item { padding: 11px 16px; }
 }
+
+/* Com três cartões no portal a linha do rodapé aperta: a chamada não pode
+   quebrar em duas linhas e o selo cede espaço antes dela. */
+.portal-card__cta { white-space: nowrap; }
+.portal-card__selo { min-width: 0; }

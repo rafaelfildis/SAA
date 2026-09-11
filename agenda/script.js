@@ -5240,7 +5240,10 @@ function renderizarPortalRamais() {
     destaque.textContent = `Rotina entra pelo ${numeroLegivel(d.portaDeEntrada.ramal)} — ${d.portaDeEntrada.titulo}.`;
     destaque.classList.add("portal-card__destaque--forte");
   }
-  definir("portal-ramais-selo", d.atalhos.map((a) => `${a.rotulo} ${a.ramal}`).join(" · "));
+  // Rótulos curtos: com três cartões lado a lado, "Sessão do Plenário" e
+  // "Sistema e-TCM" por extenso truncam justamente no número.
+  const curto = (r) => r.replace(/^Sessão do\s+/i, "").replace(/^Sistema\s+/i, "");
+  definir("portal-ramais-selo", d.atalhos.map((a) => `${curto(a.rotulo)} ${a.ramal}`).join(" · "));
 }
 
 function inicializarModuloRamais() {
@@ -5431,7 +5434,7 @@ const ROTULO_MODULO = {
 // A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
 // do Google Agenda" descreve a agenda, não o plano de entregas.
 const SUBTITULO_MODULO = {
-  portal: "TCM-BA — Agenda institucional e Plano 100 dias",
+  portal: "TCM-BA — Agenda, Plano 100 dias e Ramal DTI",
   agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
   projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
   ramais: "TCM-BA — ramais da Diretoria de Tecnologia da Informação",
