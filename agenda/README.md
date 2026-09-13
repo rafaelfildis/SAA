@@ -248,27 +248,34 @@ Material de consulta e de discussão que vem com o sistema
 navegador — desenho de estrutura se decide em ato do Tribunal, não no
 `localStorage` de quem abriu a tela.
 
-**A comparação fica em tela nas duas visões**, não só na proposta: unidades
-abaixo da Diretoria (4 → 6), funções de TI com unidade própria (4 de 7 → 7 de
-7) e pessoas lotadas (16 → 16, o mesmo quadro). A coluna da visão exibida fica
+**A comparação fica em tela nas duas visões**, não só na proposta: unidades no
+organograma (4 → 6), funções de TI com unidade própria (4 de 7 → 7 de 7) e
+pessoas lotadas (16 → 16, o mesmo quadro). A coluna da visão exibida fica
 acesa, para que a comparação diga qual dos dois lados é o que está desenhado
 abaixo.
 
 **Estrutura atual.** É a relação de lotação da DTI lida como organograma: 16
 pessoas com matrícula, vínculo e cargo como constam da relação, em três
-divisões (Desenvolvimento de Sistemas, Infraestrutura Tecnológica e Banco de
-Dados) e uma seção (Atendimento ao Usuário). Cada cartão segue a hierarquia da
-própria Diretoria — chefia (DAS-4), gerências (DAS-3) e equipe —, e o rótulo de
-cada bloco diz o nível, para que a lista não pareça um amontoado de nomes em
-ordem alfabética.
+divisões sob a Diretoria — Desenvolvimento de Sistemas, Infraestrutura
+Tecnológica e Banco de Dados — e a **Seção de Atendimento ao Usuário
+subordinada à Infraestrutura**. A seção é desenhada dentro do cartão da
+Divisão, e não ao lado dos cartões de divisão: com a seção como par de uma
+divisão, o organograma apresentaria como igual o que é subordinado.
+
+Cada cartão segue a hierarquia da própria Diretoria — chefia (DAS-4), gerências
+(DAS-3) e equipe —, e o rótulo de cada bloco diz o nível, para que a lista não
+pareça um amontoado de nomes em ordem alfabética. A chefia aparece no cabeçalho
+do cartão, não repetida na lista abaixo.
 
 **O que a relação não declara fica escrito na tela**, em cor de aviso, em vez de
-ser preenchido por conta própria: a chefia da Divisão de Banco de Dados
-("chefia a confirmar"), a divisão a que a Seção de Atendimento ao Usuário se
-subordina, e o fato de a Divisão de Infraestrutura Tecnológica constar apenas
-com a chefia — os nomes que atendem infraestrutura na lista de ramais não
-aparecem na relação de lotação. Preencher o campo correspondente no arquivo de
-dados é o suficiente para a tela passar a exibi-lo.
+ser preenchido por conta própria: o escopo de cada uma das três gerências
+lotadas na DDES, o cargo do Diretor, o quadro de atendimento da Seção (a
+relação registra apenas a gerência) e o quadro técnico da Infraestrutura — os
+nomes que atendem infraestrutura na lista de ramais não aparecem na relação de
+lotação. Registra também que a chefia da Divisão de Banco de Dados é exercida
+por analista de sistemas efetivo, sem o cargo comissionado de DAS-4 que
+titulariza as outras duas divisões. Preencher o campo correspondente no arquivo
+de dados é o suficiente para a tela passar a exibi-lo.
 
 **Ramal não entra neste módulo de propósito.** A relação de lotação não traz
 ramal, e cruzar nome de servidor com a lista de ramais pelo primeiro nome
@@ -279,7 +286,8 @@ produziria número errado ao lado de pessoa certa. Quem procura número usa o
 informação sem unidade responsável (o papel recai sobre quem opera o ambiente),
 governança de TI sem unidade própria apesar de um contrato de mais de R$ 9
 milhões por ano, informação gerencial sem dono declarado, três gerências
-lotadas na divisão sem seção nomeada e uma divisão sem chefia na relação.
+lotadas na divisão sem seção nomeada, uma chefia de divisão sem o cargo
+comissionado que as outras têm e um atendimento sem quadro próprio.
 
 **Estrutura sugerida.** É **minuta de trabalho**, e a tela diz isso em todo
 lugar onde ela aparece — faixa âmbar na introdução, selo no cartão do portal e
@@ -287,18 +295,18 @@ a ressalva de que criação, extinção e denominação de unidade, assim como
 designação de chefia, dependem de ato próprio do Tribunal.
 
 Seis unidades, sem extinguir nenhuma das existentes: **DDES** e **DINT**
-permanecem como são; a **Divisão de Banco de Dados passa a Divisão de Dados e
-Informação**, com o mesmo quadro e escopo ampliado para painéis e indicadores;
-a **Seção de Atendimento ao Usuário** ganha subordinação declarada e a porta de
-entrada formalizada no 4631; e duas unidades novas assumem o que hoje é acúmulo
+permanecem como são, com a **Seção de Atendimento ao Usuário** onde ela está e
+a porta de entrada formalizada no 4631; a **Divisão de Banco de Dados passa a
+Divisão de Dados e Informação**, mantendo chefia e quadro, com escopo ampliado
+para painéis e indicadores; e duas unidades novas assumem o que hoje é acúmulo
 — **Assessoria de Governança e Gestão de TI** e **Núcleo de Segurança da
 Informação**.
 
 **Sem criação de cargo.** A minuta é desenhada sobre as mesmas 16 pessoas — daí
-a linha "pessoas lotadas: 16 → 16" na comparação. A composição nominal das
-unidades novas, o escopo de cada uma das três gerências da DDES e a designação
-da chefia da divisão de dados ficam a definir pela Diretoria: a proposta traz o
-desenho e a distribuição de atribuições, não a lotação das pessoas.
+a linha "pessoas lotadas: 16 → 16" na comparação. A composição nominal das duas
+unidades novas e o escopo de cada uma das três gerências da DDES ficam a
+definir pela Diretoria: a proposta traz o desenho e a distribuição de
+atribuições, não a lotação das pessoas.
 
 **O que muda** vem em lista própria abaixo do organograma, com o tipo de cada
 mudança (unidade nova, renomeação, processo, governança) e o motivo. Uma

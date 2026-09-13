@@ -12,10 +12,14 @@
 // cada cartão de unidade se organiza: chefia, gerências, equipe.
 //
 // O que a relação NÃO declara fica marcado como "a confirmar", em vez de ser
-// preenchido por conta própria: a chefia da Divisão de Banco de Dados, a
-// divisão a que a Seção de Atendimento ao Usuário se subordina, o escopo de
-// cada uma das três gerências da DDES e o cargo do Diretor. Preencher o campo
-// correspondente aqui é o suficiente para a tela passar a exibi-lo.
+// preenchido por conta própria: o escopo de cada uma das três gerências da
+// DDES, o cargo do Diretor e o quadro de atendimento da SEATU. Preencher o
+// campo correspondente aqui é o suficiente para a tela passar a exibi-lo.
+//
+// A Seção de Atendimento ao Usuário é unidade subordinada à DINT, e por isso
+// entra em `subunidades` da Divisão, não na lista de unidades da Diretoria: o
+// organograma desenha o nível em que ela está, em vez de exibi-la como par de
+// uma divisão.
 //
 // Ramal não entra aqui de propósito: a relação de lotação não traz ramal, e
 // cruzar nome de servidor com a lista de ramais pelo primeiro nome produziria
@@ -48,7 +52,7 @@ window.SAA_ESTRUTURA = {
     rotulo: "Estrutura atual",
     chamada: "Como a DTI está lotada hoje",
     resumo:
-      "Três divisões e uma seção sob a Diretoria, com 16 pessoas na relação de lotação. As quatro unidades cobrem desenvolvimento, infraestrutura, banco de dados e atendimento — quatro das sete funções de TI. Governança, segurança da informação e informação gerencial não têm unidade própria: são exercidas por acúmulo ou não têm dono declarado.",
+      "Três divisões sob a Diretoria e uma seção subordinada à Infraestrutura, com 16 pessoas na relação de lotação. As quatro unidades cobrem desenvolvimento, infraestrutura, banco de dados e atendimento — quatro das sete funções de TI. Governança, segurança da informação e informação gerencial não têm unidade própria: são exercidas por acúmulo ou não têm dono declarado.",
     procedencia:
       "Montada a partir da relação de lotação da DTI (matrícula, vínculo e cargo como constam da relação). O que a relação não declara aparece como “a confirmar”, não preenchido por conta própria. Ramais ficam no módulo Ramal DTI.",
     notasTitulo: "Leitura da estrutura atual",
@@ -56,10 +60,10 @@ window.SAA_ESTRUTURA = {
       "Segurança da informação não tem unidade responsável: o papel recai sobre a Divisão de Infraestrutura Tecnológica, que opera o ambiente — quem opera acaba avaliando a própria operação.",
       "Governança de TI — plano diretor, portfólio, indicadores, gestão de contratos e de fornecedores — não tem unidade própria, embora um único contrato de serviços especializados passe de R$ 9 milhões por ano.",
       "Informação gerencial não tem dono declarado: painéis e indicadores nascem por demanda, sem unidade que responda pela fonte e pelo número.",
-      "A Divisão de Banco de Dados consta com dois analistas e sem chefia na relação de lotação — chefia a confirmar.",
+      "A chefia da Divisão de Banco de Dados é exercida por analista de sistemas efetivo, sem o cargo comissionado de DAS-4 que titulariza as outras duas divisões — a confirmar se há designação formal.",
       "As três gerências (DAS-3) da Divisão de Desenvolvimento de Sistemas estão lotadas na própria Divisão, sem seção nomeada: a relação não diz o escopo de cada uma.",
-      "A Seção de Atendimento ao Usuário é chefiada por gerente (DAS-3), e a relação não declara a divisão a que se subordina.",
-      "A Divisão de Infraestrutura Tecnológica aparece com a chefia apenas. Os nomes que atendem infraestrutura na lista de ramais não constam da relação de lotação — a confirmar se são do contrato de serviços especializados.",
+      "A Seção de Atendimento ao Usuário é a porta de entrada da operação e a única seção do organograma. A relação registra apenas a gerência: não há quadro próprio de atendimento — a confirmar quem executa o primeiro nível.",
+      "A Divisão de Infraestrutura Tecnológica aparece com a chefia e a gerência da Seção, sem quadro técnico próprio. Os nomes que atendem infraestrutura na lista de ramais não constam da relação de lotação — a confirmar se são do contrato de serviços especializados.",
     ],
     topo: {
       sigla: "DTI",
@@ -183,10 +187,11 @@ window.SAA_ESTRUTURA = {
         atribuicoes: [
           "Rede, servidores, estações de trabalho e ambiente de datacenter",
           "Backup, monitoramento e continuidade dos serviços",
+          "Atendimento ao usuário pela Seção subordinada (SEATU), no ramal 4631",
           "Segurança da informação exercida por acúmulo, sem unidade própria",
         ],
         observacao:
-          "A relação de lotação traz apenas a chefia. Os nomes que atendem infraestrutura na lista de ramais não constam da relação — a confirmar se são do contrato de serviços especializados.",
+          "A relação de lotação traz a chefia da Divisão e a gerência da Seção. Os nomes que atendem infraestrutura na lista de ramais não constam da relação — a confirmar se são do contrato de serviços especializados.",
         pessoas: [
           {
             nome: "Rafael José Levita de Almeida",
@@ -194,6 +199,31 @@ window.SAA_ESTRUTURA = {
             vinculo: "Comissionado",
             cargo: "Chefe da Divisão de Infraestrutura Tecnológica, DAS-4",
             papel: "chefia",
+          },
+        ],
+        subunidades: [
+          {
+            sigla: "SEATU",
+            nome: "Seção de Atendimento ao Usuário",
+            natureza: "Seção",
+            ramal: "4631",
+            portaDeEntrada: true,
+            funcoes: ["atendimento"],
+            atribuicoes: [
+              "Porta de entrada da operação pelo ramal 4631: chamado, incidente e solicitação de rotina",
+              "Atendimento ao usuário interno e apoio às sessões do Plenário",
+            ],
+            observacao:
+              "A relação registra apenas a gerência: a seção não tem quadro próprio de atendimento — a confirmar quem executa o primeiro nível.",
+            pessoas: [
+              {
+                nome: "Raul César Monferdini Dourado Lima",
+                matricula: "217771",
+                vinculo: "Comissionado",
+                cargo: "Gerente de Tecnologia da Informação, DAS-3",
+                papel: "gerencia",
+              },
+            ],
           },
         ],
       },
@@ -208,45 +238,21 @@ window.SAA_ESTRUTURA = {
           "Desempenho, integridade e recuperação das bases",
         ],
         observacao:
-          "Chefia de divisão não consta na relação de lotação — a confirmar. A unidade aparece com dois analistas e sem titular de DAS-4.",
+          "A chefia é exercida por analista de sistemas efetivo. A relação não registra, para esta Divisão, o cargo comissionado de DAS-4 que titulariza as outras duas — a confirmar se há designação formal.",
         pessoas: [
+          {
+            nome: "Sérvulo Dourado Cruz Lino",
+            matricula: "217410",
+            vinculo: "Efetivo",
+            cargo: "Analista de Sistemas",
+            papel: "chefia",
+          },
           {
             nome: "Ana Beatriz Sarno de Santana",
             matricula: "217530",
             vinculo: "Efetivo",
             cargo: "Analista de Sistemas",
             papel: "equipe",
-          },
-          {
-            nome: "Sérvulo Dourado Cruz Lino",
-            matricula: "217410",
-            vinculo: "Efetivo",
-            cargo: "Analista de Sistemas",
-            papel: "equipe",
-          },
-        ],
-      },
-      {
-        sigla: "SEATU",
-        nome: "Seção de Atendimento ao Usuário",
-        natureza: "Seção",
-        subordinacao: "",
-        ramal: "4631",
-        portaDeEntrada: true,
-        funcoes: ["atendimento"],
-        atribuicoes: [
-          "Porta de entrada da operação pelo ramal 4631: chamado, incidente e solicitação de rotina",
-          "Atendimento ao usuário interno e apoio às sessões do Plenário",
-        ],
-        observacao:
-          "Seção chefiada por gerente (DAS-3). A relação de lotação não declara a divisão a que se subordina — a confirmar.",
-        pessoas: [
-          {
-            nome: "Raul César Monferdini Dourado Lima",
-            matricula: "217771",
-            vinculo: "Comissionado",
-            cargo: "Gerente de Tecnologia da Informação, DAS-3",
-            papel: "gerencia",
           },
         ],
       },
@@ -258,7 +264,7 @@ window.SAA_ESTRUTURA = {
     chamada: "Minuta de proposta — cada função com unidade responsável",
     minuta: true,
     resumo:
-      "Seis unidades sob a Diretoria. Nenhuma divisão existente é extinta: DDES e DINT permanecem como são, a Divisão de Banco de Dados tem o escopo ampliado e passa a Divisão de Dados e Informação, e a Seção de Atendimento ao Usuário ganha subordinação declarada. Duas unidades novas assumem o que hoje é acúmulo — governança e segurança da informação. Sem criação de cargo: o desenho é feito sobre as mesmas 16 pessoas.",
+      "Seis unidades no organograma. Nenhuma divisão existente é extinta: DDES e DINT permanecem como são, com a Seção de Atendimento ao Usuário subordinada à Infraestrutura, e a Divisão de Banco de Dados tem o escopo ampliado e passa a Divisão de Dados e Informação, mantendo a chefia e os dois analistas. Duas unidades novas assumem o que hoje é acúmulo — governança e segurança da informação. Sem criação de cargo: o desenho é feito sobre as mesmas 16 pessoas.",
     procedencia:
       "Minuta de trabalho, sem valor de ato administrativo. Criação, extinção e denominação de unidade, assim como designação de chefia, dependem de ato próprio do Tribunal; o que esta tela propõe é o desenho e a distribuição de atribuições.",
     notasTitulo: "Premissas da minuta",
@@ -266,9 +272,10 @@ window.SAA_ESTRUTURA = {
       "Sem criação de cargo e sem contratação: as seis unidades são desenhadas sobre as 16 pessoas da relação de lotação.",
       "Nenhuma divisão é extinta. DDES e DINT permanecem com a mesma chefia e o mesmo quadro; a DBAD permanece com o mesmo quadro, com escopo ampliado e nova denominação.",
       "As duas unidades novas assumem responsabilidades que já são exercidas por acúmulo — o que muda é ter dono, não ter mais trabalho.",
-      "A minuta pressupõe a designação da chefia da divisão de dados, hoje sem titular na relação de lotação.",
+      "A divisão de dados mantém a chefia e os dois analistas de hoje: a minuta amplia o escopo, não o comando.",
       "Composição nominal das unidades novas e o escopo de cada uma das três gerências da DDES ficam a definir pela Diretoria.",
       "O ramal 4631 permanece a porta de entrada única da operação, agora com catálogo de serviços e prazo de atendimento declarados.",
+      "A Seção de Atendimento ao Usuário permanece subordinada à Divisão de Infraestrutura Tecnológica, com quadro próprio a dimensionar.",
     ],
     topo: {
       sigla: "DTI",
@@ -431,10 +438,11 @@ window.SAA_ESTRUTURA = {
         atribuicoes: [
           "Datacenter, rede, servidores, nuvem e estações de trabalho",
           "Backup, monitoramento, capacidade e continuidade dos serviços",
-          "Segundo nível de solução para o que a Seção de Atendimento ao Usuário encaminhar",
+          "Atendimento ao usuário pela Seção subordinada (SEATU), com catálogo e prazo declarados",
+          "Segundo nível de solução para o que a Seção encaminhar",
         ],
         lotacao:
-          "Mantém a chefia. Quadro próprio a dimensionar: a relação de lotação traz apenas o titular da DAS-4.",
+          "Mantém a chefia e a Seção subordinada. Quadro próprio a dimensionar: a relação de lotação traz apenas os titulares de DAS-4 e DAS-3.",
         justificativa:
           "A Divisão deixa de acumular segurança da informação e passa a responder pelo que é próprio da infraestrutura, com o Núcleo de Segurança como instância separada de política e de resposta a incidente.",
         pessoas: [
@@ -444,6 +452,35 @@ window.SAA_ESTRUTURA = {
             vinculo: "Comissionado",
             cargo: "Chefe da Divisão de Infraestrutura Tecnológica, DAS-4",
             papel: "chefia",
+          },
+        ],
+        subunidades: [
+          {
+            sigla: "SEATU",
+            nome: "Seção de Atendimento ao Usuário",
+            natureza: "Seção",
+            estado: "mantida",
+            ramal: "4631",
+            portaDeEntrada: true,
+            funcoes: ["atendimento"],
+            atribuicoes: [
+              "Porta de entrada única da operação pelo ramal 4631, com catálogo de serviços e prazo declarado",
+              "Triagem, registro e acompanhamento de todo chamado até o encerramento",
+              "Primeiro nível de solução; o que exceder vai à Infraestrutura ou ao Desenvolvimento com registro",
+              "Apoio às sessões do Plenário",
+            ],
+            lotacao: "Mantém a gerência. Quadro de atendimento a dimensionar junto com a Divisão.",
+            justificativa:
+              "A seção já é a porta de entrada de fato, e continua onde está. O que a minuta acrescenta é a separação entre quem tria e quem resolve, sem a qual não há prazo de atendimento mensurável.",
+            pessoas: [
+              {
+                nome: "Raul César Monferdini Dourado Lima",
+                matricula: "217771",
+                vinculo: "Comissionado",
+                cargo: "Gerente de Tecnologia da Informação, DAS-3",
+                papel: "gerencia",
+              },
+            ],
           },
         ],
       },
@@ -461,52 +498,23 @@ window.SAA_ESTRUTURA = {
           "Dicionário de dados, catálogo e qualidade da informação",
           "Transparência ativa e abertura de dados, no que couber à TI",
         ],
-        lotacao:
-          "Mantém os dois analistas hoje lotados na DBAD. Chefia de divisão a designar — a relação atual não traz titular.",
+        lotacao: "Mantém a chefia e os dois analistas hoje lotados na DBAD.",
         justificativa:
-          "Ampliar o escopo de uma divisão que já administra os dados custa menos que criar unidade nova, e resolve dois problemas de uma vez: painel feito por demanda passa a ter dono, e a divisão passa a ter chefia declarada.",
+          "Ampliar o escopo de uma divisão que já administra os dados custa menos que criar unidade nova: o painel feito por demanda passa a ter dono sem que se mexa em comando nem em quadro.",
         pessoas: [
+          {
+            nome: "Sérvulo Dourado Cruz Lino",
+            matricula: "217410",
+            vinculo: "Efetivo",
+            cargo: "Analista de Sistemas",
+            papel: "chefia",
+          },
           {
             nome: "Ana Beatriz Sarno de Santana",
             matricula: "217530",
             vinculo: "Efetivo",
             cargo: "Analista de Sistemas",
             papel: "equipe",
-          },
-          {
-            nome: "Sérvulo Dourado Cruz Lino",
-            matricula: "217410",
-            vinculo: "Efetivo",
-            cargo: "Analista de Sistemas",
-            papel: "equipe",
-          },
-        ],
-      },
-      {
-        sigla: "SEATU",
-        nome: "Seção de Atendimento ao Usuário",
-        natureza: "Seção",
-        estado: "mantida",
-        subordinacao: "Divisão de Infraestrutura Tecnológica, DINT (proposta)",
-        ramal: "4631",
-        portaDeEntrada: true,
-        funcoes: ["atendimento"],
-        atribuicoes: [
-          "Porta de entrada única da operação pelo ramal 4631, com catálogo de serviços e prazo declarado",
-          "Triagem, registro e acompanhamento de todo chamado até o encerramento",
-          "Primeiro nível de solução; o que exceder vai à Infraestrutura ou ao Desenvolvimento com registro",
-          "Apoio às sessões do Plenário",
-        ],
-        lotacao: "Mantém a gerência. Quadro de atendimento a dimensionar junto com a DINT.",
-        justificativa:
-          "A seção existe e já é a porta de entrada de fato. O que a minuta acrescenta é subordinação declarada e a separação entre quem tria e quem resolve, sem a qual não há prazo de atendimento mensurável.",
-        pessoas: [
-          {
-            nome: "Raul César Monferdini Dourado Lima",
-            matricula: "217771",
-            vinculo: "Comissionado",
-            cargo: "Gerente de Tecnologia da Informação, DAS-3",
-            papel: "gerencia",
           },
         ],
       },
@@ -522,13 +530,7 @@ window.SAA_ESTRUTURA = {
         tipo: "renomeada",
         titulo: "A Divisão de Banco de Dados passa a Divisão de Dados e Informação",
         detalhe:
-          "Mesmo quadro, escopo ampliado: além da administração das bases, passa a responder por painéis, indicadores, dicionário de dados e abertura de dados. Informação gerencial ganha dono sem criação de unidade nova.",
-      },
-      {
-        tipo: "governanca",
-        titulo: "Chefias sem titular ficam declaradas como pendência",
-        detalhe:
-          "A divisão de dados aparece na relação de lotação sem chefia de DAS-4. A minuta pressupõe a designação do titular — uma divisão sem chefe não tem a quem a Diretoria cobrar entrega.",
+          "Mesma chefia e mesmo quadro, escopo ampliado: além da administração das bases, passa a responder por painéis, indicadores, dicionário de dados e abertura de dados. Informação gerencial ganha dono sem criação de unidade nova.",
       },
       {
         tipo: "processo",
@@ -546,7 +548,7 @@ window.SAA_ESTRUTURA = {
         tipo: "processo",
         titulo: "Porta de entrada única formalizada no 4631",
         detalhe:
-          "A regra que hoje é norma de conduta passa a atributo da estrutura: um ramal de entrada, um catálogo de serviços e um prazo declarado por tipo de chamado — com a subordinação da seção declarada no organograma.",
+          "A regra que hoje é norma de conduta passa a atributo da estrutura: um ramal de entrada, um catálogo de serviços e um prazo declarado por tipo de chamado, na Seção que já é a porta de fato.",
       },
       {
         tipo: "processo",

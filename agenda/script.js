@@ -5337,14 +5337,32 @@ function pessoasDaUnidade(u) {
   return Array.isArray(u.pessoas) ? u.pessoas : [];
 }
 
+function subunidadesDe(u) {
+  return Array.isArray(u.subunidades) ? u.subunidades : [];
+}
+
+// Uma seção subordinada a uma divisão é unidade do organograma como qualquer
+// outra: conta nas funções cobertas, no total de unidades e no de pessoas. O
+// que muda é onde ela é desenhada, não se ela existe.
+function achatarUnidades(unidades) {
+  return unidades.flatMap((u) => [u, ...achatarUnidades(subunidadesDe(u))]);
+}
+
+function unidadesDaVisao(visao) {
+  return achatarUnidades(visao.unidades);
+}
+
 // O número que a comparação usa é gente lotada, não caixinha: a minuta não
 // cria vaga, e é isso que a linha "16 → 16" precisa deixar evidente.
 function pessoasDaVisao(visao) {
-  return [visao.topo, ...visao.unidades].reduce((a, u) => a + pessoasDaUnidade(u).length, 0);
+  return [visao.topo, ...unidadesDaVisao(visao)].reduce(
+    (a, u) => a + pessoasDaUnidade(u).length,
+    0
+  );
 }
 
 function contarVinculo(visao, vinculo) {
-  return [visao.topo, ...visao.unidades].reduce(
+  return [visao.topo, ...unidadesDaVisao(visao)].reduce(
     (a, u) => a + pessoasDaUnidade(u).filter((p) => p.vinculo === vinculo).length,
     0
   );
@@ -5386,8 +5404,15 @@ function pessoaBate(pessoa, busca) {
 function recortarUnidade(u, busca) {
   if (!busca) return u;
   if (textoDaUnidade(u).includes(busca)) return u;
-  const recorte = pessoasDaUnidade(u).filter((p) => pessoaBate(p, busca));
-  return recorte.length ? { ...u, pessoas: recorte, recortada: true } : null;
+  const pessoas = pessoasDaUnidade(u).filter((p) => pessoaBate(p, busca));
+  // A busca desce para a seção subordinada. Quando só ela bate, a divisão
+  // continua em tela como contexto, com o próprio quadro recortado — tirar a
+  // divisão deixaria a seção pendurada em lugar nenhum.
+  const subunidades = subunidadesDe(u)
+    .map((su) => recortarUnidade(su, busca))
+    .filter(Boolean);
+  if (!pessoas.length && !subunidades.length) return null;
+  return { ...u, pessoas, subunidades, recortada: true };
 }
 
 function unidadesFiltradas(visao) {
@@ -5402,7 +5427,7 @@ function unidadesFiltradas(visao) {
 function funcoesDaVisao(visao) {
   const d = dadosDeEstrutura();
   if (!d) return [];
-  const unidades = [visao.topo, ...visao.unidades];
+  const unidades = [visao.topo, ...unidadesDaVisao(visao)];
   return d.funcoes.map((f) => {
     const propria = unidades.find((u) => (u.funcoes || []).includes(f.id));
     const acumulada = unidades.find((u) => (u.funcoesAcumuladas || []).includes(f.id));
@@ -5494,7 +5519,7 @@ function linhaDeTitular(u, titular, minuta) {
     </p>`;
 }
 
-function cabecalhoDeUnidade(u, funcoesPorId, minuta) {
+function cabecalhoDeUnidade(u, funcoesPorId, minuta, tagTitulo) {
   const selos = [];
   if (u.estado && SELO_ESTADO_UNIDADE[u.estado]) {
     selos.push(
@@ -5513,7 +5538,7 @@ function cabecalhoDeUnidade(u, funcoesPorId, minuta) {
     <header class="org-unidade__topo">
       <div class="org-unidade__identificacao">
         <span class="org-unidade__sigla">${escapeHtml(u.sigla)}</span>
-        <h4 class="org-unidade__nome">${escapeHtml(u.nome)}</h4>
+        <${tagTitulo} class="org-unidade__nome">${escapeHtml(u.nome)}</${tagTitulo}>
       </div>
       ${selos.length ? `<div class="org-unidade__selos">${selos.join("")}</div>` : ""}
     </header>
@@ -5529,18 +5554,21 @@ function cabecalhoDeUnidade(u, funcoesPorId, minuta) {
     ${quadro ? `<p class="org-unidade__quadro-resumo">${escapeHtml(quadro)}</p>` : ""}`;
 }
 
-function cartaoDeUnidade(u, funcoesPorId, minuta, nomeDoTopo) {
+function cartaoDeUnidade(u, funcoesPorId, minuta, nomeDoTopo, aninhada) {
   const atribuicoes = (u.atribuicoes || []).map((a) => `<li>${escapeHtml(a)}</li>`).join("");
-  // Subordinação à própria Diretoria já está desenhada no organograma;
-  // repeti-la em cada cartão é ruído. A linha fica para o que foge disso —
-  // uma subordinação proposta, ou a de uma unidade intermediária.
+  // Subordinação à própria Diretoria já está desenhada no organograma, e a de
+  // uma seção aninhada está desenhada pelo próprio aninhamento; repeti-la
+  // seria ruído. A linha fica para o que foge disso.
   const subordinacao =
-    u.subordinacao && u.subordinacao !== nomeDoTopo
+    !aninhada && u.subordinacao && u.subordinacao !== nomeDoTopo
       ? `<p class="org-unidade__subordinacao">Subordinada a: ${escapeHtml(u.subordinacao)}</p>`
       : "";
+  const subunidades = subunidadesDe(u);
   return `
-    <article class="org-unidade${u.estado ? ` org-unidade--${escapeAttr(u.estado)}` : ""}">
-      ${cabecalhoDeUnidade(u, funcoesPorId, minuta)}
+    <article class="org-unidade${aninhada ? " org-unidade--aninhada" : ""}${
+      u.estado ? ` org-unidade--${escapeAttr(u.estado)}` : ""
+    }">
+      ${cabecalhoDeUnidade(u, funcoesPorId, minuta, aninhada ? "h5" : "h4")}
       ${subordinacao}
       ${u.origem ? `<p class="org-unidade__origem">Vem de: ${escapeHtml(u.origem)}</p>` : ""}
       ${atribuicoes ? `<ul class="org-unidade__atribuicoes">${atribuicoes}</ul>` : ""}
@@ -5551,6 +5579,18 @@ function cartaoDeUnidade(u, funcoesPorId, minuta, nomeDoTopo) {
       }
       ${blocoDeQuadro(u, titularDaUnidade(u))}
       ${u.justificativa ? `<p class="org-unidade__justificativa">${escapeHtml(u.justificativa)}</p>` : ""}
+      ${
+        subunidades.length
+          ? `<div class="org-subunidades">
+               <span class="org-subunidades__rotulo">${
+                 subunidades.length === 1 ? "Unidade subordinada" : "Unidades subordinadas"
+               }</span>
+               ${subunidades
+                 .map((su) => cartaoDeUnidade(su, funcoesPorId, minuta, nomeDoTopo, true))
+                 .join("")}
+             </div>`
+          : ""
+      }
     </article>`;
 }
 
@@ -5596,9 +5636,9 @@ function renderizarComparativoEstrutura(d, chaveAtiva) {
 
   const linhas = [
     {
-      rotulo: "Unidades abaixo da Diretoria",
-      de: String(atual.unidades.length),
-      para: String(sugerida.unidades.length),
+      rotulo: "Unidades no organograma",
+      de: String(unidadesDaVisao(atual).length),
+      para: String(unidadesDaVisao(sugerida).length),
     },
     {
       rotulo: "Funções com unidade própria",
@@ -5728,7 +5768,7 @@ function renderizarEstrutura() {
 
   document.getElementById("estrutura-titulo").textContent = visao.rotulo;
   document.getElementById("estrutura-subtitulo").textContent =
-    `${visao.chamada} · ${plural(visao.unidades.length, "unidade", "unidades")} abaixo da Diretoria · ` +
+    `${visao.chamada} · ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} no organograma · ` +
     `${plural(pessoasDaVisao(visao), "pessoa lotada", "pessoas lotadas")} (${efetivos} efetivos, ${comissionados} comissionados)`;
   document.getElementById("estrutura-resumo").textContent = visao.resumo;
   document.getElementById("estrutura-procedencia").textContent = visao.procedencia;
@@ -5744,12 +5784,14 @@ function renderizarEstrutura() {
   const unidades = unidadesFiltradas(visao);
   const busca = normalizarTexto(state.filtroEstrutura || "").trim();
   const topo = busca ? recortarUnidade(visao.topo, busca) : visao.topo;
+  const totalDeUnidades = unidadesDaVisao(visao).length;
+  const visiveis = achatarUnidades(unidades).length;
 
   const contagem = document.getElementById("estrutura-contagem");
   if (contagem) {
     contagem.textContent = busca
-      ? `${unidades.length} de ${plural(visao.unidades.length, "unidade", "unidades")}`
-      : plural(visao.unidades.length, "unidade", "unidades");
+      ? `${visiveis} de ${plural(totalDeUnidades, "unidade", "unidades")}`
+      : plural(totalDeUnidades, "unidade", "unidades");
   }
 
   // O aviso aparece sempre que há busca em vigor, e não só quando ela falha:
@@ -5760,8 +5802,8 @@ function renderizarEstrutura() {
   if (aviso) {
     aviso.hidden = !termo;
     if (termo) {
-      document.getElementById("estrutura-vazio-texto").textContent = unidades.length
-        ? `${unidades.length} de ${visao.unidades.length} unidades, filtradas por "${termo}".`
+      document.getElementById("estrutura-vazio-texto").textContent = visiveis
+        ? `${visiveis} de ${totalDeUnidades} unidades, filtradas por "${termo}".`
         : `Nenhuma unidade corresponde a "${termo}".`;
     }
   }
@@ -5806,14 +5848,14 @@ function renderizarPortalEstrutura() {
   }
 
   const lacunas = funcoesSemUnidade(d.atual);
-  definir("portal-estrutura-atual", String(d.atual.unidades.length));
-  definir("portal-estrutura-sugerida", String(d.sugerida.unidades.length));
+  definir("portal-estrutura-atual", String(unidadesDaVisao(d.atual).length));
+  definir("portal-estrutura-sugerida", String(unidadesDaVisao(d.sugerida).length));
   definir("portal-estrutura-lacunas", String(lacunas));
 
   const cel = document.getElementById("portal-estrutura-cel-lacunas");
   if (cel) cel.classList.toggle("portal-metrica--acesa", lacunas > 0);
 
-  const novas = d.sugerida.unidades.filter((u) => u.estado === "nova");
+  const novas = unidadesDaVisao(d.sugerida).filter((u) => u.estado === "nova");
   const destaque = document.getElementById("portal-estrutura-destaque");
   if (destaque) {
     destaque.textContent = novas.length
