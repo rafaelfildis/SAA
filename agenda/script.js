@@ -5291,10 +5291,11 @@ function inicializarModuloRamais() {
    responder o que muda de uma para a outra, e por isso a comparação fica em
    tela nas duas visões, não só na proposta.
 
-   A estrutura atual é a lista oficial de ramais lida como organograma: as
-   mesmas frentes, as mesmas pessoas. O que a lista não informa — titularidade
-   e nome formal da unidade — aparece como "a confirmar", em vez de ser
-   preenchido por conta própria.
+   A estrutura atual é a relação de lotação da DTI lida como organograma, e
+   cada cartão segue a hierarquia da própria Diretoria: chefia (DAS-4),
+   gerências (DAS-3) e equipe. O que a relação não declara — uma chefia sem
+   titular, a divisão a que uma seção se subordina — aparece como pendência
+   escrita na tela, em vez de ser preenchido por conta própria.
    -------------------------------------------------------------------------- */
 
 const VISOES_ESTRUTURA = ["atual", "sugerida"];
@@ -5312,6 +5313,15 @@ const SELO_MUDANCA = {
   governanca: "Governança",
 };
 
+// Ordem dos blocos dentro do cartão: é a hierarquia da Diretoria — abaixo do
+// Diretor vêm os chefes de divisão, depois os gerentes, depois analistas e
+// técnicos. O rótulo do bloco diz o nível, para que a lista não pareça um
+// amontoado de nomes em ordem alfabética.
+const PAPEIS_UNIDADE = [
+  { id: "gerencia", rotulo: "Gerências (DAS-3)" },
+  { id: "equipe", rotulo: "Equipe" },
+];
+
 function dadosDeEstrutura() {
   const d = window.SAA_ESTRUTURA;
   return d && d.atual && d.sugerida && Array.isArray(d.funcoes) ? d : null;
@@ -5323,24 +5333,38 @@ function visaoDeEstrutura(chave) {
   return d[VISOES_ESTRUTURA.includes(chave) ? chave : "atual"];
 }
 
-// Cada visão é contada pelos ramais que estão nela, e não por cabeças: a
-// lista de origem traz ramal geral, Plenário e estagiários, que não são
-// pessoas. Contar ramais é o que os dados sustentam — e é o número que
-// interessa na comparação, porque a minuta não cria vaga nenhuma.
-function ramaisDaVisao(visao) {
-  const unidades = [visao.topo, ...visao.unidades];
-  return unidades.reduce(
-    (a, u) => a + (u.pessoas || []).reduce((b, p) => b + ramaisDoItem(p).length, 0),
+function pessoasDaUnidade(u) {
+  return Array.isArray(u.pessoas) ? u.pessoas : [];
+}
+
+// O número que a comparação usa é gente lotada, não caixinha: a minuta não
+// cria vaga, e é isso que a linha "16 → 16" precisa deixar evidente.
+function pessoasDaVisao(visao) {
+  return [visao.topo, ...visao.unidades].reduce((a, u) => a + pessoasDaUnidade(u).length, 0);
+}
+
+function contarVinculo(visao, vinculo) {
+  return [visao.topo, ...visao.unidades].reduce(
+    (a, u) => a + pessoasDaUnidade(u).filter((p) => p.vinculo === vinculo).length,
     0
   );
 }
 
-// Texto pesquisável de uma unidade: nome, sigla, natureza, quem responde e
-// as atribuições. Procurar "segurança" tem de trazer o núcleo que responde
-// por ela, não só a unidade cujo nome contém a palavra.
+// Quem responde pela unidade. Uma seção é chefiada por gerente, e por isso o
+// titular não é necessariamente um DAS-4: na falta de chefia, quem aparece no
+// cabeçalho é a gerência. Sem nenhum dos dois, a tela declara a pendência.
+function titularDaUnidade(u) {
+  const pessoas = pessoasDaUnidade(u);
+  return pessoas.find((p) => p.papel === "chefia") || pessoas.find((p) => p.papel === "gerencia") || null;
+}
+
+// Texto pesquisável da unidade: nome, sigla, natureza, subordinação, o que
+// está escrito como pendência e as atribuições. Procurar "segurança" tem de
+// trazer o núcleo que responde por ela, não só a unidade cujo nome contém a
+// palavra.
 function textoDaUnidade(u) {
   return normalizarTexto(
-    [u.nome, u.sigla, u.natureza, u.responsavel, u.origem, u.lotacao, u.justificativa]
+    [u.nome, u.sigla, u.natureza, u.subordinacao, u.origem, u.observacao, u.lotacao, u.justificativa]
       .concat(u.atribuicoes || [])
       .join(" ")
   );
@@ -5349,19 +5373,21 @@ function textoDaUnidade(u) {
 function pessoaBate(pessoa, busca) {
   return (
     normalizarTexto(pessoa.nome).includes(busca) ||
-    ramaisDoItem(pessoa).some((r) => r.includes(busca))
+    normalizarTexto(pessoa.cargo).includes(busca) ||
+    normalizarTexto(pessoa.vinculo).includes(busca) ||
+    String(pessoa.matricula || "").includes(busca)
   );
 }
 
-// Quando a unidade bate pelo próprio texto, a equipe inteira fica: buscar
-// "infra" deve mostrar a unidade como ela é. Quando só uma pessoa bate, a
-// unidade aparece com aquela pessoa — é o mesmo critério do módulo de ramais.
+// Quando a unidade bate pelo próprio texto, o quadro inteiro fica: buscar
+// "infraestrutura" deve mostrar a divisão como ela é. Quando só uma pessoa
+// bate, a unidade aparece com aquela pessoa — é o mesmo critério do módulo de
+// ramais.
 function recortarUnidade(u, busca) {
   if (!busca) return u;
-  const pessoas = u.pessoas || [];
   if (textoDaUnidade(u).includes(busca)) return u;
-  const recorte = pessoas.filter((p) => pessoaBate(p, busca));
-  return recorte.length ? { ...u, pessoas: recorte } : null;
+  const recorte = pessoasDaUnidade(u).filter((p) => pessoaBate(p, busca));
+  return recorte.length ? { ...u, pessoas: recorte, recortada: true } : null;
 }
 
 function unidadesFiltradas(visao) {
@@ -5388,43 +5414,87 @@ function funcoesSemUnidade(visao) {
   return funcoesDaVisao(visao).filter((f) => !f.propria).length;
 }
 
-function ramalDiscavel(ramal) {
-  const tel = telefoneCompleto(ramal);
-  if (!tel) return `<span class="org-ramal">${escapeHtml(ramal)}</span>`;
-  return `
-    <a class="org-ramal" href="tel:${escapeAttr(tel)}"
-       title="${escapeAttr(`Ligar para ${numeroLegivel(ramal)}`)}">${escapeHtml(ramal)}</a>`;
-}
-
+// Duas linhas por pessoa: nome, e abaixo cargo, matrícula e vínculo. Com onze
+// pessoas em uma divisão, uma linha por atributo faria o cartão crescer sem
+// acrescentar informação.
 function linhaDePessoa(pessoa) {
-  const numeros = ramaisDoItem(pessoa)
-    .filter(Boolean)
-    .map(ramalDiscavel)
-    .join("");
+  const meta = [
+    pessoa.matricula ? `matrícula ${pessoa.matricula}` : "",
+    pessoa.vinculo || "",
+  ].filter(Boolean);
+  const cargo = pessoa.cargo
+    ? `<span class="org-pessoa__cargo">${escapeHtml(pessoa.cargo)}</span>`
+    : `<span class="org-pessoa__cargo org-pessoa__cargo--vago">cargo não consta na relação</span>`;
   return `
-    <li class="org-pessoa${pessoa.geral ? " org-pessoa--geral" : ""}">
+    <li class="org-pessoa">
       <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
-      <span class="org-pessoa__ramais">${numeros}</span>
+      <span class="org-pessoa__detalhe">
+        ${cargo}
+        ${meta.length ? `<span class="org-pessoa__meta">${escapeHtml(meta.join(" · "))}</span>` : ""}
+      </span>
     </li>`;
 }
 
-function blocoDeEquipe(u) {
-  const pessoas = u.pessoas || [];
-  if (!pessoas.length) {
-    return u.lotacao
-      ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>`
-      : "";
-  }
-  const nota = u.lotacao ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>` : "";
+// Quadro da unidade: quantas pessoas e como se dividem por vínculo. Em
+// administração pública a proporção entre efetivo e comissionado é leitura de
+// estrutura, não curiosidade.
+function resumoDeQuadro(u) {
+  const pessoas = pessoasDaUnidade(u);
+  if (!pessoas.length) return "";
+  const efetivos = pessoas.filter((p) => p.vinculo === "Efetivo").length;
+  const comissionados = pessoas.filter((p) => p.vinculo === "Comissionado").length;
+  const partes = [];
+  if (efetivos) partes.push(plural(efetivos, "efetivo", "efetivos"));
+  if (comissionados) partes.push(plural(comissionados, "comissionado", "comissionados"));
+  return `${plural(pessoas.length, "pessoa", "pessoas")}${partes.length ? ` · ${partes.join(" e ")}` : ""}`;
+}
+
+function blocoDeQuadro(u, titular) {
+  const pessoas = pessoasDaUnidade(u).filter((p) => p !== titular);
+  const grupos = PAPEIS_UNIDADE.map((papel) => ({
+    ...papel,
+    pessoas: pessoas.filter((p) => (p.papel || "equipe") === papel.id),
+  })).filter((g) => g.pessoas.length);
+
+  const lotacao = u.lotacao ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>` : "";
+  if (!grupos.length) return lotacao;
+
   return `
-    ${nota}
-    <div class="org-unidade__equipe">
-      <span class="org-unidade__equipe-rotulo">Equipe · ${pessoas.reduce((a, p) => a + ramaisDoItem(p).length, 0)} ramais</span>
-      <ul class="org-pessoas">${pessoas.map(linhaDePessoa).join("")}</ul>
+    ${lotacao}
+    <div class="org-unidade__quadro">
+      ${grupos
+        .map(
+          (g) => `
+        <div class="org-papel">
+          <span class="org-papel__rotulo">${escapeHtml(g.rotulo)} · ${g.pessoas.length}</span>
+          <ul class="org-pessoas">${g.pessoas.map(linhaDePessoa).join("")}</ul>
+        </div>`
+        )
+        .join("")}
     </div>`;
 }
 
-function cabecalhoDeUnidade(u, funcoesPorId) {
+function linhaDeTitular(u, titular, minuta) {
+  if (titular) {
+    return `
+      <p class="org-unidade__linha-titular">
+        <span class="org-unidade__titular">${escapeHtml(titular.nome)}</span>
+        <span class="org-unidade__titular-cargo">${escapeHtml(
+          titular.cargo || "cargo não consta na relação"
+        )}</span>
+      </p>`;
+  }
+  // Chefia sem titular é pendência declarada, não espaço em branco: na relação
+  // de lotação é um dado a confirmar; na minuta, uma designação a fazer.
+  return `
+    <p class="org-unidade__linha-titular">
+      <span class="org-unidade__titular org-unidade__titular--vago">${
+        minuta ? "Chefia a designar" : "Chefia a confirmar"
+      }</span>
+    </p>`;
+}
+
+function cabecalhoDeUnidade(u, funcoesPorId, minuta) {
   const selos = [];
   if (u.estado && SELO_ESTADO_UNIDADE[u.estado]) {
     selos.push(
@@ -5435,13 +5505,9 @@ function cabecalhoDeUnidade(u, funcoesPorId) {
     selos.push(`<span class="org-selo org-selo--porta">Porta de entrada</span>`);
   }
   // A função declarada vai no cabeçalho porque é o que diferencia as duas
-  // visões: no organograma atual o nome da unidade descreve a porta de
-  // atendimento, não a função que ela exerce.
-  const funcao = (u.funcoes || []).map((id) => funcoesPorId.get(id)).filter(Boolean)[0];
-
-  const titular = u.responsavel
-    ? `<span class="org-unidade__titular">${escapeHtml(u.responsavel)}${u.ramal ? ` · ramal ${escapeHtml(u.ramal)}` : ""}</span>`
-    : `<span class="org-unidade__titular org-unidade__titular--vago">Titularidade a confirmar${u.ramal ? ` · ramal ${escapeHtml(u.ramal)}` : ""}</span>`;
+  // visões: é ela que a comparação conta como tendo ou não unidade própria.
+  const funcoes = (u.funcoes || []).map((id) => funcoesPorId.get(id)).filter(Boolean);
+  const quadro = resumoDeQuadro(u);
 
   return `
     <header class="org-unidade__topo">
@@ -5452,32 +5518,49 @@ function cabecalhoDeUnidade(u, funcoesPorId) {
       ${selos.length ? `<div class="org-unidade__selos">${selos.join("")}</div>` : ""}
     </header>
     <p class="org-unidade__meta">
-      <span class="org-unidade__natureza">${escapeHtml(u.natureza || "")}</span>
-      ${funcao ? `<span class="org-unidade__funcao">${escapeHtml(funcao.rotulo)}</span>` : ""}
+      <span class="org-unidade__natureza">${escapeHtml(u.natureza || "")}${
+        u.ramal ? ` · ramal ${escapeHtml(u.ramal)}` : ""
+      }</span>
+      ${funcoes
+        .map((f) => `<span class="org-unidade__funcao">${escapeHtml(f.rotulo)}</span>`)
+        .join("")}
     </p>
-    <p class="org-unidade__linha-titular">${titular}</p>`;
+    ${linhaDeTitular(u, titularDaUnidade(u), minuta)}
+    ${quadro ? `<p class="org-unidade__quadro-resumo">${escapeHtml(quadro)}</p>` : ""}`;
 }
 
-function cartaoDeUnidade(u, funcoesPorId) {
-  const atribuicoes = (u.atribuicoes || [])
-    .map((a) => `<li>${escapeHtml(a)}</li>`)
-    .join("");
+function cartaoDeUnidade(u, funcoesPorId, minuta, nomeDoTopo) {
+  const atribuicoes = (u.atribuicoes || []).map((a) => `<li>${escapeHtml(a)}</li>`).join("");
+  // Subordinação à própria Diretoria já está desenhada no organograma;
+  // repeti-la em cada cartão é ruído. A linha fica para o que foge disso —
+  // uma subordinação proposta, ou a de uma unidade intermediária.
+  const subordinacao =
+    u.subordinacao && u.subordinacao !== nomeDoTopo
+      ? `<p class="org-unidade__subordinacao">Subordinada a: ${escapeHtml(u.subordinacao)}</p>`
+      : "";
   return `
     <article class="org-unidade${u.estado ? ` org-unidade--${escapeAttr(u.estado)}` : ""}">
-      ${cabecalhoDeUnidade(u, funcoesPorId)}
+      ${cabecalhoDeUnidade(u, funcoesPorId, minuta)}
+      ${subordinacao}
       ${u.origem ? `<p class="org-unidade__origem">Vem de: ${escapeHtml(u.origem)}</p>` : ""}
       ${atribuicoes ? `<ul class="org-unidade__atribuicoes">${atribuicoes}</ul>` : ""}
-      ${blocoDeEquipe(u)}
+      ${
+        u.observacao
+          ? `<p class="org-unidade__pendencia">${escapeHtml(u.observacao)}</p>`
+          : ""
+      }
+      ${blocoDeQuadro(u, titularDaUnidade(u))}
       ${u.justificativa ? `<p class="org-unidade__justificativa">${escapeHtml(u.justificativa)}</p>` : ""}
     </article>`;
 }
 
-function cartaoDoTopo(topo, funcoesPorId) {
+function cartaoDoTopo(topo, funcoesPorId, minuta) {
   const atribuicoes = (topo.atribuicoes || []).map((a) => `<li>${escapeHtml(a)}</li>`).join("");
   const acumuladas = (topo.funcoesAcumuladas || [])
     .map((id) => funcoesPorId.get(id))
     .filter(Boolean)
     .map((f) => f.rotulo);
+  const titular = titularDaUnidade(topo);
   return `
     <article class="org-topo">
       <div class="org-topo__identificacao">
@@ -5486,17 +5569,20 @@ function cartaoDoTopo(topo, funcoesPorId) {
         <span class="org-topo__natureza">${escapeHtml(topo.natureza || "")}</span>
       </div>
       <p class="org-topo__titular">${
-        topo.responsavel
-          ? escapeHtml(topo.responsavel)
-          : "Titularidade a confirmar"
-      }${topo.ramal ? ` · ramal ${escapeHtml(topo.ramal)}` : ""}</p>
+        titular
+          ? `${escapeHtml(titular.nome)}${
+              titular.matricula ? ` · matrícula ${escapeHtml(titular.matricula)}` : ""
+            }${titular.vinculo ? ` · ${escapeHtml(titular.vinculo)}` : ""}`
+          : minuta
+          ? "Chefia a designar"
+          : "Chefia a confirmar"
+      }</p>
       ${atribuicoes ? `<ul class="org-topo__atribuicoes">${atribuicoes}</ul>` : ""}
       ${
         acumuladas.length
           ? `<p class="org-topo__acumulo">Exerce por acúmulo: ${escapeHtml(acumuladas.join(", "))}.</p>`
           : ""
       }
-      ${blocoDeEquipe(topo)}
     </article>`;
 }
 
@@ -5510,7 +5596,7 @@ function renderizarComparativoEstrutura(d, chaveAtiva) {
 
   const linhas = [
     {
-      rotulo: "Unidades sob a Diretoria",
+      rotulo: "Unidades abaixo da Diretoria",
       de: String(atual.unidades.length),
       para: String(sugerida.unidades.length),
     },
@@ -5520,10 +5606,10 @@ function renderizarComparativoEstrutura(d, chaveAtiva) {
       para: `${total - funcoesSemUnidade(sugerida)} de ${total}`,
     },
     {
-      rotulo: "Ramais mapeados",
-      de: String(ramaisDaVisao(atual)),
-      para: String(ramaisDaVisao(sugerida)),
-      nota: "mesmo efetivo",
+      rotulo: "Pessoas lotadas",
+      de: String(pessoasDaVisao(atual)),
+      para: String(pessoasDaVisao(sugerida)),
+      nota: "mesmo quadro",
     },
   ];
 
@@ -5629,6 +5715,7 @@ function renderizarEstrutura() {
 
   const visao = visaoDeEstrutura(state.estruturaVisao);
   const funcoesPorId = new Map(d.funcoes.map((f) => [f.id, f]));
+  const minuta = Boolean(visao.minuta);
 
   document.querySelectorAll("#estrutura-visoes .view-toggle__btn").forEach((b) => {
     const ativo = b.dataset.visao === state.estruturaVisao;
@@ -5636,9 +5723,13 @@ function renderizarEstrutura() {
     b.setAttribute("aria-pressed", ativo ? "true" : "false");
   });
 
+  const efetivos = contarVinculo(visao, "Efetivo");
+  const comissionados = contarVinculo(visao, "Comissionado");
+
   document.getElementById("estrutura-titulo").textContent = visao.rotulo;
   document.getElementById("estrutura-subtitulo").textContent =
-    `${visao.chamada} · ${plural(visao.unidades.length, "unidade", "unidades")} sob a Diretoria · ${ramaisDaVisao(visao)} ramais mapeados`;
+    `${visao.chamada} · ${plural(visao.unidades.length, "unidade", "unidades")} abaixo da Diretoria · ` +
+    `${plural(pessoasDaVisao(visao), "pessoa lotada", "pessoas lotadas")} (${efetivos} efetivos, ${comissionados} comissionados)`;
   document.getElementById("estrutura-resumo").textContent = visao.resumo;
   document.getElementById("estrutura-procedencia").textContent = visao.procedencia;
 
@@ -5646,7 +5737,7 @@ function renderizarEstrutura() {
   // proposta exibida com o mesmo peso da estrutura vigente passa a ser lida
   // como decisão tomada.
   const intro = document.getElementById("estrutura-intro");
-  if (intro) intro.classList.toggle("estrutura-intro--minuta", Boolean(visao.minuta));
+  if (intro) intro.classList.toggle("estrutura-intro--minuta", minuta);
 
   renderizarComparativoEstrutura(d, state.estruturaVisao);
 
@@ -5679,11 +5770,13 @@ function renderizarEstrutura() {
     alvo.innerHTML = "";
   } else {
     alvo.innerHTML = `
-      ${topo ? cartaoDoTopo(topo, funcoesPorId) : ""}
+      ${topo ? cartaoDoTopo(topo, funcoesPorId, minuta) : ""}
       ${topo && unidades.length ? `<div class="org-conector" aria-hidden="true"></div>` : ""}
       ${
         unidades.length
-          ? `<div class="org-nivel">${unidades.map((u) => cartaoDeUnidade(u, funcoesPorId)).join("")}</div>`
+          ? `<div class="org-nivel">${unidades
+              .map((u) => cartaoDeUnidade(u, funcoesPorId, minuta, visao.topo.nome))
+              .join("")}</div>`
           : ""
       }`;
   }
@@ -5729,9 +5822,12 @@ function renderizarPortalEstrutura() {
     destaque.classList.add("portal-card__destaque--forte");
   }
 
-  // Selo curto: o rodapé do cartão trunca com reticências, e "sem criação de
-  // cargo" cabe melhor nas premissas do módulo do que cortado pela metade.
-  definir("portal-estrutura-selo", "Minuta em discussão");
+  // Selo curto: o rodapé do cartão trunca com reticências, e o quadro de
+  // pessoal cabe melhor aqui do que a ressalva cortada pela metade.
+  definir(
+    "portal-estrutura-selo",
+    `${plural(pessoasDaVisao(d.atual), "pessoa lotada", "pessoas lotadas")} · minuta em discussão`
+  );
 }
 
 function inicializarModuloEstrutura() {

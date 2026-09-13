@@ -2917,17 +2917,6 @@ html, body { overflow-x: hidden; }
   font-weight: 600;
   color: #fff;
 }
-.org-topo .org-unidade__equipe { border-top-color: rgba(255, 255, 255, 0.16); }
-.org-topo .org-unidade__equipe-rotulo { color: rgba(255, 255, 255, 0.72); }
-.org-topo .org-pessoa { border-bottom-color: rgba(255, 255, 255, 0.1); }
-.org-topo .org-pessoa__nome { color: rgba(255, 255, 255, 0.92); }
-.org-topo .org-ramal {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-.org-topo .org-ramal:hover { border-color: #fff; background: rgba(255, 255, 255, 0.18); }
-.org-topo .org-unidade__lotacao { color: rgba(255, 255, 255, 0.78); }
 
 /* A linha que liga a Diretoria às unidades. É decoração com função: sem ela
    as unidades parecem uma lista de cartões, não um nível hierárquico. */
@@ -2938,13 +2927,19 @@ html, body { overflow-x: hidden; }
   background: var(--color-border);
 }
 
+/* Colunas de texto, não grade: as unidades têm alturas muito diferentes — uma
+   divisão com onze pessoas ao lado de uma seção com uma —, e em grade a linha
+   toda cresce até a mais alta, deixando um vazio ao lado das menores. O
+   balanceamento por coluna encosta os cartões e mantém a ordem de leitura. */
 .org-nivel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
-  align-items: start;
+  columns: 320px 3;
+  column-gap: 16px;
   padding-top: 18px;
   border-top: 2px solid var(--color-border);
+}
+.org-nivel .org-unidade {
+  break-inside: avoid;
+  margin-bottom: 16px;
 }
 
 .org-unidade {
@@ -3010,11 +3005,35 @@ html, body { overflow-x: hidden; }
 .org-unidade__funcao { color: var(--color-secondary); }
 .org-unidade__funcao::before { content: "· "; color: var(--color-text-tertiary); }
 
-.org-unidade__linha-titular { margin: 0; font-size: 0.8rem; color: var(--color-text-primary); }
-/* Titularidade não preenchida nos dados aparece como pendência declarada, e
-   não como espaço em branco: é um dado a confirmar, não um dado inexistente. */
-.org-unidade__titular--vago { color: var(--color-warning); font-weight: 600; }
-.org-unidade__origem { margin: 0; font-size: 0.76rem; color: var(--color-text-secondary); font-style: italic; }
+.org-unidade__linha-titular { display: grid; gap: 1px; margin: 0; }
+.org-unidade__titular { font-size: 0.86rem; font-weight: 600; color: var(--color-text-primary); }
+.org-unidade__titular-cargo { font-size: 0.74rem; color: var(--color-text-secondary); }
+/* Chefia sem titular na relação aparece como pendência declarada, e não como
+   espaço em branco: é um dado a confirmar, não um dado inexistente. */
+.org-unidade__titular--vago { color: var(--color-warning); font-weight: 700; }
+.org-unidade__quadro-resumo {
+  margin: 0;
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.72rem;
+  color: var(--color-text-tertiary);
+}
+.org-unidade__subordinacao,
+.org-unidade__origem { margin: 0; font-size: 0.76rem; color: var(--color-text-secondary); }
+.org-unidade__origem { font-style: italic; }
+/* O que a relação de lotação não declara fica escrito na tela, em cor de
+   aviso: uma chefia vaga ou uma subordinação indefinida é informação, e
+   omiti-la faria o organograma parecer completo. */
+.org-unidade__pendencia {
+  margin: 0;
+  padding: 9px 11px;
+  border-left: 3px solid var(--color-warning);
+  background: var(--color-warning-tint);
+  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--color-text-primary);
+  text-wrap: pretty;
+}
 
 .org-unidade__atribuicoes {
   margin: 0;
@@ -3043,8 +3062,16 @@ html, body { overflow-x: hidden; }
   text-wrap: pretty;
 }
 
-.org-unidade__equipe { padding-top: 10px; border-top: 1px solid var(--color-border-soft); }
-.org-unidade__equipe-rotulo {
+.org-unidade__quadro {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-soft);
+}
+/* O rótulo do bloco diz o nível hierárquico — gerências antes de equipe, como
+   na regra da própria Diretoria. Sem ele a lista pareceria um amontoado de
+   nomes em ordem alfabética. */
+.org-papel__rotulo {
   display: block;
   margin-bottom: 6px;
   font-size: 0.66rem;
@@ -3055,34 +3082,21 @@ html, body { overflow-x: hidden; }
 }
 .org-pessoas { list-style: none; margin: 0; padding: 0; }
 .org-pessoa {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 0;
+  display: grid;
+  gap: 1px;
+  padding: 7px 0;
   border-bottom: 1px solid var(--color-border-soft);
 }
 .org-pessoa:last-child { border-bottom: none; }
-.org-pessoa--geral .org-pessoa__nome { font-weight: 600; color: var(--color-primary); }
-.org-pessoa__nome { font-size: 0.84rem; color: var(--color-text-primary); min-width: 0; }
-.org-pessoa__ramais { display: flex; gap: 5px; flex-shrink: 0; }
-
-.org-ramal {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 9px;
-  border: 1px solid var(--color-border);
-  border-radius: 7px;
-  background: var(--color-surface);
+.org-pessoa__nome { font-size: 0.84rem; font-weight: 500; color: var(--color-text-primary); }
+.org-pessoa__detalhe { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; }
+.org-pessoa__cargo { font-size: 0.74rem; color: var(--color-text-secondary); }
+.org-pessoa__cargo--vago { color: var(--color-warning); font-weight: 600; }
+.org-pessoa__meta {
   font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--color-secondary);
-  text-decoration: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  font-size: 0.68rem;
+  color: var(--color-text-tertiary);
 }
-.org-ramal:hover { border-color: var(--color-secondary); background: var(--color-secondary-tint); }
-.org-ramal:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
 
 /* ---------------------------------- O que muda ---------------------------------- */
 
@@ -3152,7 +3166,8 @@ html, body { overflow-x: hidden; }
 
 @media (max-width: 860px) {
   .org-topo { padding: 16px 18px; }
-  .org-nivel { grid-template-columns: 1fr; gap: 14px; }
+  .org-nivel { columns: 1; }
+  .org-nivel .org-unidade { margin-bottom: 14px; }
   .org-unidade { padding: 14px 16px; }
   .comparativo__grade { grid-template-columns: 1fr; }
   .funcao-lista { grid-template-columns: 1fr; }

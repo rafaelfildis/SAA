@@ -96,10 +96,11 @@ atrasados, e a próxima entrega com o prazo em dias. A cela de risco só acende
 quando existe algo a alertar — uma cela vermelha permanente deixa de ser sinal
 e vira ruído.
 
-**Cartão da Estrutura DTI:** unidades sob a Diretoria hoje, unidades previstas
-na minuta e quantas funções de TI seguem sem unidade própria — a cela de
-alerta só acende quando existe alguma. O destaque nomeia as unidades que a
-minuta cria, e o selo lembra que ela é minuta em discussão.
+**Cartão da Estrutura DTI:** unidades abaixo da Diretoria hoje, unidades
+previstas na minuta e quantas funções de TI seguem sem unidade própria — a cela
+de alerta só acende quando existe alguma. O destaque nomeia as unidades que a
+minuta cria, e o selo traz o quadro de pessoal com a ressalva de que a proposta
+está em discussão.
 
 Os números do portal ignoram os filtros em vigor nas telas internas: a página
 inicial resume a base, não o recorte que ficou selecionado em outro módulo.
@@ -241,56 +242,73 @@ procura sem querer procurar — Sessão do Plenário (4665) e Sistema e-TCM (567
 ### Estrutura DTI
 
 Organograma da Diretoria de Tecnologia da Informação em **duas visões**, no
-alternador do topo da tela: **estrutura atual** e **estrutura sugerida**. Lista
-de consulta e de discussão que vem com o sistema (`dados/estrutura.js`), igual
-para todo mundo e sem nada a gravar por navegador — desenho de estrutura se
-decide em ato do Tribunal, não no `localStorage` de quem abriu a tela.
+alternador do topo da tela: **estrutura atual** e **estrutura sugerida**.
+Material de consulta e de discussão que vem com o sistema
+(`dados/estrutura.js`), igual para todo mundo e sem nada a gravar por
+navegador — desenho de estrutura se decide em ato do Tribunal, não no
+`localStorage` de quem abriu a tela.
 
-**A comparação fica em tela nas duas visões**, não só na proposta: unidades sob
-a Diretoria (3 → 6), funções de TI com unidade própria (3 de 6 → 6 de 6) e
-ramais mapeados (22 → 22, o mesmo efetivo). A coluna da visão exibida fica
+**A comparação fica em tela nas duas visões**, não só na proposta: unidades
+abaixo da Diretoria (4 → 6), funções de TI com unidade própria (4 de 7 → 7 de
+7) e pessoas lotadas (16 → 16, o mesmo quadro). A coluna da visão exibida fica
 acesa, para que a comparação diga qual dos dois lados é o que está desenhado
 abaixo.
 
-**Estrutura atual.** Levantada a partir da lista oficial de ramais
-(`dados/ramais.js`): as mesmas quatro frentes e as mesmas 22 pessoas, lidas
-como organograma. A organização é por porta de atendimento — SEATU/SST, Infra e
-e-TCM —, não por função de TI, e a tela nomeia o que isso deixa sem dono:
-governança, segurança da informação e informação gerencial não têm unidade
-própria, e aparecem como exercidas **por acúmulo** ou **sem dono declarado**.
+**Estrutura atual.** É a relação de lotação da DTI lida como organograma: 16
+pessoas com matrícula, vínculo e cargo como constam da relação, em três
+divisões (Desenvolvimento de Sistemas, Infraestrutura Tecnológica e Banco de
+Dados) e uma seção (Atendimento ao Usuário). Cada cartão segue a hierarquia da
+própria Diretoria — chefia (DAS-4), gerências (DAS-3) e equipe —, e o rótulo de
+cada bloco diz o nível, para que a lista não pareça um amontoado de nomes em
+ordem alfabética.
 
-**Titularidade a confirmar.** A lista de ramais não informa quem titulariza
-cada frente, e o módulo não inventa: o campo `responsavel` fica em branco nos
-dados e a tela escreve "titularidade a confirmar", em cor de alerta. Preencher
-o campo no arquivo de dados é o suficiente para o nome passar a aparecer.
+**O que a relação não declara fica escrito na tela**, em cor de aviso, em vez de
+ser preenchido por conta própria: a chefia da Divisão de Banco de Dados
+("chefia a confirmar"), a divisão a que a Seção de Atendimento ao Usuário se
+subordina, e o fato de a Divisão de Infraestrutura Tecnológica constar apenas
+com a chefia — os nomes que atendem infraestrutura na lista de ramais não
+aparecem na relação de lotação. Preencher o campo correspondente no arquivo de
+dados é o suficiente para a tela passar a exibi-lo.
+
+**Ramal não entra neste módulo de propósito.** A relação de lotação não traz
+ramal, e cruzar nome de servidor com a lista de ramais pelo primeiro nome
+produziria número errado ao lado de pessoa certa. Quem procura número usa o
+**Ramal DTI**; este módulo responde quem é quem e onde está lotado.
+
+**O diagnóstico vem escrito**, na "Leitura da estrutura atual": segurança da
+informação sem unidade responsável (o papel recai sobre quem opera o ambiente),
+governança de TI sem unidade própria apesar de um contrato de mais de R$ 9
+milhões por ano, informação gerencial sem dono declarado, três gerências
+lotadas na divisão sem seção nomeada e uma divisão sem chefia na relação.
 
 **Estrutura sugerida.** É **minuta de trabalho**, e a tela diz isso em todo
 lugar onde ela aparece — faixa âmbar na introdução, selo no cartão do portal e
-a ressalva de que criação, extinção e denominação de unidade dependem de ato
-próprio do Tribunal. Seis unidades organizadas por função: Assessoria de
-Governança e Gestão de TI, Coordenação de Atendimento e Serviços ao Usuário,
-Coordenação de Infraestrutura e Operações, Coordenação de Sistemas, Núcleo de
-Segurança da Informação e Núcleo de Dados e Informação. As três novas assumem
-responsabilidades que **já são exercidas por acúmulo**; as três frentes
-existentes passam a coordenações com escopo declarado, mantendo equipe e
-ramais.
+a ressalva de que criação, extinção e denominação de unidade, assim como
+designação de chefia, dependem de ato próprio do Tribunal.
 
-**Sem criação de cargo.** A minuta é desenhada sobre o efetivo hoje lotado na
-DTI — daí a linha "ramais mapeados: 22 → 22" na comparação. A composição
-nominal das unidades novas fica a definir pela Diretoria: a proposta traz o
+Seis unidades, sem extinguir nenhuma das existentes: **DDES** e **DINT**
+permanecem como são; a **Divisão de Banco de Dados passa a Divisão de Dados e
+Informação**, com o mesmo quadro e escopo ampliado para painéis e indicadores;
+a **Seção de Atendimento ao Usuário** ganha subordinação declarada e a porta de
+entrada formalizada no 4631; e duas unidades novas assumem o que hoje é acúmulo
+— **Assessoria de Governança e Gestão de TI** e **Núcleo de Segurança da
+Informação**.
+
+**Sem criação de cargo.** A minuta é desenhada sobre as mesmas 16 pessoas — daí
+a linha "pessoas lotadas: 16 → 16" na comparação. A composição nominal das
+unidades novas, o escopo de cada uma das três gerências da DDES e a designação
+da chefia da divisão de dados ficam a definir pela Diretoria: a proposta traz o
 desenho e a distribuição de atribuições, não a lotação das pessoas.
 
 **O que muda** vem em lista própria abaixo do organograma, com o tipo de cada
 mudança (unidade nova, renomeação, processo, governança) e o motivo. Uma
 proposta que não diz o que muda em relação ao que existe não é avaliável.
 
-**Todo ramal disca**, como no módulo Ramal DTI: cada número é um link `tel:`
-com DDD e prefixo completos, e na tela fica só o ramal de quatro dígitos.
-
-**Busca pelo campo do topo**, por unidade, sigla, pessoa, ramal ou atribuição:
-procurar "segurança" traz o núcleo que responde por ela, e não só a unidade
-cujo nome contém a palavra. Quando a unidade bate pelo próprio texto, a equipe
-inteira fica; quando só uma pessoa bate, a unidade aparece com aquela pessoa.
+**Busca pelo campo do topo**, por unidade, sigla, pessoa, matrícula, cargo,
+vínculo ou atribuição: procurar "segurança" traz o núcleo que responde por ela,
+e não só a unidade cujo nome contém a palavra; procurar "217406" traz a pessoa.
+Quando a unidade bate pelo próprio texto, o quadro inteiro fica; quando só uma
+pessoa bate, a unidade aparece com aquela pessoa.
 
 ## Stack
 
