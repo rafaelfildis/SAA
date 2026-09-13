@@ -96,6 +96,11 @@ atrasados, e a próxima entrega com o prazo em dias. A cela de risco só acende
 quando existe algo a alertar — uma cela vermelha permanente deixa de ser sinal
 e vira ruído.
 
+**Cartão da Estrutura DTI:** unidades sob a Diretoria hoje, unidades previstas
+na minuta e quantas funções de TI seguem sem unidade própria — a cela de
+alerta só acende quando existe alguma. O destaque nomeia as unidades que a
+minuta cria, e o selo lembra que ela é minuta em discussão.
+
 Os números do portal ignoram os filtros em vigor nas telas internas: a página
 inicial resume a base, não o recorte que ficou selecionado em outro módulo.
 
@@ -105,15 +110,18 @@ exportação pertencem a módulos específicos e saem da tela onde não teriam o
 fazer, em vez de ficarem inertes.
 
 **Links diretos:** `?modulo=agenda`, `?modulo=plano` (ou `?modulo=projetos`),
-`?modulo=ramais` (ou `?modulo=ramal`) e `?modulo=portal` abrem o sistema direto
-em um módulo. Um intervalo explícito de
+`?modulo=ramais` (ou `?modulo=ramal`), `?modulo=estrutura` (ou
+`?modulo=organograma`) e `?modulo=portal` abrem o sistema direto
+em um módulo. No módulo Estrutura DTI, `?visao=sugerida` (ou `?visao=proposta`)
+abre direto na minuta, e `?visao=atual` na estrutura vigente — que é o padrão.
+Um intervalo explícito de
 datas na URL (`?data=`, `?de=`/`?ate=`) continua caindo na agenda — é o formato
 dos links do envio diário, e abrir o portal ali esconderia o que foi pedido.
 
 ## Módulos
 
-O sistema tem três módulos, alcançados pelo portal ou pela navegação da barra
-lateral.
+O sistema tem quatro módulos, alcançados pelo portal ou pela navegação da
+barra lateral.
 
 ### Agenda
 
@@ -229,6 +237,60 @@ própria busca, então trocar de tela não carrega o termo de um para o outro.
 O ramal geral de cada equipe fica destacado na lista, e os dois números que se
 procura sem querer procurar — Sessão do Plenário (4665) e Sistema e-TCM (5670)
 — ficam como atalhos logo abaixo da porta de entrada.
+
+### Estrutura DTI
+
+Organograma da Diretoria de Tecnologia da Informação em **duas visões**, no
+alternador do topo da tela: **estrutura atual** e **estrutura sugerida**. Lista
+de consulta e de discussão que vem com o sistema (`dados/estrutura.js`), igual
+para todo mundo e sem nada a gravar por navegador — desenho de estrutura se
+decide em ato do Tribunal, não no `localStorage` de quem abriu a tela.
+
+**A comparação fica em tela nas duas visões**, não só na proposta: unidades sob
+a Diretoria (3 → 6), funções de TI com unidade própria (3 de 6 → 6 de 6) e
+ramais mapeados (22 → 22, o mesmo efetivo). A coluna da visão exibida fica
+acesa, para que a comparação diga qual dos dois lados é o que está desenhado
+abaixo.
+
+**Estrutura atual.** Levantada a partir da lista oficial de ramais
+(`dados/ramais.js`): as mesmas quatro frentes e as mesmas 22 pessoas, lidas
+como organograma. A organização é por porta de atendimento — SEATU/SST, Infra e
+e-TCM —, não por função de TI, e a tela nomeia o que isso deixa sem dono:
+governança, segurança da informação e informação gerencial não têm unidade
+própria, e aparecem como exercidas **por acúmulo** ou **sem dono declarado**.
+
+**Titularidade a confirmar.** A lista de ramais não informa quem titulariza
+cada frente, e o módulo não inventa: o campo `responsavel` fica em branco nos
+dados e a tela escreve "titularidade a confirmar", em cor de alerta. Preencher
+o campo no arquivo de dados é o suficiente para o nome passar a aparecer.
+
+**Estrutura sugerida.** É **minuta de trabalho**, e a tela diz isso em todo
+lugar onde ela aparece — faixa âmbar na introdução, selo no cartão do portal e
+a ressalva de que criação, extinção e denominação de unidade dependem de ato
+próprio do Tribunal. Seis unidades organizadas por função: Assessoria de
+Governança e Gestão de TI, Coordenação de Atendimento e Serviços ao Usuário,
+Coordenação de Infraestrutura e Operações, Coordenação de Sistemas, Núcleo de
+Segurança da Informação e Núcleo de Dados e Informação. As três novas assumem
+responsabilidades que **já são exercidas por acúmulo**; as três frentes
+existentes passam a coordenações com escopo declarado, mantendo equipe e
+ramais.
+
+**Sem criação de cargo.** A minuta é desenhada sobre o efetivo hoje lotado na
+DTI — daí a linha "ramais mapeados: 22 → 22" na comparação. A composição
+nominal das unidades novas fica a definir pela Diretoria: a proposta traz o
+desenho e a distribuição de atribuições, não a lotação das pessoas.
+
+**O que muda** vem em lista própria abaixo do organograma, com o tipo de cada
+mudança (unidade nova, renomeação, processo, governança) e o motivo. Uma
+proposta que não diz o que muda em relação ao que existe não é avaliável.
+
+**Todo ramal disca**, como no módulo Ramal DTI: cada número é um link `tel:`
+com DDD e prefixo completos, e na tela fica só o ramal de quatro dígitos.
+
+**Busca pelo campo do topo**, por unidade, sigla, pessoa, ramal ou atribuição:
+procurar "segurança" traz o núcleo que responde por ela, e não só a unidade
+cujo nome contém a palavra. Quando a unidade bate pelo próprio texto, a equipe
+inteira fica; quando só uma pessoa bate, a unidade aparece com aquela pessoa.
 
 ## Stack
 

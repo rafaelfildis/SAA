@@ -84,11 +84,16 @@ const HORIZONTE_TODAS = 0;
 
 // Estado do portal e do módulo Plano 100 dias. Fica junto do resto para que
 // haja um só lugar onde olhar quando a tela não corresponde ao esperado.
-state.modulo = "portal"; // portal | agenda | projetos
+state.modulo = "portal"; // portal | agenda | projetos | ramais | estrutura
 state.projetos = [];
 state.projetoAberto = null;
 // Busca do módulo Ramal DTI, separada da busca da agenda e da do plano.
 state.filtroRamais = "";
+// Módulo Estrutura DTI: qual das duas visões está em tela, e a busca própria
+// do módulo. A visão abre na estrutura atual — a vigente é o ponto de
+// partida, e a minuta se lê em comparação com ela, não no lugar dela.
+state.estruturaVisao = "atual"; // atual | sugerida
+state.filtroEstrutura = "";
 state.projetoEditando = null;
 state.filtrosProjeto = {
   horizonte: HORIZONTE_TODAS,
@@ -3445,6 +3450,11 @@ function inicializarInterface() {
       renderizarRamais();
       return;
     }
+    if (state.modulo === "estrutura") {
+      state.filtroEstrutura = ev.target.value;
+      renderizarEstrutura();
+      return;
+    }
     state.filtros.busca = ev.target.value;
     renderizarConteudo();
   });
@@ -3767,7 +3777,22 @@ function aplicarFiltrosDaURL() {
   // sinônimo de "projetos" para que o link acompanhe o nome exibido na tela.
   const pedido = (params.get("modulo") || "").toLowerCase();
   const moduloPedido =
-    pedido === "plano" || pedido === "plano100" ? "projetos" : pedido === "ramal" ? "ramais" : pedido;
+    pedido === "plano" || pedido === "plano100"
+      ? "projetos"
+      : pedido === "ramal"
+      ? "ramais"
+      : pedido === "organograma"
+      ? "estrutura"
+      : pedido;
+
+  // "?visao=" escolhe a estrutura exibida no módulo Estrutura DTI. Aceita
+  // "proposta" como sinônimo de "sugerida": é como a minuta é chamada quando
+  // alguém manda o link.
+  const visaoPedida = (params.get("visao") || "").toLowerCase();
+  if (visaoPedida) {
+    state.estruturaVisao =
+      visaoPedida === "proposta" || visaoPedida === "sugerida" ? "sugerida" : "atual";
+  }
 
   const dia = dataValida(params.get("data"));
   const de = dia || dataValida(params.get("de"));
@@ -5259,6 +5284,477 @@ function inicializarModuloRamais() {
 }
 
 /* --------------------------------------------------------------------------
+   Estrutura DTI
+   --------------------------------------------------------------------------
+   Duas visões do mesmo organograma: a estrutura que existe hoje e a minuta de
+   estrutura sugerida. O módulo não serve para desenhar caixinhas — serve para
+   responder o que muda de uma para a outra, e por isso a comparação fica em
+   tela nas duas visões, não só na proposta.
+
+   A estrutura atual é a lista oficial de ramais lida como organograma: as
+   mesmas frentes, as mesmas pessoas. O que a lista não informa — titularidade
+   e nome formal da unidade — aparece como "a confirmar", em vez de ser
+   preenchido por conta própria.
+   -------------------------------------------------------------------------- */
+
+const VISOES_ESTRUTURA = ["atual", "sugerida"];
+
+const SELO_ESTADO_UNIDADE = {
+  nova: "Unidade nova",
+  renomeada: "Renomeada",
+  mantida: "Mantida",
+};
+
+const SELO_MUDANCA = {
+  nova: "Unidade nova",
+  renomeada: "Renomeação",
+  processo: "Processo",
+  governanca: "Governança",
+};
+
+function dadosDeEstrutura() {
+  const d = window.SAA_ESTRUTURA;
+  return d && d.atual && d.sugerida && Array.isArray(d.funcoes) ? d : null;
+}
+
+function visaoDeEstrutura(chave) {
+  const d = dadosDeEstrutura();
+  if (!d) return null;
+  return d[VISOES_ESTRUTURA.includes(chave) ? chave : "atual"];
+}
+
+// Cada visão é contada pelos ramais que estão nela, e não por cabeças: a
+// lista de origem traz ramal geral, Plenário e estagiários, que não são
+// pessoas. Contar ramais é o que os dados sustentam — e é o número que
+// interessa na comparação, porque a minuta não cria vaga nenhuma.
+function ramaisDaVisao(visao) {
+  const unidades = [visao.topo, ...visao.unidades];
+  return unidades.reduce(
+    (a, u) => a + (u.pessoas || []).reduce((b, p) => b + ramaisDoItem(p).length, 0),
+    0
+  );
+}
+
+// Texto pesquisável de uma unidade: nome, sigla, natureza, quem responde e
+// as atribuições. Procurar "segurança" tem de trazer o núcleo que responde
+// por ela, não só a unidade cujo nome contém a palavra.
+function textoDaUnidade(u) {
+  return normalizarTexto(
+    [u.nome, u.sigla, u.natureza, u.responsavel, u.origem, u.lotacao, u.justificativa]
+      .concat(u.atribuicoes || [])
+      .join(" ")
+  );
+}
+
+function pessoaBate(pessoa, busca) {
+  return (
+    normalizarTexto(pessoa.nome).includes(busca) ||
+    ramaisDoItem(pessoa).some((r) => r.includes(busca))
+  );
+}
+
+// Quando a unidade bate pelo próprio texto, a equipe inteira fica: buscar
+// "infra" deve mostrar a unidade como ela é. Quando só uma pessoa bate, a
+// unidade aparece com aquela pessoa — é o mesmo critério do módulo de ramais.
+function recortarUnidade(u, busca) {
+  if (!busca) return u;
+  const pessoas = u.pessoas || [];
+  if (textoDaUnidade(u).includes(busca)) return u;
+  const recorte = pessoas.filter((p) => pessoaBate(p, busca));
+  return recorte.length ? { ...u, pessoas: recorte } : null;
+}
+
+function unidadesFiltradas(visao) {
+  const busca = normalizarTexto(state.filtroEstrutura || "").trim();
+  if (!busca) return visao.unidades;
+  return visao.unidades.map((u) => recortarUnidade(u, busca)).filter(Boolean);
+}
+
+// Quem responde por cada função de TI nesta visão. A distinção entre unidade
+// própria e acúmulo é o achado do módulo: no organograma atual três funções
+// existem sem dono declarado, e é isso que a minuta se propõe a resolver.
+function funcoesDaVisao(visao) {
+  const d = dadosDeEstrutura();
+  if (!d) return [];
+  const unidades = [visao.topo, ...visao.unidades];
+  return d.funcoes.map((f) => {
+    const propria = unidades.find((u) => (u.funcoes || []).includes(f.id));
+    const acumulada = unidades.find((u) => (u.funcoesAcumuladas || []).includes(f.id));
+    return { ...f, propria: propria || null, acumulada: acumulada || null };
+  });
+}
+
+function funcoesSemUnidade(visao) {
+  return funcoesDaVisao(visao).filter((f) => !f.propria).length;
+}
+
+function ramalDiscavel(ramal) {
+  const tel = telefoneCompleto(ramal);
+  if (!tel) return `<span class="org-ramal">${escapeHtml(ramal)}</span>`;
+  return `
+    <a class="org-ramal" href="tel:${escapeAttr(tel)}"
+       title="${escapeAttr(`Ligar para ${numeroLegivel(ramal)}`)}">${escapeHtml(ramal)}</a>`;
+}
+
+function linhaDePessoa(pessoa) {
+  const numeros = ramaisDoItem(pessoa)
+    .filter(Boolean)
+    .map(ramalDiscavel)
+    .join("");
+  return `
+    <li class="org-pessoa${pessoa.geral ? " org-pessoa--geral" : ""}">
+      <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
+      <span class="org-pessoa__ramais">${numeros}</span>
+    </li>`;
+}
+
+function blocoDeEquipe(u) {
+  const pessoas = u.pessoas || [];
+  if (!pessoas.length) {
+    return u.lotacao
+      ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>`
+      : "";
+  }
+  const nota = u.lotacao ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>` : "";
+  return `
+    ${nota}
+    <div class="org-unidade__equipe">
+      <span class="org-unidade__equipe-rotulo">Equipe · ${pessoas.reduce((a, p) => a + ramaisDoItem(p).length, 0)} ramais</span>
+      <ul class="org-pessoas">${pessoas.map(linhaDePessoa).join("")}</ul>
+    </div>`;
+}
+
+function cabecalhoDeUnidade(u, funcoesPorId) {
+  const selos = [];
+  if (u.estado && SELO_ESTADO_UNIDADE[u.estado]) {
+    selos.push(
+      `<span class="org-selo org-selo--${escapeAttr(u.estado)}">${escapeHtml(SELO_ESTADO_UNIDADE[u.estado])}</span>`
+    );
+  }
+  if (u.portaDeEntrada) {
+    selos.push(`<span class="org-selo org-selo--porta">Porta de entrada</span>`);
+  }
+  // A função declarada vai no cabeçalho porque é o que diferencia as duas
+  // visões: no organograma atual o nome da unidade descreve a porta de
+  // atendimento, não a função que ela exerce.
+  const funcao = (u.funcoes || []).map((id) => funcoesPorId.get(id)).filter(Boolean)[0];
+
+  const titular = u.responsavel
+    ? `<span class="org-unidade__titular">${escapeHtml(u.responsavel)}${u.ramal ? ` · ramal ${escapeHtml(u.ramal)}` : ""}</span>`
+    : `<span class="org-unidade__titular org-unidade__titular--vago">Titularidade a confirmar${u.ramal ? ` · ramal ${escapeHtml(u.ramal)}` : ""}</span>`;
+
+  return `
+    <header class="org-unidade__topo">
+      <div class="org-unidade__identificacao">
+        <span class="org-unidade__sigla">${escapeHtml(u.sigla)}</span>
+        <h4 class="org-unidade__nome">${escapeHtml(u.nome)}</h4>
+      </div>
+      ${selos.length ? `<div class="org-unidade__selos">${selos.join("")}</div>` : ""}
+    </header>
+    <p class="org-unidade__meta">
+      <span class="org-unidade__natureza">${escapeHtml(u.natureza || "")}</span>
+      ${funcao ? `<span class="org-unidade__funcao">${escapeHtml(funcao.rotulo)}</span>` : ""}
+    </p>
+    <p class="org-unidade__linha-titular">${titular}</p>`;
+}
+
+function cartaoDeUnidade(u, funcoesPorId) {
+  const atribuicoes = (u.atribuicoes || [])
+    .map((a) => `<li>${escapeHtml(a)}</li>`)
+    .join("");
+  return `
+    <article class="org-unidade${u.estado ? ` org-unidade--${escapeAttr(u.estado)}` : ""}">
+      ${cabecalhoDeUnidade(u, funcoesPorId)}
+      ${u.origem ? `<p class="org-unidade__origem">Vem de: ${escapeHtml(u.origem)}</p>` : ""}
+      ${atribuicoes ? `<ul class="org-unidade__atribuicoes">${atribuicoes}</ul>` : ""}
+      ${blocoDeEquipe(u)}
+      ${u.justificativa ? `<p class="org-unidade__justificativa">${escapeHtml(u.justificativa)}</p>` : ""}
+    </article>`;
+}
+
+function cartaoDoTopo(topo, funcoesPorId) {
+  const atribuicoes = (topo.atribuicoes || []).map((a) => `<li>${escapeHtml(a)}</li>`).join("");
+  const acumuladas = (topo.funcoesAcumuladas || [])
+    .map((id) => funcoesPorId.get(id))
+    .filter(Boolean)
+    .map((f) => f.rotulo);
+  return `
+    <article class="org-topo">
+      <div class="org-topo__identificacao">
+        <span class="org-topo__sigla">${escapeHtml(topo.sigla)}</span>
+        <h3 class="org-topo__nome">${escapeHtml(topo.nome)}</h3>
+        <span class="org-topo__natureza">${escapeHtml(topo.natureza || "")}</span>
+      </div>
+      <p class="org-topo__titular">${
+        topo.responsavel
+          ? escapeHtml(topo.responsavel)
+          : "Titularidade a confirmar"
+      }${topo.ramal ? ` · ramal ${escapeHtml(topo.ramal)}` : ""}</p>
+      ${atribuicoes ? `<ul class="org-topo__atribuicoes">${atribuicoes}</ul>` : ""}
+      ${
+        acumuladas.length
+          ? `<p class="org-topo__acumulo">Exerce por acúmulo: ${escapeHtml(acumuladas.join(", "))}.</p>`
+          : ""
+      }
+      ${blocoDeEquipe(topo)}
+    </article>`;
+}
+
+function renderizarComparativoEstrutura(d, chaveAtiva) {
+  const alvo = document.getElementById("estrutura-comparativo");
+  if (!alvo) return;
+
+  const atual = d.atual;
+  const sugerida = d.sugerida;
+  const total = d.funcoes.length;
+
+  const linhas = [
+    {
+      rotulo: "Unidades sob a Diretoria",
+      de: String(atual.unidades.length),
+      para: String(sugerida.unidades.length),
+    },
+    {
+      rotulo: "Funções com unidade própria",
+      de: `${total - funcoesSemUnidade(atual)} de ${total}`,
+      para: `${total - funcoesSemUnidade(sugerida)} de ${total}`,
+    },
+    {
+      rotulo: "Ramais mapeados",
+      de: String(ramaisDaVisao(atual)),
+      para: String(ramaisDaVisao(sugerida)),
+      nota: "mesmo efetivo",
+    },
+  ];
+
+  const funcoes = funcoesDaVisao(d[chaveAtiva]);
+
+  alvo.innerHTML = `
+    <h3 class="estrutura-secao">Atual × sugerida</h3>
+    <dl class="comparativo__grade">
+      ${linhas
+        .map(
+          (l) => `
+        <div class="comparativo__linha">
+          <dt class="comparativo__rotulo">${escapeHtml(l.rotulo)}</dt>
+          <dd class="comparativo__valores">
+            <span class="comparativo__valor${chaveAtiva === "atual" ? " comparativo__valor--ativo" : ""}">
+              <span class="comparativo__legenda">Atual</span>${escapeHtml(l.de)}
+            </span>
+            <svg class="comparativo__seta" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            <span class="comparativo__valor${chaveAtiva === "sugerida" ? " comparativo__valor--ativo" : ""}">
+              <span class="comparativo__legenda">Sugerida</span>${escapeHtml(l.para)}
+            </span>
+            ${l.nota ? `<span class="comparativo__nota">${escapeHtml(l.nota)}</span>` : ""}
+          </dd>
+        </div>`
+        )
+        .join("")}
+    </dl>
+
+    <div class="comparativo__funcoes">
+      <h4 class="comparativo__funcoes-titulo">Funções de TI na visão exibida</h4>
+      <ul class="funcao-lista">
+        ${funcoes
+          .map((f) => {
+            if (f.propria) {
+              return `
+                <li class="funcao-item funcao-item--propria">
+                  <span class="funcao-item__rotulo">${escapeHtml(f.rotulo)}</span>
+                  <span class="funcao-item__dono">${escapeHtml(f.propria.sigla)}</span>
+                </li>`;
+            }
+            const dono = f.acumulada
+              ? `por acúmulo em ${f.acumulada.sigla}`
+              : "sem dono declarado";
+            return `
+              <li class="funcao-item funcao-item--sem-unidade">
+                <span class="funcao-item__rotulo">${escapeHtml(f.rotulo)}</span>
+                <span class="funcao-item__dono">${escapeHtml(dono)}</span>
+              </li>`;
+          })
+          .join("")}
+      </ul>
+    </div>`;
+}
+
+function renderizarMudancasEstrutura(visao) {
+  const secao = document.getElementById("estrutura-mudancas");
+  const lista = document.getElementById("estrutura-mudancas-lista");
+  if (!secao || !lista) return;
+
+  const mudancas = visao.mudancas || [];
+  secao.hidden = !mudancas.length;
+  if (!mudancas.length) return;
+
+  lista.innerHTML = mudancas
+    .map(
+      (m) => `
+      <li class="mudanca">
+        <span class="mudanca__tipo mudanca__tipo--${escapeAttr(m.tipo || "processo")}">${escapeHtml(
+          SELO_MUDANCA[m.tipo] || "Mudança"
+        )}</span>
+        <div class="mudanca__texto">
+          <h4 class="mudanca__titulo">${escapeHtml(m.titulo)}</h4>
+          <p class="mudanca__detalhe">${escapeHtml(m.detalhe)}</p>
+        </div>
+      </li>`
+    )
+    .join("");
+}
+
+function renderizarNotasEstrutura(visao) {
+  const secao = document.getElementById("estrutura-notas");
+  const titulo = document.getElementById("estrutura-notas-titulo");
+  const lista = document.getElementById("estrutura-notas-lista");
+  if (!secao || !titulo || !lista) return;
+
+  const notas = visao.notas || [];
+  secao.hidden = !notas.length;
+  if (!notas.length) return;
+
+  titulo.textContent = visao.notasTitulo || "Observações";
+  lista.innerHTML = notas.map((n) => `<li>${escapeHtml(n)}</li>`).join("");
+}
+
+function renderizarEstrutura() {
+  const d = dadosDeEstrutura();
+  const alvo = document.getElementById("estrutura-organograma");
+  if (!alvo) return;
+
+  if (!d) {
+    alvo.innerHTML = `<p class="ramais-indisponivel">A estrutura da DTI não pôde ser carregada.</p>`;
+    return;
+  }
+
+  const visao = visaoDeEstrutura(state.estruturaVisao);
+  const funcoesPorId = new Map(d.funcoes.map((f) => [f.id, f]));
+
+  document.querySelectorAll("#estrutura-visoes .view-toggle__btn").forEach((b) => {
+    const ativo = b.dataset.visao === state.estruturaVisao;
+    b.classList.toggle("is-active", ativo);
+    b.setAttribute("aria-pressed", ativo ? "true" : "false");
+  });
+
+  document.getElementById("estrutura-titulo").textContent = visao.rotulo;
+  document.getElementById("estrutura-subtitulo").textContent =
+    `${visao.chamada} · ${plural(visao.unidades.length, "unidade", "unidades")} sob a Diretoria · ${ramaisDaVisao(visao)} ramais mapeados`;
+  document.getElementById("estrutura-resumo").textContent = visao.resumo;
+  document.getElementById("estrutura-procedencia").textContent = visao.procedencia;
+
+  // A minuta é identificada como minuta em toda parte onde aparece: uma
+  // proposta exibida com o mesmo peso da estrutura vigente passa a ser lida
+  // como decisão tomada.
+  const intro = document.getElementById("estrutura-intro");
+  if (intro) intro.classList.toggle("estrutura-intro--minuta", Boolean(visao.minuta));
+
+  renderizarComparativoEstrutura(d, state.estruturaVisao);
+
+  const unidades = unidadesFiltradas(visao);
+  const busca = normalizarTexto(state.filtroEstrutura || "").trim();
+  const topo = busca ? recortarUnidade(visao.topo, busca) : visao.topo;
+
+  const contagem = document.getElementById("estrutura-contagem");
+  if (contagem) {
+    contagem.textContent = busca
+      ? `${unidades.length} de ${plural(visao.unidades.length, "unidade", "unidades")}`
+      : plural(visao.unidades.length, "unidade", "unidades");
+  }
+
+  // O aviso aparece sempre que há busca em vigor, e não só quando ela falha:
+  // quem filtrou e achou também precisa de um caminho de volta ao organograma
+  // inteiro que não seja apagar o campo à mão.
+  const aviso = document.getElementById("estrutura-vazio");
+  const termo = (state.filtroEstrutura || "").trim();
+  if (aviso) {
+    aviso.hidden = !termo;
+    if (termo) {
+      document.getElementById("estrutura-vazio-texto").textContent = unidades.length
+        ? `${unidades.length} de ${visao.unidades.length} unidades, filtradas por "${termo}".`
+        : `Nenhuma unidade corresponde a "${termo}".`;
+    }
+  }
+
+  if (!unidades.length && !topo) {
+    alvo.innerHTML = "";
+  } else {
+    alvo.innerHTML = `
+      ${topo ? cartaoDoTopo(topo, funcoesPorId) : ""}
+      ${topo && unidades.length ? `<div class="org-conector" aria-hidden="true"></div>` : ""}
+      ${
+        unidades.length
+          ? `<div class="org-nivel">${unidades.map((u) => cartaoDeUnidade(u, funcoesPorId)).join("")}</div>`
+          : ""
+      }`;
+  }
+
+  renderizarMudancasEstrutura(visao);
+  renderizarNotasEstrutura(visao);
+}
+
+function trocarVisaoEstrutura(visao) {
+  state.estruturaVisao = VISOES_ESTRUTURA.includes(visao) ? visao : "atual";
+  renderizarEstrutura();
+}
+
+function renderizarPortalEstrutura() {
+  const d = dadosDeEstrutura();
+  const definir = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  };
+  if (!d) {
+    definir("portal-estrutura-atual", "—");
+    definir("portal-estrutura-sugerida", "—");
+    definir("portal-estrutura-lacunas", "—");
+    definir("portal-estrutura-destaque", "A estrutura da DTI não pôde ser carregada.");
+    definir("portal-estrutura-selo", "Indisponível");
+    return;
+  }
+
+  const lacunas = funcoesSemUnidade(d.atual);
+  definir("portal-estrutura-atual", String(d.atual.unidades.length));
+  definir("portal-estrutura-sugerida", String(d.sugerida.unidades.length));
+  definir("portal-estrutura-lacunas", String(lacunas));
+
+  const cel = document.getElementById("portal-estrutura-cel-lacunas");
+  if (cel) cel.classList.toggle("portal-metrica--acesa", lacunas > 0);
+
+  const novas = d.sugerida.unidades.filter((u) => u.estado === "nova");
+  const destaque = document.getElementById("portal-estrutura-destaque");
+  if (destaque) {
+    destaque.textContent = novas.length
+      ? `A minuta cria ${plural(novas.length, "unidade", "unidades")}: ${novas.map((u) => u.nome).join(", ")}.`
+      : "A minuta mantém as unidades existentes e redistribui atribuições.";
+    destaque.classList.add("portal-card__destaque--forte");
+  }
+
+  // Selo curto: o rodapé do cartão trunca com reticências, e "sem criação de
+  // cargo" cabe melhor nas premissas do módulo do que cortado pela metade.
+  definir("portal-estrutura-selo", "Minuta em discussão");
+}
+
+function inicializarModuloEstrutura() {
+  const grupo = document.getElementById("estrutura-visoes");
+  if (grupo) {
+    grupo.addEventListener("click", (ev) => {
+      const btn = ev.target.closest(".view-toggle__btn");
+      if (btn) trocarVisaoEstrutura(btn.dataset.visao);
+    });
+  }
+
+  const limpar = document.getElementById("btn-limpar-busca-estrutura");
+  if (limpar) {
+    limpar.addEventListener("click", () => {
+      state.filtroEstrutura = "";
+      const busca = document.getElementById("busca");
+      if (busca) busca.value = "";
+      renderizarEstrutura();
+    });
+  }
+}
+
+/* --------------------------------------------------------------------------
    Portal
    --------------------------------------------------------------------------
    Tela de entrada do sistema. Não é uma capa decorativa: cada cartão mostra o
@@ -5394,6 +5890,7 @@ function renderizarPortal() {
   renderizarPortalAgenda();
   renderizarPortalProjetos();
   renderizarPortalRamais();
+  renderizarPortalEstrutura();
   atualizarBadgeProjetos();
 }
 
@@ -5422,22 +5919,24 @@ function inicializarPortal() {
    Troca de módulo
    -------------------------------------------------------------------------- */
 
-const MODULOS = ["portal", "agenda", "projetos", "ramais"];
+const MODULOS = ["portal", "agenda", "projetos", "ramais", "estrutura"];
 
 const ROTULO_MODULO = {
   portal: "Portal",
   agenda: "Agenda",
   projetos: "Plano 100 dias",
   ramais: "Ramal DTI",
+  estrutura: "Estrutura DTI",
 };
 
 // A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
 // do Google Agenda" descreve a agenda, não o plano de entregas.
 const SUBTITULO_MODULO = {
-  portal: "TCM-BA — Agenda, Plano 100 dias e Ramal DTI",
+  portal: "TCM-BA — Agenda, Plano 100 dias, Ramal DTI e Estrutura DTI",
   agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
   projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
   ramais: "TCM-BA — ramais da Diretoria de Tecnologia da Informação",
+  estrutura: "TCM-BA — organograma da DTI: estrutura atual e estrutura sugerida",
 };
 
 function trocarModulo(modulo) {
@@ -5448,6 +5947,7 @@ function trocarModulo(modulo) {
   document.getElementById("modulo-agenda").hidden = atual !== "agenda";
   document.getElementById("modulo-projetos").hidden = atual !== "projetos";
   document.getElementById("modulo-ramais").hidden = atual !== "ramais";
+  document.getElementById("modulo-estrutura").hidden = atual !== "estrutura";
   document.getElementById("filtros-agenda").hidden = atual !== "agenda";
   document.getElementById("filtros-projetos").hidden = atual !== "projetos";
 
@@ -5462,6 +5962,8 @@ function trocarModulo(modulo) {
         ? "Buscar por projeto, responsável ou área…"
         : atual === "ramais"
         ? "Buscar por nome, equipe ou ramal…"
+        : atual === "estrutura"
+        ? "Buscar por unidade, pessoa ou atribuição…"
         : "Buscar por título, descrição ou local…";
     // Cada módulo tem a sua busca. Carregar o texto de um para o outro daria
     // uma lista filtrada por um termo que não está mais escrito em lugar
@@ -5469,6 +5971,7 @@ function trocarModulo(modulo) {
     busca.value =
       atual === "projetos" ? state.filtrosProjeto.busca || ""
       : atual === "ramais" ? state.filtroRamais || ""
+      : atual === "estrutura" ? state.filtroEstrutura || ""
       : state.filtros.busca || "";
   }
   document.getElementById("btn-abrir-export").hidden = atual !== "agenda";
@@ -5508,6 +6011,7 @@ function trocarModulo(modulo) {
 
   if (atual === "projetos") renderizarProjetos();
   if (atual === "ramais") renderizarRamais();
+  if (atual === "estrutura") renderizarEstrutura();
   if (atual === "portal") renderizarPortal();
 }
 
@@ -5688,6 +6192,7 @@ function iniciar() {
   inicializarInterface();
   inicializarModuloProjetos();
   inicializarModuloRamais();
+  inicializarModuloEstrutura();
   inicializarPortal();
   aplicarFiltrosDaURL();
 
