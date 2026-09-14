@@ -5431,33 +5431,10 @@ function pessoaBate(pessoa, busca) {
     normalizarTexto(pessoa.nomeNaRelacao).includes(busca) ||
     normalizarTexto(pessoa.cargo).includes(busca) ||
     normalizarTexto(pessoa.nivel).includes(busca) ||
+    normalizarTexto(pessoa.funcao).includes(busca) ||
     normalizarTexto(pessoa.vinculo).includes(busca) ||
     String(pessoa.matricula || "").includes(busca)
   );
-}
-
-// Quando a unidade bate pelo próprio texto, o quadro inteiro fica: buscar
-// "infraestrutura" deve mostrar a divisão como ela é. Quando só uma pessoa
-// bate, a unidade aparece com aquela pessoa — é o mesmo critério do módulo de
-// ramais.
-function recortarUnidade(u, busca) {
-  if (!busca) return u;
-  if (textoDaUnidade(u).includes(busca)) return u;
-  const pessoas = pessoasDaUnidade(u).filter((p) => pessoaBate(p, busca));
-  // A busca desce para a seção subordinada. Quando só ela bate, a divisão
-  // continua em tela como contexto, com o próprio quadro recortado — tirar a
-  // divisão deixaria a seção pendurada em lugar nenhum.
-  const subunidades = subunidadesDe(u)
-    .map((su) => recortarUnidade(su, busca))
-    .filter(Boolean);
-  if (!pessoas.length && !subunidades.length) return null;
-  return { ...u, pessoas, subunidades, recortada: true };
-}
-
-function unidadesFiltradas(visao) {
-  const busca = normalizarTexto(state.filtroEstrutura || "").trim();
-  if (!busca) return visao.unidades;
-  return visao.unidades.map((u) => recortarUnidade(u, busca)).filter(Boolean);
 }
 
 // Quem responde por cada função de TI nesta visão. A distinção entre unidade
@@ -5563,260 +5540,6 @@ function painelDeEquipe(u, busca) {
       </div>`;
     })
     .join("");
-}
-
-function linhaDeTitular(u, titular, minuta) {
-  if (titular) {
-    return `
-      <p class="org-unidade__linha-titular">
-        <span class="org-unidade__titular">${escapeHtml(titular.nome)}</span>
-        <span class="org-unidade__titular-cargo">${escapeHtml(
-          titular.cargo || "cargo não consta na relação"
-        )}</span>
-      </p>`;
-  }
-  // Chefia sem titular é pendência declarada, não espaço em branco: na relação
-  // de lotação é um dado a confirmar; na minuta, uma designação a fazer.
-  return `
-    <p class="org-unidade__linha-titular">
-      <span class="org-unidade__titular org-unidade__titular--vago">${
-        minuta ? "Chefia a designar" : "Chefia a confirmar"
-      }</span>
-    </p>`;
-}
-
-function cabecalhoDeUnidade(u, funcoesPorId, minuta, tagTitulo) {
-  const selos = [];
-  if (u.estado && SELO_ESTADO_UNIDADE[u.estado]) {
-    selos.push(
-      `<span class="org-selo org-selo--${escapeAttr(u.estado)}">${escapeHtml(SELO_ESTADO_UNIDADE[u.estado])}</span>`
-    );
-  }
-  if (u.portaDeEntrada) {
-    selos.push(`<span class="org-selo org-selo--porta">Porta de entrada</span>`);
-  }
-  // A função declarada vai no cabeçalho porque é o que diferencia as duas
-  // visões: é ela que a comparação conta como tendo ou não unidade própria.
-  const funcoes = (u.funcoes || []).map((id) => funcoesPorId.get(id)).filter(Boolean);
-  const quadro = resumoDeQuadro(u);
-
-  return `
-    <header class="org-unidade__topo">
-      <div class="org-unidade__identificacao">
-        <span class="org-unidade__sigla">${escapeHtml(u.sigla)}</span>
-        <${tagTitulo} class="org-unidade__nome">${escapeHtml(u.nome)}</${tagTitulo}>
-      </div>
-      ${selos.length ? `<div class="org-unidade__selos">${selos.join("")}</div>` : ""}
-    </header>
-    <p class="org-unidade__meta">
-      <span class="org-unidade__natureza">${escapeHtml(u.natureza || "")}${
-        u.ramal ? ` · ramal ${escapeHtml(u.ramal)}` : ""
-      }</span>
-      ${funcoes
-        .map((f) => `<span class="org-unidade__funcao">${escapeHtml(f.rotulo)}</span>`)
-        .join("")}
-    </p>
-    ${linhaDeTitular(u, titularDaUnidade(u), minuta)}
-    ${quadro ? `<p class="org-unidade__quadro-resumo">${escapeHtml(quadro)}</p>` : ""}`;
-}
-
-function cartaoDeUnidade(u, funcoesPorId, minuta, nomeDoTopo, aninhada) {
-  const atribuicoes = (u.atribuicoes || []).map((a) => `<li>${escapeHtml(a)}</li>`).join("");
-  // Subordinação à própria Diretoria já está desenhada no organograma, e a de
-  // uma seção aninhada está desenhada pelo próprio aninhamento; repeti-la
-  // seria ruído. A linha fica para o que foge disso.
-  const subordinacao =
-    !aninhada && u.subordinacao && u.subordinacao !== nomeDoTopo
-      ? `<p class="org-unidade__subordinacao">Subordinada a: ${escapeHtml(u.subordinacao)}</p>`
-      : "";
-  const subunidades = subunidadesDe(u);
-  return `
-    <article class="org-unidade${aninhada ? " org-unidade--aninhada" : ""}${
-      u.estado ? ` org-unidade--${escapeAttr(u.estado)}` : ""
-    }">
-      ${cabecalhoDeUnidade(u, funcoesPorId, minuta, aninhada ? "h5" : "h4")}
-      ${subordinacao}
-      ${u.origem ? `<p class="org-unidade__origem">Vem de: ${escapeHtml(u.origem)}</p>` : ""}
-      ${atribuicoes ? `<ul class="org-unidade__atribuicoes">${atribuicoes}</ul>` : ""}
-      ${
-        u.observacao
-          ? `<p class="org-unidade__pendencia">${escapeHtml(u.observacao)}</p>`
-          : ""
-      }
-      ${u.lotacao ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>` : ""}
-      ${u.justificativa ? `<p class="org-unidade__justificativa">${escapeHtml(u.justificativa)}</p>` : ""}
-      ${
-        subunidades.length
-          ? `<div class="org-subunidades">
-               <span class="org-subunidades__rotulo">${
-                 subunidades.length === 1 ? "Unidade subordinada" : "Unidades subordinadas"
-               }</span>
-               ${subunidades
-                 .map((su) => cartaoDeUnidade(su, funcoesPorId, minuta, nomeDoTopo, true))
-                 .join("")}
-             </div>`
-          : ""
-      }
-    </article>`;
-}
-
-function cartaoDoTopo(topo, funcoesPorId, minuta) {
-  const atribuicoes = (topo.atribuicoes || []).map((a) => `<li>${escapeHtml(a)}</li>`).join("");
-  const acumuladas = (topo.funcoesAcumuladas || [])
-    .map((id) => funcoesPorId.get(id))
-    .filter(Boolean)
-    .map((f) => f.rotulo);
-  const titular = titularDaUnidade(topo);
-  return `
-    <article class="org-topo">
-      <div class="org-topo__identificacao">
-        <span class="org-topo__sigla">${escapeHtml(topo.sigla)}</span>
-        <h3 class="org-topo__nome">${escapeHtml(topo.nome)}</h3>
-        <span class="org-topo__natureza">${escapeHtml(topo.natureza || "")}</span>
-      </div>
-      <p class="org-topo__titular">${
-        titular
-          ? `${escapeHtml(titular.nome)}${titular.cargo ? ` · ${escapeHtml(titular.cargo)}` : ""}${
-              titular.matricula ? ` · matrícula ${escapeHtml(titular.matricula)}` : ""
-            }${titular.vinculo ? ` · ${escapeHtml(titular.vinculo)}` : ""}`
-          : minuta
-          ? "Chefia a designar"
-          : "Chefia a confirmar"
-      }</p>
-      ${atribuicoes ? `<ul class="org-topo__atribuicoes">${atribuicoes}</ul>` : ""}
-      ${
-        topo.observacao
-          ? `<p class="org-topo__pendencia">${escapeHtml(topo.observacao)}</p>`
-          : ""
-      }
-      ${
-        acumuladas.length
-          ? `<p class="org-topo__acumulo">Exerce por acúmulo: ${escapeHtml(acumuladas.join(", "))}.</p>`
-          : ""
-      }
-      ${
-        resumoDeQuadro(topo)
-          ? `<p class="org-unidade__quadro-resumo">${escapeHtml(resumoDeQuadro(topo))}</p>`
-          : ""
-      }
-    </article>`;
-}
-
-function renderizarComparativoEstrutura(d, chaveAtiva) {
-  const alvo = document.getElementById("estrutura-comparativo");
-  if (!alvo) return;
-
-  const atual = d.atual;
-  const sugerida = d.sugerida;
-  const total = d.funcoes.length;
-
-  const linhas = [
-    {
-      rotulo: "Unidades no organograma",
-      de: String(unidadesDaVisao(atual).length),
-      para: String(unidadesDaVisao(sugerida).length),
-    },
-    {
-      rotulo: "Funções com unidade própria",
-      de: `${total - funcoesSemUnidade(atual)} de ${total}`,
-      para: `${total - funcoesSemUnidade(sugerida)} de ${total}`,
-    },
-    {
-      rotulo: "Pessoas no organograma",
-      de: String(pessoasDaVisao(atual)),
-      para: String(pessoasDaVisao(sugerida)),
-      nota: "mesmo quadro",
-    },
-  ];
-
-  const funcoes = funcoesDaVisao(d[chaveAtiva]);
-
-  alvo.innerHTML = `
-    <h3 class="estrutura-secao">Atual × sugerida</h3>
-    <dl class="comparativo__grade">
-      ${linhas
-        .map(
-          (l) => `
-        <div class="comparativo__linha">
-          <dt class="comparativo__rotulo">${escapeHtml(l.rotulo)}</dt>
-          <dd class="comparativo__valores">
-            <span class="comparativo__valor${chaveAtiva === "atual" ? " comparativo__valor--ativo" : ""}">
-              <span class="comparativo__legenda">Atual</span>${escapeHtml(l.de)}
-            </span>
-            <svg class="comparativo__seta" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-            <span class="comparativo__valor${chaveAtiva === "sugerida" ? " comparativo__valor--ativo" : ""}">
-              <span class="comparativo__legenda">Sugerida</span>${escapeHtml(l.para)}
-            </span>
-            ${l.nota ? `<span class="comparativo__nota">${escapeHtml(l.nota)}</span>` : ""}
-          </dd>
-        </div>`
-        )
-        .join("")}
-    </dl>
-
-    <div class="comparativo__funcoes">
-      <h4 class="comparativo__funcoes-titulo">Funções de TI na visão exibida</h4>
-      <ul class="funcao-lista">
-        ${funcoes
-          .map((f) => {
-            if (f.propria) {
-              return `
-                <li class="funcao-item funcao-item--propria">
-                  <span class="funcao-item__rotulo">${escapeHtml(f.rotulo)}</span>
-                  <span class="funcao-item__dono">${escapeHtml(f.propria.sigla)}</span>
-                </li>`;
-            }
-            const dono = f.acumulada
-              ? `por acúmulo em ${f.acumulada.sigla}`
-              : "sem dono declarado";
-            return `
-              <li class="funcao-item funcao-item--sem-unidade">
-                <span class="funcao-item__rotulo">${escapeHtml(f.rotulo)}</span>
-                <span class="funcao-item__dono">${escapeHtml(dono)}</span>
-              </li>`;
-          })
-          .join("")}
-      </ul>
-    </div>`;
-}
-
-function renderizarMudancasEstrutura(visao) {
-  const secao = document.getElementById("estrutura-mudancas");
-  const lista = document.getElementById("estrutura-mudancas-lista");
-  if (!secao || !lista) return;
-
-  const mudancas = visao.mudancas || [];
-  secao.hidden = !mudancas.length;
-  if (!mudancas.length) return;
-
-  lista.innerHTML = mudancas
-    .map(
-      (m) => `
-      <li class="mudanca">
-        <span class="mudanca__tipo mudanca__tipo--${escapeAttr(m.tipo || "processo")}">${escapeHtml(
-          SELO_MUDANCA[m.tipo] || "Mudança"
-        )}</span>
-        <div class="mudanca__texto">
-          <h4 class="mudanca__titulo">${escapeHtml(m.titulo)}</h4>
-          <p class="mudanca__detalhe">${escapeHtml(m.detalhe)}</p>
-        </div>
-      </li>`
-    )
-    .join("");
-}
-
-function renderizarNotasEstrutura(visao) {
-  const secao = document.getElementById("estrutura-notas");
-  const titulo = document.getElementById("estrutura-notas-titulo");
-  const lista = document.getElementById("estrutura-notas-lista");
-  if (!secao || !titulo || !lista) return;
-
-  const notas = visao.notas || [];
-  secao.hidden = !notas.length;
-  if (!notas.length) return;
-
-  titulo.textContent = visao.notasTitulo || "Observações";
-  lista.innerHTML = notas.map((n) => `<li>${escapeHtml(n)}</li>`).join("");
 }
 
 /* --------------------------------------------------------------------------
@@ -6010,16 +5733,23 @@ function renderizarFluxograma(visao) {
   const excedente = rolagem ? rolagem.scrollWidth - rolagem.clientWidth : 0;
   if (rolagem && excedente > 1) rolagem.scrollLeft = excedente / 2;
 
+  // A nota guarda só o que é funcional: o retorno da busca e o aviso de que o
+  // desenho rola. Sem busca e sem rolagem ela sai da tela — texto explicando o
+  // óbvio é ruído em um organograma.
   const nota = document.getElementById("estrutura-fluxo-nota");
   if (nota) {
     const destacados = alvo.querySelectorAll(".fluxo-no.is-destacado").length;
-    const base = busca
-      ? destacados
-        ? `Fluxograma da estrutura inteira. ${plural(destacados, "caixa destacada", "caixas destacadas")} pela busca em vigor.`
-        : "Fluxograma da estrutura inteira. Nenhuma caixa corresponde à busca em vigor."
-      : "Do Diretor às gerências de TI. Clique em uma unidade para ver a equipe alocada nela; a equipe pertence à unidade, e não a uma gerência específica, porque as relações não declaram a qual gerência cada pessoa responde.";
-    nota.textContent =
-      excedente > 1 ? `${base} Arraste na horizontal para ver o desenho inteiro.` : base;
+    const partes = [];
+    if (busca) {
+      partes.push(
+        destacados
+          ? `${plural(destacados, "caixa destacada", "caixas destacadas")} pela busca.`
+          : "Nenhuma caixa corresponde à busca."
+      );
+    }
+    if (excedente > 1) partes.push("Arraste na horizontal para ver o desenho inteiro.");
+    nota.textContent = partes.join(" ");
+    nota.hidden = !partes.length;
   }
 }
 
@@ -6088,7 +5818,7 @@ function fecharPainelDeUnidade() {
 
 function renderizarEstrutura() {
   const d = dadosDeEstrutura();
-  const alvo = document.getElementById("estrutura-organograma");
+  const alvo = document.getElementById("estrutura-fluxograma");
   if (!alvo) return;
 
   if (!d) {
@@ -6097,8 +5827,6 @@ function renderizarEstrutura() {
   }
 
   const visao = visaoDeEstrutura(state.estruturaVisao);
-  const funcoesPorId = new Map(d.funcoes.map((f) => [f.id, f]));
-  const minuta = Boolean(visao.minuta);
 
   document.querySelectorAll("#estrutura-visoes .view-toggle__btn").forEach((b) => {
     const ativo = b.dataset.visao === state.estruturaVisao;
@@ -6112,31 +5840,22 @@ function renderizarEstrutura() {
   const naRelacao = pessoasDaVisao(visao) - tecnicos;
 
   document.getElementById("estrutura-titulo").textContent = visao.rotulo;
+  // A linha de apoio resume o desenho em números, e é o único texto corrido da
+  // tela: o resto é o organograma e a lista de quem está em cada unidade.
   document.getElementById("estrutura-subtitulo").textContent =
-    `${visao.chamada} · ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} no organograma · ` +
+    `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
     `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
     `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`;
-  document.getElementById("estrutura-resumo").textContent = visao.resumo;
-  document.getElementById("estrutura-procedencia").textContent = visao.procedencia;
-
-  // A minuta é identificada como minuta em toda parte onde aparece: uma
-  // proposta exibida com o mesmo peso da estrutura vigente passa a ser lida
-  // como decisão tomada.
-  const intro = document.getElementById("estrutura-intro");
-  if (intro) intro.classList.toggle("estrutura-intro--minuta", minuta);
-
-  renderizarComparativoEstrutura(d, state.estruturaVisao);
 
   // Com os nomes atrás de um clique, uma busca que casasse só com pessoas não
   // mostraria nada: a unidade correspondente se abre sozinha.
-  const buscaCorrente = normalizarTexto(state.filtroEstrutura || "").trim();
-  if (buscaCorrente) {
+  const busca = normalizarTexto(state.filtroEstrutura || "").trim();
+  if (busca) {
     const aberta = unidadePorSigla(visao, state.estruturaUnidadeAberta);
-    const casaNaAberta =
-      aberta && pessoasDaUnidade(aberta).some((p) => pessoaBate(p, buscaCorrente));
+    const casaNaAberta = aberta && pessoasDaUnidade(aberta).some((p) => pessoaBate(p, busca));
     if (!casaNaAberta) {
       const comPessoa = [visao.topo, ...unidadesDaVisao(visao)].find((u) =>
-        pessoasDaUnidade(u).some((p) => pessoaBate(p, buscaCorrente))
+        pessoasDaUnidade(u).some((p) => pessoaBate(p, busca))
       );
       if (comPessoa) {
         state.estruturaUnidadeAberta = comPessoa.sigla;
@@ -6153,51 +5872,6 @@ function renderizarEstrutura() {
 
   renderizarFluxograma(visao);
   renderizarPainelDeUnidade(visao);
-
-  const unidades = unidadesFiltradas(visao);
-  const busca = normalizarTexto(state.filtroEstrutura || "").trim();
-  const topo = busca ? recortarUnidade(visao.topo, busca) : visao.topo;
-  const totalDeUnidades = unidadesDaVisao(visao).length;
-  const visiveis = achatarUnidades(unidades).length;
-
-  const contagem = document.getElementById("estrutura-contagem");
-  if (contagem) {
-    contagem.textContent = busca
-      ? `${visiveis} de ${plural(totalDeUnidades, "unidade", "unidades")}`
-      : plural(totalDeUnidades, "unidade", "unidades");
-  }
-
-  // O aviso aparece sempre que há busca em vigor, e não só quando ela falha:
-  // quem filtrou e achou também precisa de um caminho de volta ao organograma
-  // inteiro que não seja apagar o campo à mão.
-  const aviso = document.getElementById("estrutura-vazio");
-  const termo = (state.filtroEstrutura || "").trim();
-  if (aviso) {
-    aviso.hidden = !termo;
-    if (termo) {
-      document.getElementById("estrutura-vazio-texto").textContent = visiveis
-        ? `${visiveis} de ${totalDeUnidades} unidades, filtradas por "${termo}".`
-        : `Nenhuma unidade corresponde a "${termo}".`;
-    }
-  }
-
-  if (!unidades.length && !topo) {
-    alvo.innerHTML = "";
-  } else {
-    alvo.innerHTML = `
-      ${topo ? cartaoDoTopo(topo, funcoesPorId, minuta) : ""}
-      ${topo && unidades.length ? `<div class="org-conector" aria-hidden="true"></div>` : ""}
-      ${
-        unidades.length
-          ? `<div class="org-nivel">${unidades
-              .map((u) => cartaoDeUnidade(u, funcoesPorId, minuta, visao.topo.nome))
-              .join("")}</div>`
-          : ""
-      }`;
-  }
-
-  renderizarMudancasEstrutura(visao);
-  renderizarNotasEstrutura(visao);
 }
 
 function trocarVisaoEstrutura(visao) {
@@ -6281,15 +5955,6 @@ function inicializarModuloEstrutura() {
     });
   }
 
-  const limpar = document.getElementById("btn-limpar-busca-estrutura");
-  if (limpar) {
-    limpar.addEventListener("click", () => {
-      state.filtroEstrutura = "";
-      const busca = document.getElementById("busca");
-      if (busca) busca.value = "";
-      renderizarEstrutura();
-    });
-  }
 }
 
 /* --------------------------------------------------------------------------

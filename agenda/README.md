@@ -243,153 +243,67 @@ procura sem querer procurar — Sessão do Plenário (4665) e Sistema e-TCM (567
 
 Organograma da Diretoria de Tecnologia da Informação em **duas visões**, no
 alternador do topo da tela: **estrutura atual** e **estrutura sugerida**.
-Material de consulta e de discussão que vem com o sistema
-(`dados/estrutura.js`), igual para todo mundo e sem nada a gravar por
-navegador — desenho de estrutura se decide em ato do Tribunal, não no
-`localStorage` de quem abriu a tela.
+Material de consulta que vem com o sistema (`dados/estrutura.js`), igual para
+todo mundo e sem nada a gravar por navegador — desenho de estrutura se decide
+em ato do Tribunal, não no `localStorage` de quem abriu a tela.
 
-**A comparação fica em tela nas duas visões**, não só na proposta: unidades no
-organograma (4 → 6), funções de TI com unidade própria (4 de 7 → 7 de 7) e
-pessoas no organograma (43 → 43, o mesmo quadro). A coluna da visão exibida
-fica acesa, para que a comparação diga qual dos dois lados é o que está
-desenhado abaixo.
+A tela tem duas coisas e só: **o fluxograma** e **a lista de quem está em cada
+unidade**. Nenhum texto corrido, nenhum comparativo, nenhuma nota — a leitura é
+o desenho.
 
-**Duas relações, não somadas às cegas.** A estrutura atual reúne a **relação de
-lotação** — 16 pessoas com matrícula, vínculo e cargo — e a **equipe técnica**
-— 27 pessoas alocadas por unidade com perfil de senioridade (Júnior, Pleno,
-Sênior, Master, Estagiário), sem matrícula nem vínculo declarados. Cada unidade
-mostra as duas contagens separadas, e o módulo registra que os perfis são os de
-contrato de serviços especializados, a confirmar: um número só apagaria a
-diferença entre quadro próprio e equipe alocada, que é justamente o que uma
-discussão de estrutura precisa ver.
+**Esqueleto fixo.** De cima para baixo: **Diretor → chefes de divisão (DAS-4) →
+gerências de TI (DAS-3)**, com a **Seção de Atendimento ao Usuário** dentro da
+Divisão de Infraestrutura Tecnológica, no nível das gerências, porque é onde
+ela está e quem a chefia é um gerente. Cada nível tem cor própria — navy na
+Diretoria, azul nas divisões, azul claro nas gerências, vermelho na porta de
+entrada e tracejado nas unidades que a minuta cria —, o que permite ler a
+profundidade sem seguir as linhas com o dedo. A caixa traz o titular, o nível
+do cargo e o quadro em números; nome de quem não é chefia ou gerência não
+aparece no desenho.
 
-**O fluxograma vem primeiro.** Antes do detalhamento das unidades, o módulo
-desenha a estrutura como fluxo, de cima para baixo — **Diretor → chefes de
-divisão (DAS-4) → gerências de TI (DAS-3)** —, que é a leitura que um gestor faz
-primeiro: quem responde a quem. A **Seção de Atendimento ao Usuário** aparece
-dentro da Divisão de Infraestrutura Tecnológica, no nível das gerências, porque
-é onde ela está e quem a chefia é um gerente (DAS-3).
+**A equipe abre no clique.** Clicar na caixa de uma unidade abre, abaixo do
+desenho, a equipe alocada nela. Um painel por vez, e sempre no mesmo lugar:
+assim nenhuma caixa se mexe quando alguém abre uma divisão — a caixa que se
+quer ler não sai do lugar debaixo do cursor. A caixa aberta fica marcada e a
+chamada muda de "ver equipe alocada (36)" para "ocultar equipe (36)"; unidade
+sem quadro além da chefia diz isso na própria caixa, em vez de abrir um painel
+vazio. Esc, o × do painel e um segundo clique na mesma caixa dispensam a lista.
 
-**O esqueleto é fixo e a equipe abre no clique.** As caixas de Diretoria,
-divisão, gerência e seção estão sempre em tela; a equipe alocada em cada
-unidade aparece só quando se clica na caixa da unidade, em um painel abaixo do
-desenho. Um painel por vez, e sempre abaixo do fluxograma: assim nenhuma caixa
-se mexe quando alguém abre uma divisão — a caixa que se quer ler não sai do
-lugar debaixo do cursor. A caixa aberta fica marcada, e a chamada muda de "ver
-equipe alocada (36)" para "ocultar equipe (36)"; unidade sem quadro além da
-chefia diz isso na própria caixa, em vez de abrir um painel vazio.
-
-No painel, os nomes vêm em colunas e em três blocos — **gerências (DAS-3),
+No painel os nomes vêm em colunas e em três blocos — **gerências (DAS-3),
 relação de lotação e equipe técnica** —, com matrícula, vínculo e cargo para
-quem vem da relação, e perfil de senioridade (mais a função declarada, quando
-há) para quem vem da alocação. A distribuição por perfil fica no título do
-bloco técnico. Esc e o botão de fechar dispensam o painel; clicar de novo na
-mesma caixa também.
+quem vem da relação de lotação, e perfil de senioridade (mais a função
+declarada, quando há) para quem vem da alocação. A distribuição por perfil fica
+no título do bloco técnico: "1 master · 12 sêniores · 3 plenos · 7 juniores · 3
+estagiários".
 
-Cada nível tem cor própria — navy na Diretoria, azul nas divisões, azul claro
-nas gerências, vermelho na porta de entrada e tracejado nas unidades que a
-minuta cria —, o que permite ler a profundidade sem seguir as linhas com o
-dedo. A caixa de divisão traz o titular, o nível do cargo e o quadro em
-números, sem nome de quem não é chefia ou gerência.
+**Duas relações, contadas separadamente.** A linha de apoio do título resume o
+desenho em números: unidades, total de pessoas, quantas vêm da **relação de
+lotação** (com vínculo) e quantas da **equipe técnica** (alocada por perfil).
+Somá-las em um número só apagaria a diferença entre quadro próprio e equipe
+alocada.
 
-A árvore é montada em `<ul>` aninhado com os conectores desenhados em CSS: sem
-biblioteca, sem canvas e sem posição calculada em JavaScript, o desenho
-acompanha o texto quando a fonte muda de tamanho, sobrevive ao zoom e continua
-legível impresso. Em tela estreita ele rola dentro do próprio quadro, sem
-empurrar a página, e **abre centrado na raiz** — com a rolagem em zero, o
-telefone mostraria a margem vazia à esquerda em vez da Diretoria.
-
-**A equipe aparece ligada à sua unidade, não distribuída entre as gerências.**
-Nem a relação de lotação nem a alocação dizem a qual das três gerências da DDES
-cada pessoa responde, e distribuir por conta própria inventaria subordinação
-onde há lacuna declarada. A nota abaixo do desenho diz isso, e cada caixa de
-gerência mostra "escopo a definir".
+**A árvore é `<ul>` aninhado com os conectores em CSS**: sem biblioteca, sem
+canvas e sem posição calculada em JavaScript, o desenho acompanha o texto
+quando a fonte muda de tamanho, sobrevive ao zoom e continua legível impresso.
+Em tela estreita ele rola dentro do próprio quadro, sem empurrar a página, e
+abre centrado na raiz.
 
 **A busca destaca, não recorta.** Com um termo em vigor, o fluxograma continua
-mostrando a estrutura inteira e acende as caixas correspondentes, com a
-contagem na nota: um mapa que se recorta deixa de ser mapa. O detalhamento
-abaixo, esse sim, é filtrado.
+mostrando a estrutura inteira e acende as caixas correspondentes. Como os nomes
+estão atrás de um clique, um termo que case com pessoa **abre sozinho** o painel
+da unidade dela e destaca quem bate; quando o termo deixa de casar com alguém, o
+painel que a busca abriu se fecha — o que foi aberto à mão fica aberto. Procura
+por unidade, sigla, pessoa, matrícula, cargo, perfil de senioridade, função
+declarada ou vínculo: "217406" traz a pessoa, "Sênior IV" traz os dois perfis,
+"QA" traz quem responde por QA e requisitos.
 
-**Busca por pessoa abre o painel sozinha.** Com os nomes atrás de um clique, um
-termo que casasse só com pessoas não mostraria nada: o módulo abre o painel da
-unidade correspondente e destaca quem bate. O painel que a busca abriu também
-se fecha sozinho quando o termo deixa de casar com alguém; o que foi aberto à
-mão fica aberto.
-
-**Hierarquia no detalhamento.** Abaixo do fluxograma, cada unidade tem um
-cartão: três divisões sob a Diretoria — Desenvolvimento de Sistemas,
-Infraestrutura Tecnológica e Banco de Dados — e a **Seção de Atendimento ao
-Usuário subordinada à Infraestrutura**, desenhada dentro do cartão da Divisão e
-não ao lado dos cartões de divisão: com a seção como par de uma divisão, o
-organograma apresentaria como igual o que é subordinado.
-
-O cartão responde o que a unidade faz e o que falta nela — atribuições,
-titularidade, quadro em números, pendências e, na minuta, a justificativa. Os
-nomes não se repetem aqui: quem é quem é pergunta do fluxograma, a um clique na
-caixa da unidade.
-
-**O Diretor é Diego Daltro**, conforme designação informada pela Diretoria. A
-relação de lotação registra, para a matrícula 217796 lotada na DTI, o nome
-Diego Cavalcante Teixeira, sem cargo declarado — o módulo não escolhe entre os
-dois: exibe a designação e registra a divergência como pendência, a confirmar
-se é a mesma pessoa.
-
-**O que as relações não declaram fica escrito na tela**, em cor de aviso, em vez
-de ser preenchido por conta própria: o escopo de cada uma das três gerências
-lotadas na DDES, o quadro de atendimento da Seção e o
-quadro técnico da Infraestrutura — que a alocação de técnicos não contempla, e
-cujos nomes na lista de ramais não constam de nenhuma das duas relações.
-Registra também que a chefia da Divisão de Banco de Dados é exercida por
-analista de sistemas efetivo, sem o cargo comissionado de DAS-4 que titulariza
-as outras duas divisões. Preencher o campo correspondente no arquivo de dados é
-o suficiente para a tela passar a exibi-lo.
-
-**Ramal não entra neste módulo de propósito.** As relações não trazem ramal, e
-cruzar nome com a lista de ramais pelo primeiro nome produziria número errado ao
-lado de pessoa certa. Quem procura número usa o **Ramal DTI**; este módulo
-responde quem é quem e onde está lotado.
-
-**O diagnóstico vem escrito**, na "Leitura da estrutura atual": o
-desenvolvimento concentra 37 das 43 pessoas e 26 dos 27 técnicos; segurança da
-informação não tem unidade responsável e recai sobre quem opera o ambiente;
-governança de TI não tem unidade própria apesar de um contrato de mais de R$ 9
-milhões por ano; informação gerencial não tem dono declarado; infraestrutura e
-banco de dados não receberam técnicos na alocação; e a porta de entrada da
-operação registra apenas a gerência, sem quadro próprio de atendimento.
-
-**Estrutura sugerida.** É **minuta de trabalho**, e a tela diz isso em todo
-lugar onde ela aparece — faixa âmbar na introdução, selo no cartão do portal e
-a ressalva de que criação, extinção e denominação de unidade, assim como
-designação de chefia e remanejamento de equipe, dependem de ato próprio do
-Tribunal.
-
-Seis unidades, sem extinguir nenhuma das existentes: **DDES** e **DINT**
-permanecem como são, com a **Seção de Atendimento ao Usuário** onde ela está e
-a porta de entrada formalizada no 4631; a **Divisão de Banco de Dados passa a
-Divisão de Dados e Informação**, mantendo chefia e quadro, com escopo ampliado
-para painéis e indicadores; e duas unidades novas assumem o que hoje é acúmulo
-— **Assessoria de Governança e Gestão de TI** e **Núcleo de Segurança da
-Informação**.
-
-**Sem criação de cargo.** A minuta é desenhada sobre as mesmas 43 pessoas — daí
-a linha "pessoas no organograma: 43 → 43" na comparação. A composição nominal
-das duas unidades novas, o escopo de cada uma das três gerências da DDES e o
-dimensionamento do quadro técnico da infraestrutura e dos dados ficam a definir
-pela Diretoria: a proposta traz o desenho e a distribuição de atribuições, não
-a lotação das pessoas.
-
-**O que muda** vem em lista própria abaixo do organograma, com o tipo de cada
-mudança (unidade nova, renomeação, processo, governança) e o motivo. Uma
-proposta que não diz o que muda em relação ao que existe não é avaliável.
-
-**Busca pelo campo do topo**, por unidade, sigla, pessoa, matrícula, cargo,
-perfil de senioridade, função declarada, vínculo ou atribuição: procurar
-"segurança" traz o núcleo que responde por ela, e não só a unidade cujo nome
-contém a palavra; procurar "217406" traz a pessoa; procurar "Sênior IV" traz os
-dois perfis; procurar "QA" traz quem responde por QA e requisitos.
-Quando a unidade bate pelo próprio texto, o quadro inteiro fica; quando só uma
-pessoa bate, a unidade aparece com aquela pessoa — e uma divisão entra como
-contexto quando quem bate está na seção subordinada.
+**O que o arquivo de dados guarda além do que a tela mostra.** O levantamento
+completo continua em `dados/estrutura.js` — atribuições de cada unidade,
+pendências ("chefia a confirmar", "quem executa o primeiro nível"), as
+premissas da minuta e a lista do que ela muda. Nada disso é exibido hoje: fica
+como registro, e o cabeçalho do arquivo diz exatamente quais campos a tela lê,
+para que quem editar a estrutura não procure na interface um campo que ela
+ignora.
 
 ## Stack
 

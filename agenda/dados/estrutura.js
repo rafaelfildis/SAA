@@ -43,6 +43,19 @@
 // Os quadros ficam em constantes compartilhadas porque as duas visões usam as
 // mesmas pessoas: repetir 37 nomes em cada uma criaria duas listas para
 // divergirem na primeira atualização.
+//
+// O QUE A TELA USA HOJE. O módulo ficou com o fluxograma e a lista da equipe,
+// e só lê: `sigla`, `nome`, `natureza`, `ramal`, `portaDeEntrada`, `estado`,
+// `pessoas`, `subunidades`, `funcoes`/`funcoesAcumuladas` (que alimentam a
+// métrica do portal) e `lotacao`/`observacao` (exibidos no painel de uma
+// unidade sem equipe própria).
+//
+// Os demais campos — `chamada`, `resumo`, `procedencia`, `atribuicoes`,
+// `justificativa`, `origem`, `subordinacao`, `notas`, `notasTitulo` e
+// `mudancas` — não aparecem em tela nenhuma: ficam como registro do
+// levantamento e da minuta, e voltam a ser exibidos no dia em que a Diretoria
+// pedir o detalhamento de volta. Quem editar a estrutura pode ignorá-los sem
+// quebrar nada.
 
 (function () {
   // Perfil de senioridade, sem matrícula nem vínculo: é como a alocação da
