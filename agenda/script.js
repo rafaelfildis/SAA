@@ -4306,8 +4306,8 @@ function renderizarListaProjetos(lista) {
             <span class="proj-card__meta">
               ${seloSituacao(p)}
               ${etiquetasDeUnidade(p)}
-              ${p.fornecedor ? `<span>${escapeHtml(p.fornecedor.split(" · ")[0])}</span>` : ""}
-              ${p.responsavel ? `<span>${escapeHtml(p.responsavel)}</span>` : ""}
+              ${etiquetaDeFornecedor(p)}
+              ${textoDoResponsavel(p)}
               ${p.area ? `<span>${escapeHtml(p.area)}</span>` : ""}
               ${ultima && ultima.nota ? `<span>${escapeHtml(ultima.nota.slice(0, 90))}</span>` : ""}
             </span>
@@ -4346,6 +4346,36 @@ function etiquetasDeUnidade(p) {
         )}">${escapeHtml(UNIDADES_DTI[u].rotulo)}</span>`
     )
     .join("");
+}
+
+// Fornecedor em etiqueta própria, e não em texto corrido: ao lado do nome do
+// fiscal, dois nomes em cinza seguido viravam uma linha só, e quem lê a lista
+// não sabia qual era a empresa e qual era a pessoa. O ícone dá a distinção sem
+// gastar uma palavra de rótulo, e o nome completo, com CNPJ, fica no title e
+// no painel.
+const ICONE_EMPRESA = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg>`;
+const ICONE_PESSOA = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+
+function etiquetaDeFornecedor(p) {
+  if (!p || !p.fornecedor) return "";
+  // Na lista entra a razão social, e o CNPJ fica no title: em uma linha de
+  // metadados ele ocuparia o lugar do que importa. Quando o nome vem como
+  // "SIGLA — razão social", a etiqueta mostra a sigla, que é como a empresa é
+  // chamada nos autos — o nome inteiro continua no title e no painel.
+  const razao = p.fornecedor.split(" · ")[0];
+  const partes = razao.split(" — ");
+  const curto = partes.length > 1 && partes[0].length <= 12 ? partes[0] : razao;
+  return `<span class="etiqueta-fornecedor" title="Fornecedor: ${escapeAttr(p.fornecedor)}">
+    ${ICONE_EMPRESA}<span class="etiqueta-fornecedor__nome">${escapeHtml(curto)}</span>
+  </span>`;
+}
+
+function textoDoResponsavel(p) {
+  if (!p || !p.responsavel) return "";
+  const rotulo = p.tipo === "contrato" ? "Fiscalização" : "Responsável";
+  return `<span class="meta-pessoa" title="${escapeAttr(`${rotulo}: ${p.responsavel}`)}">
+    ${ICONE_PESSOA}<span class="meta-pessoa__nome">${escapeHtml(p.responsavel)}</span>
+  </span>`;
 }
 
 function renderizarFiltrosSituacao(lista) {

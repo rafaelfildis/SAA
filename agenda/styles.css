@@ -2104,6 +2104,42 @@ html, body { overflow-x: hidden; }
 .etiqueta-unidade--dint { color: var(--cat-online); background: var(--cat-online-bg); }
 .etiqueta-unidade--dbad { color: var(--cat-escola); background: var(--cat-escola-bg); }
 
+/* Fornecedor em etiqueta neutra, ao lado da etiqueta colorida da unidade: a
+   cor pertence à Divisão, e dar outra à empresa faria a lista competir consigo
+   mesma. O ícone distingue empresa de pessoa — sem ele, fornecedor e fiscal
+   eram dois nomes em cinza seguido. Nome longo corta com reticências e o
+   inteiro, com CNPJ, fica no title e no painel. */
+.etiqueta-fornecedor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(340px, 42vw);
+  padding: 3px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-surface-alt);
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+.etiqueta-fornecedor svg { flex: 0 0 auto; color: var(--color-text-tertiary); }
+.etiqueta-fornecedor__nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Pessoa na linha de metadados: fiscal do contrato ou responsável do projeto.
+   Fica em texto, não em etiqueta — duas etiquetas lado a lado já seriam
+   demais —, e o ícone é o que diz que ali é gente. O nome não corta: a linha
+   de metadados quebra, e nome de pessoa cortado no meio é pior do que uma
+   linha a mais. Uma comissão de fiscalização inteira, porém, não pode empurrar
+   o resto para fora da tela — daí o limite de três linhas. */
+.meta-pessoa { align-items: flex-start; max-width: 100%; }
+.meta-pessoa svg { flex: 0 0 auto; margin-top: 3px; color: var(--color-text-tertiary); }
+.meta-pessoa__nome {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* --- Formulários --------------------------------------------------------- */
 
 .proj-modal {

@@ -148,13 +148,24 @@ formulário a unidade é um seletor de uma opção; salvar sem tocar nele preser
 a lista original, inclusive a de mais de uma unidade, que o seletor não sabe
 representar. Projeto sem unidade declarada simplesmente não recebe etiqueta.
 
-**Fornecedor.** A empresa contratada aparece na lista (só a razão social) e no
-painel de detalhe (com o CNPJ, onde o documento de origem o traz). O campo
-`responsavel`, nos contratos, é o **fiscal ou a comissão de fiscalização**
-declarada — e o painel rotula a linha como "Fiscalização" em vez de
-"Responsável" quando o registro é um contrato. A busca alcança os dois campos e
-a sigla da unidade: "X-Site" traz os cinco contratos da empresa, "DBAD" os doze
-sob a Divisão de Banco de Dados.
+**Fornecedor em etiqueta própria**, ao lado da etiqueta colorida da unidade e
+com ícone de empresa. Em texto corrido ele ficava encostado no nome do fiscal, e
+dois nomes em cinza seguido viravam uma linha só: o ícone distingue empresa de
+pessoa sem gastar uma palavra de rótulo. A etiqueta é neutra de propósito — a
+cor pertence à Divisão, e dar outra à empresa faria a lista competir consigo
+mesma. Quando o nome vem como "SIGLA — razão social", a etiqueta mostra a sigla
+(`PRODEB`, `Dataprev`, `X-Site`), que é como a empresa é chamada nos autos; o
+nome inteiro, com CNPJ, fica no title e no painel de detalhe.
+
+O **fiscal** fica ao lado, em texto com ícone de pessoa, e o nome **não corta**:
+a linha de metadados quebra, porque nome de pessoa cortado no meio é pior do que
+uma linha a mais — uma comissão de cinco fiscais, porém, para em três linhas
+para não empurrar o resto do cartão. Nos contratos esse campo é o **fiscal ou a
+comissão de fiscalização** declarada, e tanto o title quanto o painel rotulam a
+linha como "Fiscalização" em vez de "Responsável".
+
+A busca alcança os dois campos e a sigla da unidade: "X-Site" traz os cinco
+contratos da empresa, "DBAD" os doze sob a Divisão de Banco de Dados.
 
 **Situações:** não iniciado, em andamento, em risco, concluído, suspenso e
 vencido. *Atrasado* não é uma delas: é derivado do prazo vencido sem entrega.
