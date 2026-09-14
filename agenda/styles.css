@@ -2918,6 +2918,21 @@ html, body { overflow-x: hidden; }
   color: #fff;
 }
 
+/* Pendência no painel navy: a mesma informação do cartão branco, com a cor
+   de aviso trocada por uma faixa translúcida que sobrevive ao fundo escuro. */
+.org-topo__pendencia {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  max-width: 88ch;
+  border-left: 3px solid var(--color-warning);
+  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+  background: rgba(255, 255, 255, 0.09);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.9);
+  text-wrap: pretty;
+}
+
 /* O quadro da Diretoria fica sobre o painel navy: os tokens de texto do tema
    claro não têm contraste ali e por isso são redefinidos, não reaproveitados. */
 .org-topo .org-unidade__quadro-resumo { color: rgba(255, 255, 255, 0.72); margin-top: 10px; }
@@ -3288,3 +3303,188 @@ html, body { overflow-x: hidden; }
    que as métricas de todos eles fiquem na mesma linha de base. */
 .portal-card--estrutura { border-left-color: var(--color-success); }
 .portal-card--estrutura .portal-card__icone { background: var(--color-success-tint); color: var(--color-success); }
+
+/* ==========================================================================
+   FLUXOGRAMA DA ESTRUTURA
+
+   Árvore em <ul> aninhado com conectores desenhados em CSS: sem biblioteca,
+   sem canvas e sem posição calculada em JavaScript. O desenho acompanha o
+   texto quando a fonte muda de tamanho, sobrevive ao zoom e continua legível
+   na impressão — três coisas que um organograma em imagem não faz.
+   ========================================================================== */
+
+.fluxograma-bloco { margin-bottom: 22px; }
+
+/* Uma árvore de quatro níveis não cabe em 390px de largura, e comprimir as
+   caixas até caberem tornaria o texto ilegível: a rolagem horizontal fica
+   contida aqui, sem contaminar a página. */
+.fluxograma-rolagem {
+  overflow-x: auto;
+  padding: 8px 4px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+}
+
+.fluxograma { display: inline-block; min-width: 100%; }
+
+.fluxo,
+.fluxo ul {
+  display: flex;
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fluxo li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 6px 0;
+}
+
+/* Conectores: cada filho sobe meia linha horizontal até o irmão e uma
+   vertical até o pai. O primeiro não desenha a metade da esquerda e o último
+   não desenha a da direita, o que fecha a chave sem sobras. */
+.fluxo li::before,
+.fluxo li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 22px;
+  border-top: 2px solid var(--color-border);
+}
+.fluxo li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid var(--color-border);
+}
+.fluxo li:first-child::before,
+.fluxo li:last-child::after { border: 0 none; }
+.fluxo li:last-child::before { border-right: 2px solid var(--color-border); border-radius: 0 6px 0 0; }
+.fluxo li:first-child::after { border-radius: 6px 0 0 0; }
+.fluxo li:only-child::before,
+.fluxo li:only-child::after { display: none; }
+.fluxo li:only-child { padding-top: 22px; }
+/* Filho único: só a vertical, centrada. */
+.fluxo li:only-child > .fluxo-no::before {
+  content: "";
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  width: 0;
+  height: 22px;
+  border-left: 2px solid var(--color-border);
+}
+/* Vertical que sai do pai para a linha dos filhos. */
+.fluxo ul::before {
+  content: "";
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  width: 0;
+  height: 22px;
+  border-left: 2px solid var(--color-border);
+}
+.fluxo > li { padding-top: 0; }
+.fluxo > li::before,
+.fluxo > li::after { display: none; }
+/* A raiz não pendura de ninguém: sem esta exceção a regra de filho único
+   desenha uma linha subindo da Diretoria para o nada. */
+.fluxo > li:only-child > .fluxo-no::before { display: none; }
+.fluxo > li > ul { position: relative; margin-top: 22px; }
+
+.fluxo-no {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 176px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-text-tertiary);
+  border-radius: var(--raio-pequeno);
+  box-shadow: var(--sombra-leve);
+  text-align: left;
+}
+.fluxo-no__selo {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.fluxo-no__titulo {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-heading);
+  text-wrap: pretty;
+}
+.fluxo-no__linha {
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+}
+
+/* Cada nível tem cor própria: é o que permite ler a profundidade sem seguir
+   as linhas com o dedo. */
+.fluxo-no--diretoria {
+  width: 244px;
+  border-top-color: var(--color-brand-red);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.fluxo-no--diretoria .fluxo-no__titulo { color: #fff; font-size: 0.88rem; }
+.fluxo-no--diretoria .fluxo-no__selo { color: rgba(255, 255, 255, 0.7); }
+.fluxo-no--diretoria .fluxo-no__linha { color: rgba(255, 255, 255, 0.88); }
+
+.fluxo-no--unidade { border-top-color: var(--color-primary); }
+.fluxo-no--unidade .fluxo-no__selo { color: var(--color-primary); }
+.fluxo-no--unidade-nova { border-top-color: var(--color-success); border-style: dashed; }
+.fluxo-no--unidade-nova .fluxo-no__selo { color: var(--color-success); }
+.fluxo-no--secao { border-top-color: var(--color-error); }
+.fluxo-no--secao .fluxo-no__selo { color: var(--color-error-strong); }
+.fluxo-no--gerencia { border-top-color: var(--color-accent); width: 152px; }
+.fluxo-no--gerencia .fluxo-no__selo { color: var(--color-accent); }
+.fluxo-no--equipe {
+  border-top-color: var(--color-text-tertiary);
+  border-style: dashed;
+  background: var(--color-background);
+  width: 152px;
+}
+
+/* Caixa que corresponde à busca em vigor: o fluxograma continua mostrando a
+   estrutura inteira, e o destaque diz onde está o que se procurou. */
+.fluxo-no.is-destacado {
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px var(--color-secondary-tint), var(--sombra-leve);
+}
+.fluxo-no--diretoria.is-destacado { box-shadow: 0 0 0 3px rgba(127, 176, 236, 0.5), var(--sombra-leve); }
+
+.fluxograma__nota {
+  margin: 10px 0 0;
+  max-width: 92ch;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+.estrutura-secao--detalhe { margin-top: 4px; }
+
+@media (max-width: 860px) {
+  .fluxo-no { width: 162px; }
+  .fluxo-no--diretoria { width: 210px; }
+  .fluxo-no--gerencia,
+  .fluxo-no--equipe { width: 146px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluxo-no { transition: none; }
+}

@@ -52,10 +52,11 @@
 
   const QUADRO_DIRETORIA = [
     {
-      nome: "Diego Cavalcante Teixeira",
+      nome: "Diego Daltro",
+      nomeNaRelacao: "Diego Cavalcante Teixeira",
       matricula: "217796",
       vinculo: "Efetivo",
-      cargo: "",
+      cargo: "Diretor de Tecnologia da Informação",
       papel: "chefia",
     },
     tecnico("Fabiana Dumiense Costa", "Sênior II"),
@@ -236,7 +237,7 @@
         "A alocação de técnicos não contempla a Infraestrutura nem o Banco de Dados. A DINT segue com a chefia da Divisão e a gerência da Seção, sem quadro técnico próprio, e os nomes que atendem infraestrutura na lista de ramais não constam de nenhuma das duas relações — a confirmar.",
         "A Seção de Atendimento ao Usuário é a porta de entrada da operação e registra apenas a gerência: não há quadro próprio de atendimento — a confirmar quem executa o primeiro nível.",
         "A chefia da Divisão de Banco de Dados é exercida por analista de sistemas efetivo, sem o cargo comissionado de DAS-4 que titulariza as outras duas divisões — a confirmar se há designação formal.",
-        "As três gerências (DAS-3) da Divisão de Desenvolvimento de Sistemas estão lotadas na própria Divisão, sem seção nomeada: a relação não diz o escopo de cada uma.",
+        "As três gerências (DAS-3) da Divisão de Desenvolvimento de Sistemas estão lotadas na própria Divisão, sem seção nomeada: nem a relação de lotação nem a alocação dizem o escopo de cada gerência ou a qual delas cada técnico responde. No fluxograma, por isso, a equipe aparece ligada à Divisão, e não distribuída entre as três.",
         "A relação da equipe técnica não declara vínculo. Os perfis — Júnior, Pleno, Sênior, Master e Estagiário — são os de contrato de serviços especializados, a confirmar junto à Diretoria.",
       ],
       topo: {
@@ -249,6 +250,8 @@
           "Decisão sobre portfólio, prioridades e alocação de recursos entre as unidades",
           "Gestão dos contratos de TI, entre eles o Contrato 65/2022 de serviços especializados",
         ],
+        observacao:
+          "A relação de lotação registra, para a matrícula 217796 lotada na Diretoria, o nome Diego Cavalcante Teixeira, sem cargo declarado. O organograma segue a designação informada pela Diretoria — a confirmar se é a mesma pessoa.",
         pessoas: QUADRO_DIRETORIA,
       },
       unidades: [

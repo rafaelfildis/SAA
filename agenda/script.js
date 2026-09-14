@@ -5423,6 +5423,7 @@ function textoDaUnidade(u) {
 function pessoaBate(pessoa, busca) {
   return (
     normalizarTexto(pessoa.nome).includes(busca) ||
+    normalizarTexto(pessoa.nomeNaRelacao).includes(busca) ||
     normalizarTexto(pessoa.cargo).includes(busca) ||
     normalizarTexto(pessoa.nivel).includes(busca) ||
     normalizarTexto(pessoa.vinculo).includes(busca) ||
@@ -5672,7 +5673,7 @@ function cartaoDoTopo(topo, funcoesPorId, minuta) {
       </div>
       <p class="org-topo__titular">${
         titular
-          ? `${escapeHtml(titular.nome)}${
+          ? `${escapeHtml(titular.nome)}${titular.cargo ? ` · ${escapeHtml(titular.cargo)}` : ""}${
               titular.matricula ? ` · matrícula ${escapeHtml(titular.matricula)}` : ""
             }${titular.vinculo ? ` · ${escapeHtml(titular.vinculo)}` : ""}`
           : minuta
@@ -5680,6 +5681,11 @@ function cartaoDoTopo(topo, funcoesPorId, minuta) {
           : "Chefia a confirmar"
       }</p>
       ${atribuicoes ? `<ul class="org-topo__atribuicoes">${atribuicoes}</ul>` : ""}
+      ${
+        topo.observacao
+          ? `<p class="org-topo__pendencia">${escapeHtml(topo.observacao)}</p>`
+          : ""
+      }
       ${
         acumuladas.length
           ? `<p class="org-topo__acumulo">Exerce por acúmulo: ${escapeHtml(acumuladas.join(", "))}.</p>`
@@ -5811,6 +5817,210 @@ function renderizarNotasEstrutura(visao) {
   lista.innerHTML = notas.map((n) => `<li>${escapeHtml(n)}</li>`).join("");
 }
 
+/* --------------------------------------------------------------------------
+   Fluxograma
+   --------------------------------------------------------------------------
+   O organograma desenhado como fluxo, de cima para baixo: Diretor, chefes de
+   divisão, gerências de TI e equipe. É a leitura que um gestor faz primeiro —
+   quem responde a quem —, e por isso vem antes do detalhamento das unidades,
+   que é onde ficam atribuições, pendências e justificativas.
+
+   Árvore em <ul> aninhado com conectores em CSS: sem biblioteca, sem canvas e
+   sem posição calculada em JavaScript, o desenho acompanha o texto quando a
+   fonte muda de tamanho e continua legível impresso.
+
+   A equipe da DDES aparece ligada à Divisão, e não distribuída entre as três
+   gerências, porque nem a relação de lotação nem a alocação dizem a qual
+   gerência cada pessoa responde. Distribuir por conta própria inventaria
+   subordinação onde há lacuna declarada.
+   -------------------------------------------------------------------------- */
+
+function buscaAtivaEstrutura() {
+  return normalizarTexto(state.filtroEstrutura || "").trim();
+}
+
+function pessoasDoPapel(u, papel) {
+  return pessoasDaUnidade(u).filter((p) => (p.papel || "equipe") === papel);
+}
+
+function noDoFluxo({ classe, selo, titulo, linhas, destacado }) {
+  return `
+    <div class="fluxo-no fluxo-no--${classe}${destacado ? " is-destacado" : ""}">
+      ${selo ? `<span class="fluxo-no__selo">${escapeHtml(selo)}</span>` : ""}
+      <span class="fluxo-no__titulo">${escapeHtml(titulo)}</span>
+      ${(linhas || [])
+        .filter(Boolean)
+        .map((l) => `<span class="fluxo-no__linha">${escapeHtml(l)}</span>`)
+        .join("")}
+    </div>`;
+}
+
+// Nível do cargo, quando há: "Chefe da Divisão de Desenvolvimento de
+// Sistemas, DAS-4" repete o título da caixa e ocupa três linhas; "DAS-4" diz o
+// mesmo no espaço de um selo.
+function nivelDoCargo(pessoa) {
+  const das = (pessoa.cargo || "").match(/DAS-\d/);
+  return das ? das[0] : "";
+}
+
+function papelResumido(pessoa, rotulo) {
+  const das = nivelDoCargo(pessoa);
+  if (das) return `${rotulo} · ${das}`;
+  // Sem cargo comissionado, o que informa é o cargo efetivo — é o caso de uma
+  // chefia exercida por analista.
+  return pessoa.cargo ? `${rotulo} · ${pessoa.cargo}` : rotulo;
+}
+
+function noDePessoa(pessoa, classe, busca) {
+  return noDoFluxo({
+    classe,
+    selo: nivelDoCargo(pessoa),
+    titulo: pessoa.nome,
+    // Gerência sem seção nomeada não tem escopo declarado, e a caixa diz isso
+    // em vez de repetir "Gerente de Tecnologia da Informação" sob o selo que
+    // já traz DAS-3.
+    linhas: [pessoa.escopo || (classe === "gerencia" ? "escopo a definir" : pessoa.nivel || "")],
+    destacado: Boolean(busca) && pessoaBate(pessoa, busca),
+  });
+}
+
+// Nó de equipe: a divisão tem quadro que não é chefia nem gerência. Traz as
+// duas relações separadas e a distribuição por perfil, que é a informação de
+// estrutura que interessa no fluxo.
+function noDeEquipe(u, busca) {
+  const daRelacao = pessoasDoPapel(u, "equipe");
+  const tecnicos = pessoasDoPapel(u, "tecnica");
+  if (!daRelacao.length && !tecnicos.length) return "";
+
+  const total = daRelacao.length + tecnicos.length;
+  const faixas = distribuicaoDeSenioridade(tecnicos);
+  const destacado =
+    Boolean(busca) && [...daRelacao, ...tecnicos].some((p) => pessoaBate(p, busca));
+
+  return `<li>${noDoFluxo({
+    classe: "equipe",
+    selo: "Equipe",
+    titulo: plural(total, "pessoa", "pessoas"),
+    linhas: [
+      daRelacao.length ? `${plural(daRelacao.length, "servidor", "servidores")} na relação de lotação` : "",
+      tecnicos.length ? `${plural(tecnicos.length, "técnico", "técnicos")} alocados` : "",
+      faixas,
+    ],
+    destacado,
+  })}</li>`;
+}
+
+function filhosDoFluxo(u, busca) {
+  const titular = titularDaUnidade(u);
+  const gerencias = pessoasDoPapel(u, "gerencia")
+    .filter((p) => p !== titular)
+    .map((p) => `<li>${noDePessoa(p, "gerencia", busca)}</li>`);
+
+  const secoes = subunidadesDe(u).map((su) => {
+    const titular = titularDaUnidade(su);
+    const destacado =
+      Boolean(busca) &&
+      (textoDaUnidade(su).includes(busca) ||
+        pessoasDaUnidade(su).some((p) => pessoaBate(p, busca)));
+    const no = noDoFluxo({
+      classe: "secao",
+      selo: su.natureza || "",
+      titulo: `${su.sigla} — ${su.nome}`,
+      linhas: [
+        titular ? titular.nome : "chefia a confirmar",
+        titular ? papelResumido(titular, "Gerência") : "",
+        su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
+      ],
+      destacado,
+    });
+    const netos = filhosDoFluxo(su, busca);
+    return `<li>${no}${netos ? `<ul>${netos}</ul>` : ""}</li>`;
+  });
+
+  const equipe = noDeEquipe(u, busca);
+  const itens = [...gerencias, ...secoes, equipe].filter(Boolean);
+  return itens.join("");
+}
+
+function renderizarFluxograma(visao) {
+  const alvo = document.getElementById("estrutura-fluxograma");
+  if (!alvo) return;
+
+  const busca = buscaAtivaEstrutura();
+  const topo = visao.topo;
+  const diretor = titularDaUnidade(topo);
+
+  const noTopo = noDoFluxo({
+    classe: "diretoria",
+    selo: topo.natureza || "",
+    titulo: `${topo.sigla} — ${topo.nome}`,
+    linhas: [
+      diretor ? `${diretor.nome}${diretor.cargo ? ` · ${diretor.cargo}` : ""}` : "chefia a confirmar",
+    ],
+    destacado:
+      Boolean(busca) &&
+      (textoDaUnidade(topo).includes(busca) ||
+        pessoasDaUnidade(topo).some((p) => pessoaBate(p, busca))),
+  });
+
+  const ramos = visao.unidades
+    .map((u) => {
+      const titular = titularDaUnidade(u);
+      const destacado =
+        Boolean(busca) &&
+        (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
+      const no = noDoFluxo({
+        classe: u.estado === "nova" ? "unidade-nova" : "unidade",
+        selo: u.natureza || "",
+        titulo: `${u.sigla} — ${u.nome}`,
+        linhas: [
+          titular ? titular.nome : minutaEmTela(visao) ? "chefia a designar" : "chefia a confirmar",
+          titular ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia") : "",
+          resumoDeQuadro(u),
+        ],
+        destacado,
+      });
+      const filhos = filhosDoFluxo(u, busca);
+      return `<li>${no}${filhos ? `<ul>${filhos}</ul>` : ""}</li>`;
+    })
+    .join("");
+
+  // A equipe lotada na própria Diretoria entra como ramo dela: a técnica
+  // alocada ali não pertence a divisão nenhuma.
+  const equipeDaDiretoria = noDeEquipe(topo, busca);
+
+  alvo.innerHTML = `
+    <ul class="fluxo">
+      <li>
+        ${noTopo}
+        <ul>${ramos}${equipeDaDiretoria}</ul>
+      </li>
+    </ul>`;
+
+  // A árvore é centrada e mais larga que a tela em telefone: com a rolagem em
+  // zero, o que aparece é a margem vazia à esquerda, e não a Diretoria.
+  // Centrar a rolagem abre o desenho na raiz, que é por onde se começa a ler.
+  const rolagem = alvo.closest(".fluxograma-rolagem");
+  const excedente = rolagem ? rolagem.scrollWidth - rolagem.clientWidth : 0;
+  if (rolagem && excedente > 1) rolagem.scrollLeft = excedente / 2;
+
+  const nota = document.getElementById("estrutura-fluxo-nota");
+  if (nota) {
+    const destacados = alvo.querySelectorAll(".fluxo-no.is-destacado").length;
+    const base = busca
+      ? destacados
+        ? `Fluxograma da estrutura inteira. ${plural(destacados, "caixa destacada", "caixas destacadas")} pela busca em vigor.`
+        : "Fluxograma da estrutura inteira. Nenhuma caixa corresponde à busca em vigor."
+      : "Do Diretor aos técnicos. A equipe aparece ligada à sua unidade, e não distribuída entre as gerências, porque as relações não declaram a qual gerência cada pessoa responde.";
+    nota.textContent =
+      excedente > 1 ? `${base} Arraste na horizontal para ver o desenho inteiro.` : base;
+  }
+}
+
+function minutaEmTela(visao) {
+  return Boolean(visao && visao.minuta);
+}
+
 function renderizarEstrutura() {
   const d = dadosDeEstrutura();
   const alvo = document.getElementById("estrutura-organograma");
@@ -5851,6 +6061,7 @@ function renderizarEstrutura() {
   if (intro) intro.classList.toggle("estrutura-intro--minuta", minuta);
 
   renderizarComparativoEstrutura(d, state.estruturaVisao);
+  renderizarFluxograma(visao);
 
   const unidades = unidadesFiltradas(visao);
   const busca = normalizarTexto(state.filtroEstrutura || "").trim();

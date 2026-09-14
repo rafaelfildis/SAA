@@ -263,11 +263,43 @@ contrato de serviços especializados, a confirmar: um número só apagaria a
 diferença entre quadro próprio e equipe alocada, que é justamente o que uma
 discussão de estrutura precisa ver.
 
-**Hierarquia.** Três divisões sob a Diretoria — Desenvolvimento de Sistemas,
+**O fluxograma vem primeiro.** Antes do detalhamento das unidades, o módulo
+desenha a estrutura como fluxo, de cima para baixo — **Diretor → chefes de
+divisão (DAS-4) → gerências de TI (DAS-3) → equipe** —, que é a leitura que um
+gestor faz primeiro: quem responde a quem. A **Seção de Atendimento ao
+Usuário** aparece dentro da Divisão de Infraestrutura Tecnológica, no nível das
+gerências, porque é onde ela está e quem a chefia é um gerente (DAS-3).
+
+Cada nível tem cor própria — navy na Diretoria, azul nas divisões, azul claro
+nas gerências, vermelho na porta de entrada, tracejado nas caixas de equipe e
+nas unidades que a minuta cria —, o que permite ler a profundidade sem seguir
+as linhas com o dedo. A caixa de divisão traz o titular, o nível do cargo e o
+quadro; a de equipe traz as duas relações separadas e a distribuição por perfil.
+
+A árvore é montada em `<ul>` aninhado com os conectores desenhados em CSS: sem
+biblioteca, sem canvas e sem posição calculada em JavaScript, o desenho
+acompanha o texto quando a fonte muda de tamanho, sobrevive ao zoom e continua
+legível impresso. Em tela estreita ele rola dentro do próprio quadro, sem
+empurrar a página, e **abre centrado na raiz** — com a rolagem em zero, o
+telefone mostraria a margem vazia à esquerda em vez da Diretoria.
+
+**A equipe aparece ligada à sua unidade, não distribuída entre as gerências.**
+Nem a relação de lotação nem a alocação dizem a qual das três gerências da DDES
+cada pessoa responde, e distribuir por conta própria inventaria subordinação
+onde há lacuna declarada. A nota abaixo do desenho diz isso, e cada caixa de
+gerência mostra "escopo a definir".
+
+**A busca destaca, não recorta.** Com um termo em vigor, o fluxograma continua
+mostrando a estrutura inteira e acende as caixas correspondentes, com a
+contagem na nota: um mapa que se recorta deixa de ser mapa. O detalhamento
+abaixo, esse sim, é filtrado.
+
+**Hierarquia no detalhamento.** Abaixo do fluxograma, cada unidade tem um
+cartão: três divisões sob a Diretoria — Desenvolvimento de Sistemas,
 Infraestrutura Tecnológica e Banco de Dados — e a **Seção de Atendimento ao
-Usuário subordinada à Infraestrutura**. A seção é desenhada dentro do cartão da
-Divisão, e não ao lado dos cartões de divisão: com a seção como par de uma
-divisão, o organograma apresentaria como igual o que é subordinado.
+Usuário subordinada à Infraestrutura**, desenhada dentro do cartão da Divisão e
+não ao lado dos cartões de divisão: com a seção como par de uma divisão, o
+organograma apresentaria como igual o que é subordinado.
 
 Dentro de cada cartão vale a regra da própria Diretoria — chefia (DAS-4),
 gerências (DAS-3), relação de lotação e equipe técnica —, e o rótulo de cada
@@ -279,9 +311,15 @@ plenos · 7 juniores · 3 estagiários"). A informação de estrutura é a
 distribuição; os nomes ficam a um clique. A busca abre o bloco, para que o
 resultado não se esconda atrás de um resumo.
 
+**O Diretor é Diego Daltro**, conforme designação informada pela Diretoria. A
+relação de lotação registra, para a matrícula 217796 lotada na DTI, o nome
+Diego Cavalcante Teixeira, sem cargo declarado — o módulo não escolhe entre os
+dois: exibe a designação e registra a divergência como pendência, a confirmar
+se é a mesma pessoa.
+
 **O que as relações não declaram fica escrito na tela**, em cor de aviso, em vez
 de ser preenchido por conta própria: o escopo de cada uma das três gerências
-lotadas na DDES, o cargo do Diretor, o quadro de atendimento da Seção e o
+lotadas na DDES, o quadro de atendimento da Seção e o
 quadro técnico da Infraestrutura — que a alocação de técnicos não contempla, e
 cujos nomes na lista de ramais não constam de nenhuma das duas relações.
 Registra também que a chefia da Divisão de Banco de Dados é exercida por
