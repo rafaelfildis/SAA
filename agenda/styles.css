@@ -2936,20 +2936,6 @@ html, body { overflow-x: hidden; }
 /* O quadro da Diretoria fica sobre o painel navy: os tokens de texto do tema
    claro não têm contraste ali e por isso são redefinidos, não reaproveitados. */
 .org-topo .org-unidade__quadro-resumo { color: rgba(255, 255, 255, 0.72); margin-top: 10px; }
-.org-topo .org-unidade__quadro { border-top-color: rgba(255, 255, 255, 0.16); }
-.org-topo .org-papel__rotulo { color: rgba(255, 255, 255, 0.72); }
-.org-topo .org-papel__resumo {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-.org-topo .org-papel__resumo:hover { border-color: rgba(255, 255, 255, 0.4); }
-.org-topo .org-papel__faixas { color: rgba(255, 255, 255, 0.72); }
-.org-topo .org-pessoa { border-bottom-color: rgba(255, 255, 255, 0.1); }
-.org-topo .org-pessoa__nome { color: rgba(255, 255, 255, 0.92); }
-.org-topo .org-pessoa__cargo,
-.org-topo .org-pessoa__meta { color: rgba(255, 255, 255, 0.7); }
-.org-topo .org-pessoa__nivel { color: #fff; }
-.org-topo .org-unidade__lotacao { color: rgba(255, 255, 255, 0.78); }
 
 /* A linha que liga a Diretoria às unidades. É decoração com função: sem ela
    as unidades parecem uma lista de cartões, não um nível hierárquico. */
@@ -3126,65 +3112,6 @@ html, body { overflow-x: hidden; }
 .org-unidade--aninhada .org-unidade__pendencia { font-size: 0.76rem; }
 .org-unidade--aninhada .org-unidade__justificativa { background: var(--color-surface); }
 
-.org-unidade__quadro {
-  display: grid;
-  gap: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border-soft);
-}
-/* O rótulo do bloco diz o nível hierárquico — gerências antes de equipe, como
-   na regra da própria Diretoria. Sem ele a lista pareceria um amontoado de
-   nomes em ordem alfabética. */
-.org-papel__rotulo {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-/* Equipe técnica recolhida: o cabeçalho é clicável e mostra sempre a
-   contagem e a distribuição por perfil. A informação de estrutura fica à
-   vista; a lista de nomes, a um clique. */
-.org-papel--recolhivel > summary { cursor: pointer; list-style: none; }
-.org-papel--recolhivel > summary::-webkit-details-marker { display: none; }
-.org-papel__resumo {
-  display: flex;
-  align-items: baseline;
-  gap: 4px 10px;
-  flex-wrap: wrap;
-  padding: 7px 9px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--raio-pequeno);
-  background: var(--color-background);
-}
-.org-papel__resumo:hover { border-color: var(--color-secondary); }
-.org-papel--recolhivel > summary:focus-visible {
-  outline: 2px solid var(--color-secondary);
-  outline-offset: 2px;
-  border-radius: var(--raio-pequeno);
-}
-.org-papel--recolhivel .org-papel__rotulo { margin-bottom: 0; }
-/* A seta gira quando o bloco abre: sem ela o cabeçalho não se anuncia como
-   algo que se pode abrir. */
-.org-papel__resumo::before {
-  content: "";
-  width: 0;
-  height: 0;
-  border-left: 5px solid currentColor;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  color: var(--color-text-tertiary);
-  transition: transform 0.15s ease;
-  align-self: center;
-}
-.org-papel--recolhivel[open] .org-papel__resumo::before { transform: rotate(90deg); }
-.org-papel__faixas {
-  font-size: 0.7rem;
-  color: var(--color-text-secondary);
-}
-.org-papel--recolhivel .org-pessoas { margin-top: 4px; }
 .org-pessoa--tecnica .org-pessoa__nome { font-weight: 400; }
 .org-pessoa__nivel {
   font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
@@ -3411,6 +3338,35 @@ html, body { overflow-x: hidden; }
   border-radius: var(--raio-pequeno);
   box-shadow: var(--sombra-leve);
   text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+/* Unidade abre equipe, e por isso é botão de verdade: foco, Enter e espaço
+   vêm do elemento, não de um punhado de atributos ARIA sobre uma div. */
+button.fluxo-no { cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+button.fluxo-no:hover { border-color: var(--color-secondary); box-shadow: var(--sombra-cartao); }
+button.fluxo-no:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 3px; }
+.fluxo-no__chamada {
+  margin-top: 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-secondary);
+}
+.fluxo-no__seta {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  color: var(--color-text-tertiary);
+  transition: transform 0.15s ease;
+}
+.fluxo-no.is-aberta .fluxo-no__seta { transform: rotate(180deg); }
+/* A caixa aberta fica marcada: o painel aparece abaixo do desenho, e sem isso
+   não se sabe de qual unidade ele fala. */
+.fluxo-no.is-aberta {
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 2px var(--color-secondary), var(--sombra-cartao);
 }
 .fluxo-no__selo {
   font-size: 0.6rem;
@@ -3443,6 +3399,10 @@ html, body { overflow-x: hidden; }
 .fluxo-no--diretoria .fluxo-no__titulo { color: #fff; font-size: 0.88rem; }
 .fluxo-no--diretoria .fluxo-no__selo { color: rgba(255, 255, 255, 0.7); }
 .fluxo-no--diretoria .fluxo-no__linha { color: rgba(255, 255, 255, 0.88); }
+.fluxo-no--diretoria .fluxo-no__chamada { color: #BBD5F5; }
+.fluxo-no--diretoria .fluxo-no__seta { color: rgba(255, 255, 255, 0.7); }
+button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
+.fluxo-no--diretoria.is-aberta { box-shadow: 0 0 0 2px var(--color-brand-red), var(--sombra-cartao); }
 
 .fluxo-no--unidade { border-top-color: var(--color-primary); }
 .fluxo-no--unidade .fluxo-no__selo { color: var(--color-primary); }
@@ -3452,13 +3412,6 @@ html, body { overflow-x: hidden; }
 .fluxo-no--secao .fluxo-no__selo { color: var(--color-error-strong); }
 .fluxo-no--gerencia { border-top-color: var(--color-accent); width: 152px; }
 .fluxo-no--gerencia .fluxo-no__selo { color: var(--color-accent); }
-.fluxo-no--equipe {
-  border-top-color: var(--color-text-tertiary);
-  border-style: dashed;
-  background: var(--color-background);
-  width: 152px;
-}
-
 /* Caixa que corresponde à busca em vigor: o fluxograma continua mostrando a
    estrutura inteira, e o destaque diz onde está o que se procurou. */
 .fluxo-no.is-destacado {
@@ -3481,10 +3434,120 @@ html, body { overflow-x: hidden; }
 @media (max-width: 860px) {
   .fluxo-no { width: 162px; }
   .fluxo-no--diretoria { width: 210px; }
-  .fluxo-no--gerencia,
-  .fluxo-no--equipe { width: 146px; }
+  .fluxo-no--gerencia { width: 146px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .fluxo-no { transition: none; }
+}
+
+/* ==========================================================================
+   PAINEL DA UNIDADE
+
+   Abre abaixo do fluxograma quando se clica na caixa de uma unidade. Fica
+   fora da área de rolagem horizontal de propósito: o desenho rola, o painel
+   não — uma lista de quarenta nomes em rolagem lateral seria impraticável.
+   Um painel por vez, para que o esqueleto do organograma não se mexa quando
+   alguém abre uma divisão.
+   ========================================================================== */
+
+.unidade-painel {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-secondary);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+}
+
+.unidade-painel__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+.unidade-painel__identificacao { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.unidade-painel__natureza {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.unidade-painel__titulo {
+  margin: 0;
+  font-family: "Bitter", Georgia, serif;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  text-wrap: pretty;
+}
+.unidade-painel__chefia { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary); }
+.unidade-painel__fechar { flex-shrink: 0; }
+
+.unidade-painel__grupo + .unidade-painel__grupo {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-soft);
+}
+.unidade-painel__grupo-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 4px 10px;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.unidade-painel__faixas {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-secondary);
+}
+
+/* Em colunas: vinte e seis nomes em coluna única fariam o painel mais alto
+   que a tela, e a leitura é por nome, não por posição na lista. */
+.unidade-painel__lista { columns: 260px 3; column-gap: 22px; }
+.unidade-painel__lista .org-pessoa { break-inside: avoid; }
+
+.unidade-painel__vazio {
+  margin: 0;
+  padding: 11px 13px;
+  border-left: 3px solid var(--color-warning);
+  background: var(--color-warning-tint);
+  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  text-wrap: pretty;
+}
+
+/* Pessoa que corresponde à busca em vigor: com os nomes atrás de um clique, o
+   destaque é o que evita ter de varrer a lista com o olho. */
+.org-pessoa.is-destacada {
+  background: var(--color-secondary-tint);
+  border-radius: var(--raio-pequeno);
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  box-shadow: inset 3px 0 0 var(--color-secondary);
+}
+.org-pessoa__funcao {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+@media (max-width: 860px) {
+  .unidade-painel { padding: 14px 15px; }
+  .unidade-painel__lista { columns: 1; }
 }

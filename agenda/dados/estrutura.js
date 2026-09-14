@@ -48,7 +48,7 @@
   // Perfil de senioridade, sem matrícula nem vínculo: é como a alocação da
   // equipe técnica chega, e inventar os campos que faltam seria pior do que
   // deixá-los vazios.
-  const tecnico = (nome, nivel) => ({ nome, nivel, papel: "tecnica" });
+  const tecnico = (nome, nivel, funcao) => ({ nome, nivel, funcao: funcao || "", papel: "tecnica" });
 
   const QUADRO_DIRETORIA = [
     {
@@ -165,7 +165,7 @@
     tecnico("Pedro Martins Caires", "Júnior I"),
     tecnico("Fabrício Maicon Félix Santos", "Estagiário"),
     tecnico("Rian Uchoa Assunção", "Estagiário"),
-    tecnico("Yuri Figueiredo Ribeiro", "Estagiário"),
+    tecnico("Yuri Figueiredo Ribeiro", "Estagiário", "QA e Analista de Requisitos"),
   ];
 
   const QUADRO_DINT = [

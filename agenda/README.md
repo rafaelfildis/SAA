@@ -265,16 +265,32 @@ discussão de estrutura precisa ver.
 
 **O fluxograma vem primeiro.** Antes do detalhamento das unidades, o módulo
 desenha a estrutura como fluxo, de cima para baixo — **Diretor → chefes de
-divisão (DAS-4) → gerências de TI (DAS-3) → equipe** —, que é a leitura que um
-gestor faz primeiro: quem responde a quem. A **Seção de Atendimento ao
-Usuário** aparece dentro da Divisão de Infraestrutura Tecnológica, no nível das
-gerências, porque é onde ela está e quem a chefia é um gerente (DAS-3).
+divisão (DAS-4) → gerências de TI (DAS-3)** —, que é a leitura que um gestor faz
+primeiro: quem responde a quem. A **Seção de Atendimento ao Usuário** aparece
+dentro da Divisão de Infraestrutura Tecnológica, no nível das gerências, porque
+é onde ela está e quem a chefia é um gerente (DAS-3).
+
+**O esqueleto é fixo e a equipe abre no clique.** As caixas de Diretoria,
+divisão, gerência e seção estão sempre em tela; a equipe alocada em cada
+unidade aparece só quando se clica na caixa da unidade, em um painel abaixo do
+desenho. Um painel por vez, e sempre abaixo do fluxograma: assim nenhuma caixa
+se mexe quando alguém abre uma divisão — a caixa que se quer ler não sai do
+lugar debaixo do cursor. A caixa aberta fica marcada, e a chamada muda de "ver
+equipe alocada (36)" para "ocultar equipe (36)"; unidade sem quadro além da
+chefia diz isso na própria caixa, em vez de abrir um painel vazio.
+
+No painel, os nomes vêm em colunas e em três blocos — **gerências (DAS-3),
+relação de lotação e equipe técnica** —, com matrícula, vínculo e cargo para
+quem vem da relação, e perfil de senioridade (mais a função declarada, quando
+há) para quem vem da alocação. A distribuição por perfil fica no título do
+bloco técnico. Esc e o botão de fechar dispensam o painel; clicar de novo na
+mesma caixa também.
 
 Cada nível tem cor própria — navy na Diretoria, azul nas divisões, azul claro
-nas gerências, vermelho na porta de entrada, tracejado nas caixas de equipe e
-nas unidades que a minuta cria —, o que permite ler a profundidade sem seguir
-as linhas com o dedo. A caixa de divisão traz o titular, o nível do cargo e o
-quadro; a de equipe traz as duas relações separadas e a distribuição por perfil.
+nas gerências, vermelho na porta de entrada e tracejado nas unidades que a
+minuta cria —, o que permite ler a profundidade sem seguir as linhas com o
+dedo. A caixa de divisão traz o titular, o nível do cargo e o quadro em
+números, sem nome de quem não é chefia ou gerência.
 
 A árvore é montada em `<ul>` aninhado com os conectores desenhados em CSS: sem
 biblioteca, sem canvas e sem posição calculada em JavaScript, o desenho
@@ -294,6 +310,12 @@ mostrando a estrutura inteira e acende as caixas correspondentes, com a
 contagem na nota: um mapa que se recorta deixa de ser mapa. O detalhamento
 abaixo, esse sim, é filtrado.
 
+**Busca por pessoa abre o painel sozinha.** Com os nomes atrás de um clique, um
+termo que casasse só com pessoas não mostraria nada: o módulo abre o painel da
+unidade correspondente e destaca quem bate. O painel que a busca abriu também
+se fecha sozinho quando o termo deixa de casar com alguém; o que foi aberto à
+mão fica aberto.
+
 **Hierarquia no detalhamento.** Abaixo do fluxograma, cada unidade tem um
 cartão: três divisões sob a Diretoria — Desenvolvimento de Sistemas,
 Infraestrutura Tecnológica e Banco de Dados — e a **Seção de Atendimento ao
@@ -301,15 +323,10 @@ Usuário subordinada à Infraestrutura**, desenhada dentro do cartão da Divisã
 não ao lado dos cartões de divisão: com a seção como par de uma divisão, o
 organograma apresentaria como igual o que é subordinado.
 
-Dentro de cada cartão vale a regra da própria Diretoria — chefia (DAS-4),
-gerências (DAS-3), relação de lotação e equipe técnica —, e o rótulo de cada
-bloco diz o nível. A chefia aparece no cabeçalho, não repetida na lista abaixo.
-
-**A equipe técnica vem recolhida** quando passa de seis nomes, com a contagem e
-a **distribuição por perfil** sempre à vista ("1 master · 12 sêniores · 3
-plenos · 7 juniores · 3 estagiários"). A informação de estrutura é a
-distribuição; os nomes ficam a um clique. A busca abre o bloco, para que o
-resultado não se esconda atrás de um resumo.
+O cartão responde o que a unidade faz e o que falta nela — atribuições,
+titularidade, quadro em números, pendências e, na minuta, a justificativa. Os
+nomes não se repetem aqui: quem é quem é pergunta do fluxograma, a um clique na
+caixa da unidade.
 
 **O Diretor é Diego Daltro**, conforme designação informada pela Diretoria. A
 relação de lotação registra, para a matrícula 217796 lotada na DTI, o nome
@@ -366,9 +383,10 @@ mudança (unidade nova, renomeação, processo, governança) e o motivo. Uma
 proposta que não diz o que muda em relação ao que existe não é avaliável.
 
 **Busca pelo campo do topo**, por unidade, sigla, pessoa, matrícula, cargo,
-perfil de senioridade, vínculo ou atribuição: procurar "segurança" traz o
-núcleo que responde por ela, e não só a unidade cujo nome contém a palavra;
-procurar "217406" traz a pessoa; procurar "Sênior IV" traz os dois perfis.
+perfil de senioridade, função declarada, vínculo ou atribuição: procurar
+"segurança" traz o núcleo que responde por ela, e não só a unidade cujo nome
+contém a palavra; procurar "217406" traz a pessoa; procurar "Sênior IV" traz os
+dois perfis; procurar "QA" traz quem responde por QA e requisitos.
 Quando a unidade bate pelo próprio texto, o quadro inteiro fica; quando só uma
 pessoa bate, a unidade aparece com aquela pessoa — e uma divisão entra como
 contexto quando quem bate está na seção subordinada.

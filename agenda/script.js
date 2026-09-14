@@ -94,6 +94,13 @@ state.filtroRamais = "";
 // partida, e a minuta se lê em comparação com ela, não no lugar dela.
 state.estruturaVisao = "atual"; // atual | sugerida
 state.filtroEstrutura = "";
+// Sigla da unidade cuja equipe está aberta no fluxograma, ou null. Uma por
+// vez: o esqueleto do organograma não pode se mexer quando alguém abre uma
+// divisão, ou a caixa que se quer ler sai do lugar debaixo do cursor.
+state.estruturaUnidadeAberta = null;
+// Quem abriu o painel: a busca ou o clique. A busca que abriu também fecha
+// quando o termo deixa de casar com pessoa; o que se abriu à mão fica aberto.
+state.estruturaPainelPelaBusca = false;
 state.projetoEditando = null;
 state.filtrosProjeto = {
   horizonte: HORIZONTE_TODAS,
@@ -5317,15 +5324,13 @@ const SELO_MUDANCA = {
 // Diretor vêm os chefes de divisão, depois os gerentes, depois analistas e
 // técnicos. O rótulo do bloco diz o nível, para que a lista não pareça um
 // amontoado de nomes em ordem alfabética.
+// Blocos do painel de equipe, na ordem da hierarquia. Gerência aparece aqui
+// também porque o painel é a lista de gente da unidade; no desenho ela já tem
+// caixa própria.
 const PAPEIS_UNIDADE = [
   { id: "gerencia", rotulo: "Gerências (DAS-3)" },
   { id: "equipe", rotulo: "Relação de lotação" },
-  // Recolhida por padrão: com 26 nomes em uma divisão, a lista aberta faria o
-  // organograma virar uma listagem de pessoal. O que o cabeçalho mostra
-  // sempre é a distribuição por perfil, que é a informação de estrutura; os
-  // nomes ficam a um clique. A busca abre o bloco, para que o resultado não
-  // se esconda atrás de um resumo.
-  { id: "tecnica", rotulo: "Equipe técnica", recolhivel: true },
+  { id: "tecnica", rotulo: "Equipe técnica" },
 ];
 
 // Faixas de senioridade da equipe técnica, do topo para a base. A distribuição
@@ -5476,16 +5481,17 @@ function funcoesSemUnidade(visao) {
 // Duas linhas por pessoa: nome, e abaixo cargo, matrícula e vínculo. Com onze
 // pessoas em uma divisão, uma linha por atributo faria o cartão crescer sem
 // acrescentar informação.
-function linhaDePessoa(pessoa) {
+function linhaDePessoa(pessoa, destacada) {
   // Quem vem da equipe técnica tem perfil de senioridade e não tem matrícula
   // nem vínculo declarados. Exibir "cargo não consta" para essas pessoas
   // transformaria a diferença entre as duas relações em erro de preenchimento.
   if (pessoa.papel === "tecnica") {
     return `
-      <li class="org-pessoa org-pessoa--tecnica">
+      <li class="org-pessoa org-pessoa--tecnica${destacada ? " is-destacada" : ""}">
         <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
         <span class="org-pessoa__detalhe">
           <span class="org-pessoa__nivel">${escapeHtml(pessoa.nivel || "perfil não declarado")}</span>
+          ${pessoa.funcao ? `<span class="org-pessoa__funcao">${escapeHtml(pessoa.funcao)}</span>` : ""}
         </span>
       </li>`;
   }
@@ -5497,7 +5503,7 @@ function linhaDePessoa(pessoa) {
     ? `<span class="org-pessoa__cargo">${escapeHtml(pessoa.cargo)}</span>`
     : `<span class="org-pessoa__cargo org-pessoa__cargo--vago">cargo não consta na relação</span>`;
   return `
-    <li class="org-pessoa">
+    <li class="org-pessoa${destacada ? " is-destacada" : ""}">
       <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
       <span class="org-pessoa__detalhe">
         ${cargo}
@@ -5522,44 +5528,41 @@ function resumoDeQuadro(u) {
   return `${plural(pessoas.length, "pessoa", "pessoas")}${partes.length ? ` · ${partes.join(", ")}` : ""}`;
 }
 
-function blocoDeQuadro(u, titular) {
+// Painel de equipe da unidade: é o que abre ao clicar na caixa do fluxograma.
+// Aqui os nomes aparecem por inteiro, em colunas, porque o painel só existe
+// depois de alguém pedir para vê-lo — diferente do organograma, que precisa
+// caber em uma tela.
+function painelDeEquipe(u, busca) {
+  const titular = titularDaUnidade(u);
   const pessoas = pessoasDaUnidade(u).filter((p) => p !== titular);
   const grupos = PAPEIS_UNIDADE.map((papel) => ({
     ...papel,
     pessoas: pessoas.filter((p) => (p.papel || "equipe") === papel.id),
   })).filter((g) => g.pessoas.length);
 
-  const lotacao = u.lotacao ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>` : "";
-  if (!grupos.length) return lotacao;
+  if (!grupos.length) {
+    return `<p class="unidade-painel__vazio">${escapeHtml(
+      u.lotacao || u.observacao || "A unidade não registra equipe além da chefia."
+    )}</p>`;
+  }
 
-  const buscando = Boolean((state.filtroEstrutura || "").trim());
-  const LIMITE_PARA_RECOLHER = 6;
-
-  return `
-    ${lotacao}
-    <div class="org-unidade__quadro">
-      ${grupos
-        .map((g) => {
-          const lista = `<ul class="org-pessoas">${g.pessoas.map(linhaDePessoa).join("")}</ul>`;
-          if (!g.recolhivel || g.pessoas.length <= LIMITE_PARA_RECOLHER) {
-            return `
-        <div class="org-papel">
-          <span class="org-papel__rotulo">${escapeHtml(g.rotulo)} · ${g.pessoas.length}</span>
-          ${lista}
-        </div>`;
-          }
-          const faixas = distribuicaoDeSenioridade(g.pessoas);
-          return `
-        <details class="org-papel org-papel--recolhivel"${buscando ? " open" : ""}>
-          <summary class="org-papel__resumo">
-            <span class="org-papel__rotulo">${escapeHtml(g.rotulo)} · ${g.pessoas.length}</span>
-            ${faixas ? `<span class="org-papel__faixas">${escapeHtml(faixas)}</span>` : ""}
-          </summary>
-          ${lista}
-        </details>`;
-        })
-        .join("")}
-    </div>`;
+  return grupos
+    .map((g) => {
+      const faixas = g.id === "tecnica" ? distribuicaoDeSenioridade(g.pessoas) : "";
+      return `
+      <div class="unidade-painel__grupo">
+        <h5 class="unidade-painel__grupo-titulo">
+          ${escapeHtml(g.rotulo)} · ${g.pessoas.length}
+          ${faixas ? `<span class="unidade-painel__faixas">${escapeHtml(faixas)}</span>` : ""}
+        </h5>
+        <ul class="org-pessoas unidade-painel__lista">
+          ${g.pessoas
+            .map((p) => linhaDePessoa(p, Boolean(busca) && pessoaBate(p, busca)))
+            .join("")}
+        </ul>
+      </div>`;
+    })
+    .join("");
 }
 
 function linhaDeTitular(u, titular, minuta) {
@@ -5640,7 +5643,7 @@ function cartaoDeUnidade(u, funcoesPorId, minuta, nomeDoTopo, aninhada) {
           ? `<p class="org-unidade__pendencia">${escapeHtml(u.observacao)}</p>`
           : ""
       }
-      ${blocoDeQuadro(u, titularDaUnidade(u))}
+      ${u.lotacao ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>` : ""}
       ${u.justificativa ? `<p class="org-unidade__justificativa">${escapeHtml(u.justificativa)}</p>` : ""}
       ${
         subunidades.length
@@ -5696,7 +5699,6 @@ function cartaoDoTopo(topo, funcoesPorId, minuta) {
           ? `<p class="org-unidade__quadro-resumo">${escapeHtml(resumoDeQuadro(topo))}</p>`
           : ""
       }
-      ${blocoDeQuadro(topo, titular)}
     </article>`;
 }
 
@@ -5843,16 +5845,40 @@ function pessoasDoPapel(u, papel) {
   return pessoasDaUnidade(u).filter((p) => (p.papel || "equipe") === papel);
 }
 
-function noDoFluxo({ classe, selo, titulo, linhas, destacado }) {
-  return `
-    <div class="fluxo-no fluxo-no--${classe}${destacado ? " is-destacado" : ""}">
+function noDoFluxo({ classe, selo, titulo, linhas, destacado, unidade, aberta, chamada }) {
+  const corpo = `
       ${selo ? `<span class="fluxo-no__selo">${escapeHtml(selo)}</span>` : ""}
       <span class="fluxo-no__titulo">${escapeHtml(titulo)}</span>
       ${(linhas || [])
         .filter(Boolean)
         .map((l) => `<span class="fluxo-no__linha">${escapeHtml(l)}</span>`)
         .join("")}
-    </div>`;
+      ${chamada ? `<span class="fluxo-no__chamada">${escapeHtml(chamada)}</span>` : ""}`;
+
+  const classes = `fluxo-no fluxo-no--${classe}${destacado ? " is-destacado" : ""}${
+    aberta ? " is-aberta" : ""
+  }`;
+
+  // Só unidade abre equipe. Caixa de pessoa não é botão: um controle que não
+  // faz nada ao ser clicado é pior do que um texto que nunca prometeu nada.
+  if (!unidade) return `<div class="${classes}">${corpo}</div>`;
+
+  return `
+    <button type="button" class="${classes}" data-unidade="${escapeAttr(unidade)}"
+            aria-expanded="${aberta ? "true" : "false"}" aria-controls="estrutura-painel">
+      ${corpo}
+      <svg class="fluxo-no__seta" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>`;
+}
+
+// Chamada de ação da caixa: quantas pessoas há para ver, ou que não há.
+function chamadaDeEquipe(u, aberta) {
+  const titular = titularDaUnidade(u);
+  const equipe = pessoasDaUnidade(u).filter((p) => p !== titular).length;
+  if (!equipe) return "sem equipe além da chefia";
+  return aberta
+    ? `ocultar equipe (${equipe})`
+    : `ver equipe alocada (${equipe})`;
 }
 
 // Nível do cargo, quando há: "Chefe da Divisão de Desenvolvimento de
@@ -5884,32 +5910,6 @@ function noDePessoa(pessoa, classe, busca) {
   });
 }
 
-// Nó de equipe: a divisão tem quadro que não é chefia nem gerência. Traz as
-// duas relações separadas e a distribuição por perfil, que é a informação de
-// estrutura que interessa no fluxo.
-function noDeEquipe(u, busca) {
-  const daRelacao = pessoasDoPapel(u, "equipe");
-  const tecnicos = pessoasDoPapel(u, "tecnica");
-  if (!daRelacao.length && !tecnicos.length) return "";
-
-  const total = daRelacao.length + tecnicos.length;
-  const faixas = distribuicaoDeSenioridade(tecnicos);
-  const destacado =
-    Boolean(busca) && [...daRelacao, ...tecnicos].some((p) => pessoaBate(p, busca));
-
-  return `<li>${noDoFluxo({
-    classe: "equipe",
-    selo: "Equipe",
-    titulo: plural(total, "pessoa", "pessoas"),
-    linhas: [
-      daRelacao.length ? `${plural(daRelacao.length, "servidor", "servidores")} na relação de lotação` : "",
-      tecnicos.length ? `${plural(tecnicos.length, "técnico", "técnicos")} alocados` : "",
-      faixas,
-    ],
-    destacado,
-  })}</li>`;
-}
-
 function filhosDoFluxo(u, busca) {
   const titular = titularDaUnidade(u);
   const gerencias = pessoasDoPapel(u, "gerencia")
@@ -5922,6 +5922,7 @@ function filhosDoFluxo(u, busca) {
       Boolean(busca) &&
       (textoDaUnidade(su).includes(busca) ||
         pessoasDaUnidade(su).some((p) => pessoaBate(p, busca)));
+    const aberta = state.estruturaUnidadeAberta === su.sigla;
     const no = noDoFluxo({
       classe: "secao",
       selo: su.natureza || "",
@@ -5932,14 +5933,15 @@ function filhosDoFluxo(u, busca) {
         su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
       ],
       destacado,
+      unidade: su.sigla,
+      aberta,
+      chamada: chamadaDeEquipe(su, aberta),
     });
     const netos = filhosDoFluxo(su, busca);
     return `<li>${no}${netos ? `<ul>${netos}</ul>` : ""}</li>`;
   });
 
-  const equipe = noDeEquipe(u, busca);
-  const itens = [...gerencias, ...secoes, equipe].filter(Boolean);
-  return itens.join("");
+  return [...gerencias, ...secoes].filter(Boolean).join("");
 }
 
 function renderizarFluxograma(visao) {
@@ -5950,6 +5952,7 @@ function renderizarFluxograma(visao) {
   const topo = visao.topo;
   const diretor = titularDaUnidade(topo);
 
+  const topoAberto = state.estruturaUnidadeAberta === topo.sigla;
   const noTopo = noDoFluxo({
     classe: "diretoria",
     selo: topo.natureza || "",
@@ -5961,6 +5964,9 @@ function renderizarFluxograma(visao) {
       Boolean(busca) &&
       (textoDaUnidade(topo).includes(busca) ||
         pessoasDaUnidade(topo).some((p) => pessoaBate(p, busca))),
+    unidade: topo.sigla,
+    aberta: topoAberto,
+    chamada: chamadaDeEquipe(topo, topoAberto),
   });
 
   const ramos = visao.unidades
@@ -5969,6 +5975,7 @@ function renderizarFluxograma(visao) {
       const destacado =
         Boolean(busca) &&
         (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
+      const aberta = state.estruturaUnidadeAberta === u.sigla;
       const no = noDoFluxo({
         classe: u.estado === "nova" ? "unidade-nova" : "unidade",
         selo: u.natureza || "",
@@ -5979,21 +5986,20 @@ function renderizarFluxograma(visao) {
           resumoDeQuadro(u),
         ],
         destacado,
+        unidade: u.sigla,
+        aberta,
+        chamada: chamadaDeEquipe(u, aberta),
       });
       const filhos = filhosDoFluxo(u, busca);
       return `<li>${no}${filhos ? `<ul>${filhos}</ul>` : ""}</li>`;
     })
     .join("");
 
-  // A equipe lotada na própria Diretoria entra como ramo dela: a técnica
-  // alocada ali não pertence a divisão nenhuma.
-  const equipeDaDiretoria = noDeEquipe(topo, busca);
-
   alvo.innerHTML = `
     <ul class="fluxo">
       <li>
         ${noTopo}
-        <ul>${ramos}${equipeDaDiretoria}</ul>
+        <ul>${ramos}</ul>
       </li>
     </ul>`;
 
@@ -6011,7 +6017,7 @@ function renderizarFluxograma(visao) {
       ? destacados
         ? `Fluxograma da estrutura inteira. ${plural(destacados, "caixa destacada", "caixas destacadas")} pela busca em vigor.`
         : "Fluxograma da estrutura inteira. Nenhuma caixa corresponde à busca em vigor."
-      : "Do Diretor aos técnicos. A equipe aparece ligada à sua unidade, e não distribuída entre as gerências, porque as relações não declaram a qual gerência cada pessoa responde.";
+      : "Do Diretor às gerências de TI. Clique em uma unidade para ver a equipe alocada nela; a equipe pertence à unidade, e não a uma gerência específica, porque as relações não declaram a qual gerência cada pessoa responde.";
     nota.textContent =
       excedente > 1 ? `${base} Arraste na horizontal para ver o desenho inteiro.` : base;
   }
@@ -6019,6 +6025,65 @@ function renderizarFluxograma(visao) {
 
 function minutaEmTela(visao) {
   return Boolean(visao && visao.minuta);
+}
+
+// Procura a unidade pela sigla em qualquer nível: a seção subordinada abre
+// painel como qualquer outra.
+function unidadePorSigla(visao, sigla) {
+  if (!visao || !sigla) return null;
+  if (visao.topo.sigla === sigla) return visao.topo;
+  return unidadesDaVisao(visao).find((u) => u.sigla === sigla) || null;
+}
+
+function renderizarPainelDeUnidade(visao) {
+  const painel = document.getElementById("estrutura-painel");
+  if (!painel) return;
+
+  const u = unidadePorSigla(visao, state.estruturaUnidadeAberta);
+  if (!u) {
+    painel.hidden = true;
+    return;
+  }
+
+  const busca = buscaAtivaEstrutura();
+  const titular = titularDaUnidade(u);
+
+  painel.hidden = false;
+  document.getElementById("estrutura-painel-natureza").textContent = u.natureza || "";
+  document.getElementById("estrutura-painel-titulo").textContent = `${u.sigla} — ${u.nome}`;
+
+  const chefia = document.getElementById("estrutura-painel-chefia");
+  const resumo = resumoDeQuadro(u);
+  chefia.textContent = [
+    titular
+      ? `${titular.nome} · ${papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")}`
+      : minutaEmTela(visao)
+      ? "Chefia a designar"
+      : "Chefia a confirmar",
+    resumo,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  document.getElementById("estrutura-painel-corpo").innerHTML = painelDeEquipe(u, busca);
+}
+
+function abrirUnidadeNoFluxo(sigla) {
+  state.estruturaUnidadeAberta = state.estruturaUnidadeAberta === sigla ? null : sigla;
+  state.estruturaPainelPelaBusca = false;
+  renderizarEstrutura();
+
+  // O foco volta para a caixa que abriu o painel: sem isso, quem navega por
+  // teclado perde a posição a cada abertura, porque o desenho é reconstruído.
+  const botao = document.querySelector(`.fluxo-no[data-unidade="${CSS.escape(sigla)}"]`);
+  if (botao) botao.focus({ preventScroll: true });
+}
+
+function fecharPainelDeUnidade() {
+  if (!state.estruturaUnidadeAberta) return;
+  state.estruturaUnidadeAberta = null;
+  state.estruturaPainelPelaBusca = false;
+  renderizarEstrutura();
 }
 
 function renderizarEstrutura() {
@@ -6061,7 +6126,33 @@ function renderizarEstrutura() {
   if (intro) intro.classList.toggle("estrutura-intro--minuta", minuta);
 
   renderizarComparativoEstrutura(d, state.estruturaVisao);
+
+  // Com os nomes atrás de um clique, uma busca que casasse só com pessoas não
+  // mostraria nada: a unidade correspondente se abre sozinha.
+  const buscaCorrente = normalizarTexto(state.filtroEstrutura || "").trim();
+  if (buscaCorrente) {
+    const aberta = unidadePorSigla(visao, state.estruturaUnidadeAberta);
+    const casaNaAberta =
+      aberta && pessoasDaUnidade(aberta).some((p) => pessoaBate(p, buscaCorrente));
+    if (!casaNaAberta) {
+      const comPessoa = [visao.topo, ...unidadesDaVisao(visao)].find((u) =>
+        pessoasDaUnidade(u).some((p) => pessoaBate(p, buscaCorrente))
+      );
+      if (comPessoa) {
+        state.estruturaUnidadeAberta = comPessoa.sigla;
+        state.estruturaPainelPelaBusca = true;
+      } else if (state.estruturaPainelPelaBusca) {
+        // O termo mudou e não casa com ninguém: o painel que a busca abriu sai
+        // de cena, em vez de seguir mostrando a unidade de um resultado que
+        // não existe mais.
+        state.estruturaUnidadeAberta = null;
+        state.estruturaPainelPelaBusca = false;
+      }
+    }
+  }
+
   renderizarFluxograma(visao);
+  renderizarPainelDeUnidade(visao);
 
   const unidades = unidadesFiltradas(visao);
   const busca = normalizarTexto(state.filtroEstrutura || "").trim();
@@ -6110,7 +6201,14 @@ function renderizarEstrutura() {
 }
 
 function trocarVisaoEstrutura(visao) {
+  const anterior = state.estruturaVisao;
   state.estruturaVisao = VISOES_ESTRUTURA.includes(visao) ? visao : "atual";
+  // DBAD não existe na minuta, e DDI não existe hoje: manter a sigla aberta
+  // deixaria o painel apontando para uma unidade que não está no desenho.
+  if (state.estruturaVisao !== anterior) {
+    state.estruturaUnidadeAberta = null;
+    state.estruturaPainelPelaBusca = false;
+  }
   renderizarEstrutura();
 }
 
@@ -6155,6 +6253,26 @@ function renderizarPortalEstrutura() {
 }
 
 function inicializarModuloEstrutura() {
+  // Delegação no fluxograma: o desenho é reconstruído a cada render, e um
+  // ouvinte por caixa se perderia junto.
+  const fluxo = document.getElementById("estrutura-fluxograma");
+  if (fluxo) {
+    fluxo.addEventListener("click", (ev) => {
+      const botao = ev.target.closest(".fluxo-no[data-unidade]");
+      if (botao) abrirUnidadeNoFluxo(botao.dataset.unidade);
+    });
+  }
+
+  const fechar = document.getElementById("btn-fechar-painel-unidade");
+  if (fechar) fechar.addEventListener("click", fecharPainelDeUnidade);
+
+  // Esc fecha o painel quando ele é o que está aberto no módulo.
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (state.modulo !== "estrutura" || !state.estruturaUnidadeAberta) return;
+    fecharPainelDeUnidade();
+  });
+
   const grupo = document.getElementById("estrutura-visoes");
   if (grupo) {
     grupo.addEventListener("click", (ev) => {
