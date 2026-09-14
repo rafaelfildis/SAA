@@ -37,7 +37,13 @@
 // lado de pessoa certa. Quem procura número usa o módulo Ramal DTI.
 //
 // A ESTRUTURA SUGERIDA é minuta de trabalho, e a tela diz isso em todo lugar
-// onde ela aparece. Nenhuma unidade de hoje é extinta e nenhuma perde quadro: a
+// onde ela aparece. Ela desenha ESTRUTURA, e não pessoas: nenhuma unidade dela
+// declara quadro nominal, cada caixa informa o nível e o cargo que o ocupa
+// (DAS-4, DAS-3, equipe contratada ou quadro efetivo) e o único nome do
+// desenho é o do titular de hoje na Superintendência. Quem quiser ver quem
+// está onde usa a estrutura atual, que é onde esse dado existe.
+//
+// Nenhuma unidade de hoje é extinta e nenhuma perde quadro: a
 // camada de operação muda de denominação — Divisão passa a Coordenação, a Seção
 // de Atendimento sobe a Coordenação de Suporte Técnico e o Banco de Dados passa
 // a Núcleo sob a Coordenação de Sistemas —, uma camada de direção é criada
@@ -52,12 +58,20 @@
 // divergirem na primeira atualização.
 //
 // O QUE A TELA USA HOJE. O módulo ficou com o fluxograma e a lista da equipe,
-// e só lê: `sigla`, `nome`, `natureza`, `ramal`, `portaDeEntrada`, `estado`,
-// `titularADesignar`, `pessoas`, `subunidades`, `funcoes`/`funcoesAcumuladas`
-// (que alimentam a métrica do portal) e `lotacao`/`observacao` (exibidos no
-// painel de uma unidade sem equipe própria). Em `pessoas`, o campo `funcao` de
-// uma gerência é a frente que ela conduz: aparece na caixa dela no fluxo, na
-// lista da unidade e no papel. Sem ele, a caixa fica só com o cargo e o nome.
+// e só lê:
+//
+//   · da visão: `rotulo`, `minuta`, `estrutural` (desenha só a estrutura: sem
+//     contagem de pessoas, sem lista de equipe e sem caixa clicável) e
+//     `totalDeCargos` (o balão ao lado do topo);
+//   · da unidade: `sigla`, `nome`, `natureza`, `cargo` (o par nível-cargo no
+//     selo, que também tira o nome de responsável da caixa), `ramal`,
+//     `portaDeEntrada`, `estado`, `titularADesignar`, `frentes` (caixas de
+//     frente abaixo da unidade, sem pessoa), `pessoas`, `subunidades`,
+//     `funcoes`/`funcoesAcumuladas` (que alimentam a métrica do portal) e
+//     `lotacao`/`observacao` (no painel de uma unidade sem equipe própria e na
+//     lista de cargos da folha);
+//   · da pessoa: `nome`, `cargo`, `matricula`, `vinculo`, `papel`, `nivel` e
+//     `funcao`.
 //
 // Os demais campos — `chamada`, `resumo`, `procedencia`, `atribuicoes`,
 // `justificativa`, `origem`, `subordinacao`, `notas`, `notasTitulo` e
@@ -86,7 +100,8 @@
 
   // Na minuta o titular de hoje passa a Superintendente. O quadro é separado
   // do da estrutura atual de propósito: compartilhá-lo faria o cargo proposto
-  // aparecer também na estrutura vigente.
+  // aparecer também na estrutura vigente. Traz só o cargo do topo — a minuta
+  // desenha estrutura, e este é o único nome que ela nomeia.
   const QUADRO_SUPERINTENDENCIA = [
     {
       nome: "Diego Daltro",
@@ -96,7 +111,6 @@
       cargo: "Superintendente de Tecnologia da Informação",
       papel: "chefia",
     },
-    tecnico("Fabiana Dumiense Costa", "Sênior II"),
   ];
 
   const QUADRO_DDES = [
@@ -204,23 +218,6 @@
     tecnico("Rian Uchoa Assunção", "Estagiário"),
     tecnico("Yuri Figueiredo Ribeiro", "Estagiário", "QA e Analista de Requisitos"),
   ];
-
-  // Na minuta as três gerências (DAS-3) passam ao Núcleo de Desenvolvimento de
-  // Sistemas, cada uma com a frente que conduz — o que a relação de lotação
-  // hoje não declara. Derivar do quadro de hoje, em vez de repetir os nomes,
-  // mantém matrícula, vínculo e cargo vindo de uma fonte só.
-  const FRENTES_DE_DESENVOLVIMENTO = [
-    ["Ayala Bezerra Leal", "Líder Técnica de Desenvolvimento de Sistemas"],
-    ["Lucas Juan Nogueira Novaes", "Sustentação de Sistemas"],
-    ["Fabrício André de Souza Muniz", "Modernização de Sistemas"],
-  ];
-  const QUADRO_DESENVOLVIMENTO = FRENTES_DE_DESENVOLVIMENTO.map(([nome, funcao]) => ({
-    ...QUADRO_DDES.find((p) => p.nome === nome),
-    funcao,
-  }));
-  const QUADRO_COSIS = QUADRO_DDES.filter(
-    (p) => !FRENTES_DE_DESENVOLVIMENTO.some(([nome]) => nome === p.nome)
-  );
 
   const QUADRO_DINT = [
     {
@@ -377,6 +374,15 @@
       rotulo: "Estrutura sugerida",
       chamada: "Minuta de proposta — Superintendência, duas Diretorias e Coordenações",
       minuta: true,
+      // A minuta desenha a estrutura, e não quem a ocupa: nenhuma unidade dela
+      // declara pessoas, e a tela não conta nem lista quadro. O que cada caixa
+      // informa é o nível e o cargo que o ocupa — cargo comissionado, quadro
+      // efetivo ou equipe contratada.
+      estrutural: true,
+      // Total de cargos da proposta, informado pela Diretoria. Não é derivado
+      // das relações — a de lotação traz 16 pessoas e a alocação 27 —, porque
+      // dimensionar a proposta é decisão de quem a assina.
+      totalDeCargos: 45,
       resumo:
         "A Diretoria de Tecnologia da Informação passa a Superintendência, e abaixo dela ficam duas Diretorias. A de Tecnologia da Informação recebe a operação de hoje convertida em Coordenações — Sistemas, Infraestrutura e Suporte Técnico, as três no mesmo nível —, e a Coordenação de Sistemas passa a dirigir três Núcleos: Desenvolvimento de Sistemas, com as três gerências de hoje e a frente de cada uma declarada, Banco de Dados e UX/UI. A de Projetos de TIC é nova, com as Coordenações de Processos de TIC e de Governança Digital e Segurança da Informação. Nenhuma unidade existente é extinta nem perde quadro: o que muda é a denominação da camada de operação, o nível do Atendimento e a criação da segunda Diretoria.",
       procedencia:
@@ -386,10 +392,10 @@
         "Nenhuma unidade existente é extinta ou perde quadro: DDES, DINT, SEATU e DBAD continuam com a mesma chefia e o mesmo pessoal, sob nova denominação.",
         "A camada de operação passa a se chamar Coordenação: Sistemas (ex-DDES), Infraestrutura (ex-DINT) e Suporte Técnico (ex-SEATU). O Atendimento sobe de Seção subordinada à Infraestrutura para Coordenação no mesmo nível das outras duas.",
         "O Banco de Dados passa de Divisão a Núcleo sob a Coordenação de Sistemas, junto com os Núcleos de Desenvolvimento de Sistemas e de UX/UI. O quadro de hoje do Banco de Dados vai inteiro com ele.",
-        "As três gerências (DAS-3) passam ao Núcleo de Desenvolvimento de Sistemas com a frente de cada uma nomeada: liderança técnica (Ayala Bezerra Leal), sustentação (Lucas Juan Nogueira Novaes) e modernização (Fabrício André de Souza Muniz). Hoje as três têm o mesmo cargo e nenhum escopo declarado na relação de lotação — a divisão de frentes é proposta da minuta, a confirmar pela Diretoria.",
-        "A chefia do Núcleo de Desenvolvimento de Sistemas fica a designar: a liderança técnica declarada pode acumulá-la, e isso é decisão da Diretoria. A equipe técnica segue ligada à Coordenação de Sistemas enquanto não se declarar a qual frente cada técnico responde.",
+        "As três gerências (DAS-3) de hoje passam ao Núcleo de Desenvolvimento de Sistemas, cada uma com a frente que conduz declarada: Desenvolvimento, Sustentação e Modernização de Sistema. Hoje as três têm o mesmo cargo e nenhum escopo declarado na relação de lotação — a divisão de frentes é proposta da minuta, a confirmar pela Diretoria.",
         "O Núcleo de UX/UI nasce sem quadro declarado: a alocação atual não traz profissional de experiência do usuário, e compor o núcleo exige remanejamento ou provimento.",
-        "O organograma da minuta mostra cargo, não pessoa: cada caixa traz o nível e o cargo que o ocupa — Diretoria (DAS-4), Coordenação (DAS-3) e Núcleo (equipe contratada, salvo o de Banco de Dados, que fica com quadro efetivo) —, e o único nome no desenho é o do titular de hoje na Superintendência. Enquanto a designação depende de ato, nomear quem ocupa o quê daria por decidido o que não está; o quadro de cada unidade continua na lista, que é onde ele é informação e não anúncio.",
+        "A minuta desenha estrutura, não pessoas: nenhuma unidade dela traz quadro nominal, e cada caixa informa o nível e o cargo que o ocupa — Diretoria (DAS-4), Coordenação (DAS-3) e Núcleo (equipe contratada, salvo o de Banco de Dados, que fica com quadro efetivo). O único nome do desenho é o do titular de hoje na Superintendência. Enquanto a criação de unidade e a designação de chefia dependem de ato, lotar nomes na proposta daria por decidido o que não está — quem quiser ver quem está onde hoje tem a estrutura atual, que é onde esse dado existe.",
+        "O total de 45 cargos no balão ao lado da Superintendência é o dimensionamento informado pela Diretoria, e não uma conta do sistema: a relação de lotação traz 16 pessoas e a alocação da equipe técnica 27.",
         "Os Núcleos são operados por equipe contratada, com uma exceção decidida pela Diretoria: o Núcleo de Banco de Dados mantém os dois analistas efetivos de hoje. A administração das bases corporativas continua em quadro próprio.",
         "O Núcleo de Desenvolvimento de Sistemas é operado por equipe contratada e conduzido por três gerências DAS-3, uma por frente — é o que explica um Núcleo terceirizado com três comissionados no quadro.",
         "O titular de hoje passa a Superintendente. A chefia das duas Diretorias, das Coordenações novas e dos Núcleos fica a designar pela Diretoria — o cargo comissionado correspondente a Coordenação e a Núcleo também é decisão do ato de criação.",
@@ -443,7 +449,6 @@
               ],
               lotacao:
                 "Mantém a chefia e o quadro de hoje. As três gerências (DAS-3) passam ao Núcleo de Desenvolvimento de Sistemas; a equipe técnica segue ligada à Coordenação enquanto a Diretoria não declarar a qual frente cada técnico responde.",
-              pessoas: QUADRO_COSIS,
               subunidades: [
                 {
                   sigla: "NDS",
@@ -452,16 +457,20 @@
                   cargo: "Terceirizados",
                   estado: "nova",
                   titularADesignar: true,
+                  frentes: [
+                    "Desenvolvimento de Sistema",
+                    "Sustentação de Sistema",
+                    "Modernização de Sistema",
+                  ],
                   atribuicoes: [
-                    "Condução das três frentes de desenvolvimento: liderança técnica, sustentação e modernização",
+                    "Condução das três frentes: desenvolvimento, sustentação e modernização de sistema",
                     "Padrões de arquitetura, de código e de homologação dos sistemas",
                     "Distribuição do trabalho da equipe técnica entre as frentes",
                   ],
                   lotacao:
-                    "Reúne as três gerências (DAS-3) de hoje, cada uma com a frente que conduz. A chefia do Núcleo fica a designar — a liderança técnica declarada pode ser ela própria, decisão da Diretoria. A equipe técnica permanece na Coordenação: nem a relação de lotação nem a alocação dizem a qual frente cada técnico responde.",
+                    "Três frentes declaradas, uma por gerência (DAS-3): desenvolvimento, sustentação e modernização de sistema. A chefia do Núcleo fica a designar, e a distribuição da equipe contratada entre as frentes depende da Diretoria — nem a relação de lotação nem a alocação de hoje dizem a qual frente cada técnico responde.",
                   justificativa:
-                    "Hoje as três gerências estão lotadas na Divisão sem seção nem escopo declarado, e por isso nada distingue uma da outra no organograma. Nomear a frente de cada uma — liderança técnica, sustentação e modernização — diz quem responde pelo quê antes de qualquer criação de cargo.",
-                  pessoas: QUADRO_DESENVOLVIMENTO,
+                    "Hoje as três gerências estão lotadas na Divisão sem seção nem escopo declarado, e por isso nada distingue uma da outra no organograma. Nomear a frente de cada uma — desenvolvimento, sustentação e modernização de sistema — diz quem responde pelo quê antes de qualquer criação de cargo.",
                 },
                 {
                   sigla: "NBD",
@@ -480,7 +489,6 @@
                     "Mantém a chefia e os dois analistas de hoje. É a exceção declarada à regra dos Núcleos: continua com quadro efetivo, e não com equipe contratada.",
                   justificativa:
                     "O trabalho de banco de dados sustenta os sistemas e se decide com eles. Como Núcleo sob a Coordenação de Sistemas, a mesma equipe passa a ter a prioridade definida onde o sistema é construído, em vez de negociada entre duas unidades de mesmo nível.",
-                  pessoas: QUADRO_DADOS,
                 },
                 {
                   sigla: "NUX",
@@ -517,7 +525,6 @@
                 "Mantém a chefia. Quadro técnico a dimensionar: a alocação atual não contempla a unidade.",
               justificativa:
                 "A unidade deixa de acumular segurança da informação, que passa à Coordenação de Governança Digital e Segurança da Informação, e responde pelo que é próprio da infraestrutura.",
-              pessoas: QUADRO_DINT,
             },
             {
               sigla: "COSTEC",
@@ -538,7 +545,6 @@
                 "Mantém a gerência de hoje. Quadro de atendimento a dimensionar, e cargo de chefia da Coordenação a definir no ato de criação.",
               justificativa:
                 "O atendimento é a porta de entrada de toda a área e responde a quem usa o Tribunal inteiro, não só à infraestrutura. No mesmo nível das outras duas Coordenações, encaminha chamado para Sistemas e para Infraestrutura em igualdade, sem depender da fila de uma delas.",
-              pessoas: QUADRO_SEATU,
             },
           ],
         },
@@ -615,7 +621,7 @@
           tipo: "nova",
           titulo: "Núcleo de Desenvolvimento de Sistemas, com a frente de cada gerência nomeada",
           detalhe:
-            "As três gerências (DAS-3) saem da lotação genérica na Divisão e passam a um Núcleo próprio, cada uma conduzindo uma frente declarada: liderança técnica, sustentação e modernização. Hoje as três têm o mesmo cargo e nenhum escopo na relação, e nada no organograma diz quem responde pelo quê.",
+            "As três gerências (DAS-3) saem da lotação genérica na Divisão e passam a um Núcleo próprio, cada uma conduzindo uma frente declarada: Desenvolvimento, Sustentação e Modernização de Sistema. Hoje as três têm o mesmo cargo e nenhum escopo na relação, e nada no organograma diz quem responde pelo quê.",
         },
         {
           tipo: "renomeada",

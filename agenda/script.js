@@ -5590,6 +5590,13 @@ function classeDaUnidade(u) {
 
 // A Seção de Atendimento não carrega o selo "Seção": a Diretoria pediu o termo
 // fora da caixa, e o nível da unidade já se lê pela posição no fluxo.
+// Visão que desenha só a estrutura: sem contagem de pessoas na caixa, sem
+// lista de equipe e sem caixa clicável — não há quadro nominal para abrir. É
+// como a minuta se apresenta, e é decisão dela, não da tela.
+function visaoEstrutural(v) {
+  return Boolean((v || visaoEmMontagem || {}).estrutural);
+}
+
 // Unidade que declara `cargo` é desenhada como posição, não como pessoa: o
 // selo diz o nível e o cargo que o ocupa — "COORDENAÇÃO · DAS-3" —, e nome de
 // responsável não entra na caixa. É o que a minuta pede: enquanto a
@@ -5690,13 +5697,24 @@ function papelResumido(pessoa, rotulo) {
 // o título é o nome de quem responde, em azul como nas demais caixas, e a
 // frente que ela conduz vem na linha de apoio. Onde é desenhada como posição,
 // a frente ocupa o título e o nome não entra.
-function noDeGerencia(pessoa, busca, posicao) {
+function noDeGerencia(pessoa, busca) {
   return noDoFluxo({
     classe: "gerencia",
     selo: nivelDoCargo(pessoa),
-    titulo: posicao ? pessoa.funcao || "Gerência de TI" : pessoa.nome,
-    linhas: posicao ? [] : [pessoa.funcao],
+    titulo: pessoa.nome,
+    linhas: [pessoa.funcao],
     destacado: Boolean(busca) && pessoaBate(pessoa, busca),
+  });
+}
+
+// Frente proposta por uma unidade: é posição, não pessoa. A caixa traz só o
+// nome da frente — o cargo que a conduz está no selo da unidade acima, e quem
+// a ocupa é decisão que a minuta não antecipa.
+function noDeFrenteProposta(rotulo, busca) {
+  return noDoFluxo({
+    classe: "gerencia",
+    titulo: rotulo,
+    destacado: Boolean(busca) && normalizarTexto(rotulo).includes(busca),
   });
 }
 
@@ -5708,9 +5726,8 @@ let visaoEmMontagem = null;
 function filhosDoFluxo(u, busca, paraPapel) {
   const titular = titularDaUnidade(u);
   const gerentes = pessoasDoPapel(u, "gerencia").filter((p) => p !== titular);
-  const gerencias = gerentes.map(
-    (p) => `<li>${noDeGerencia(p, busca, desenhadaComoPosicao(u))}</li>`
-  );
+  const gerencias = gerentes.map((p) => `<li>${noDeGerencia(p, busca)}</li>`);
+  const frentes = (u.frentes || []).map((f) => `<li>${noDeFrenteProposta(f, busca)}</li>`);
 
   const secoes = subunidadesDe(u).map((su) => {
     const titular = titularDaUnidade(su);
@@ -5739,19 +5756,19 @@ function filhosDoFluxo(u, busca, paraPapel) {
           ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")
           : "",
         su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
-        resumoDeQuadro(su),
+        visaoEstrutural() ? "" : resumoDeQuadro(su),
       ],
       destacado,
       nova: su.estado === "nova",
-      unidade: paraPapel ? "" : su.sigla,
+      unidade: paraPapel || visaoEstrutural() ? "" : su.sigla,
       aberta,
-      chamada: paraPapel ? "" : chamadaDeEquipe(su, aberta),
+      chamada: paraPapel || visaoEstrutural() ? "" : chamadaDeEquipe(su, aberta),
     });
     const netos = filhosDoFluxo(su, busca, paraPapel);
     return `<li>${no}${netos ? `<ul>${netos}</ul>` : ""}</li>`;
   });
 
-  return [...gerencias, ...secoes].filter(Boolean).join("");
+  return [...gerencias, ...frentes, ...secoes].filter(Boolean).join("");
 }
 
 // Monta a árvore e devolve o HTML. Serve a tela e o papel: o organograma
@@ -5776,9 +5793,9 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
       Boolean(busca) &&
       (textoDaUnidade(topo).includes(busca) ||
         pessoasDaUnidade(topo).some((p) => pessoaBate(p, busca))),
-    unidade: paraPapel ? "" : topo.sigla,
+    unidade: paraPapel || visaoEstrutural(visao) ? "" : topo.sigla,
     aberta: topoAberto,
-    chamada: paraPapel ? "" : chamadaDeEquipe(topo, topoAberto),
+    chamada: paraPapel || visaoEstrutural(visao) ? "" : chamadaDeEquipe(topo, topoAberto),
   });
 
   const ramos = visao.unidades
@@ -5807,23 +5824,35 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
           !posicao && titular
             ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")
             : "",
-          resumoDeQuadro(u),
+          visaoEstrutural(visao) ? "" : resumoDeQuadro(u),
         ],
         destacado,
         nova: u.estado === "nova",
-        unidade: paraPapel ? "" : u.sigla,
+        unidade: paraPapel || visaoEstrutural(visao) ? "" : u.sigla,
         aberta,
-        chamada: paraPapel ? "" : chamadaDeEquipe(u, aberta),
+        chamada: paraPapel || visaoEstrutural(visao) ? "" : chamadaDeEquipe(u, aberta),
       });
       const filhos = filhosDoFluxo(u, busca, paraPapel);
       return `<li>${no}${filhos ? `<ul>${filhos}</ul>` : ""}</li>`;
     })
     .join("");
 
+  // Balão ao lado do topo: o total de cargos da proposta, informado pela
+  // Diretoria. Fica em posição absoluta dentro de um invólucro da largura da
+  // caixa, para não deslocar o topo do eixo vertical da árvore.
+  const balao = visao.totalDeCargos
+    ? `<span class="fluxo-balao">
+         <svg class="fluxo-balao__seta" viewBox="0 0 24 24" width="15" height="15" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+              aria-hidden="true"><line x1="6" y1="18" x2="18" y2="6"></line><polyline points="10 6 18 6 18 14"></polyline></svg>
+         <span class="fluxo-balao__texto">${escapeHtml(plural(visao.totalDeCargos, "cargo", "cargos"))}</span>
+       </span>`
+    : "";
+
   return `
     <ul class="fluxo">
       <li>
-        ${noTopo}
+        <div class="fluxo-topo">${noTopo}${balao}</div>
         <ul>${ramos}</ul>
       </li>
     </ul>`;
@@ -5951,16 +5980,24 @@ function renderizarEstrutura() {
 
   document.getElementById("estrutura-titulo").textContent = visao.rotulo;
   // A linha de apoio resume o desenho em números, e é o único texto corrido da
-  // tela: o resto é o organograma e a lista de quem está em cada unidade.
-  document.getElementById("estrutura-subtitulo").textContent =
-    `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
-    `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
-    `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`;
+  // tela: o resto é o organograma e a lista de quem está em cada unidade. Na
+  // visão estrutural não há quadro nominal para somar, e o que ela resume é o
+  // desenho: unidades e cargos.
+  document.getElementById("estrutura-subtitulo").textContent = visaoEstrutural(visao)
+    ? `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
+      `${plural(visao.totalDeCargos || 0, "cargo", "cargos")}: estrutura proposta por nível e cargo, ` +
+      `sem lotação de pessoas`
+    : `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
+      `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
+      `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`;
 
   // Com os nomes atrás de um clique, uma busca que casasse só com pessoas não
   // mostraria nada: a unidade correspondente se abre sozinha.
   const busca = normalizarTexto(state.filtroEstrutura || "").trim();
-  if (busca) {
+  if (visaoEstrutural(visao)) {
+    state.estruturaUnidadeAberta = null;
+    state.estruturaPainelPelaBusca = false;
+  } else if (busca) {
     const aberta = unidadePorSigla(visao, state.estruturaUnidadeAberta);
     const casaNaAberta = aberta && pessoasDaUnidade(aberta).some((p) => pessoaBate(p, busca));
     if (!casaNaAberta) {
@@ -6071,6 +6108,37 @@ function linhaPessoaExport(pessoa) {
     </div>`;
 }
 
+// Na visão estrutural a folha não lista equipe — não há quadro nominal. O que
+// ela lista é o cargo de cada unidade e o que a minuta diz sobre a composição,
+// que é a informação que o documento tem a dar.
+function blocoCargoExport(u) {
+  const titular = titularDaUnidade(u);
+  const direita = [u.natureza || "", u.cargo || (titular && titular.cargo) || "a definir"]
+    .filter(Boolean)
+    .join(" · ");
+  return `
+    <div style="margin-bottom:11px;break-inside:avoid">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:4px;border-bottom:1px solid ${EXP.borda}">
+        <span style="font:700 11px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.navy}">${escapeHtml(`${u.sigla} — ${u.nome}`)}</span>
+        <span style="font:400 9.5px/1.3 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right">${escapeHtml(direita)}</span>
+      </div>
+      ${
+        (u.frentes || []).length
+          ? `<div style="margin-top:5px;font:400 9.5px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.link}">${escapeHtml(
+              `Frentes: ${u.frentes.join(" · ")}`
+            )}</div>`
+          : ""
+      }
+      ${
+        u.lotacao || u.observacao
+          ? `<div style="margin-top:4px;font:400 9.5px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-wrap:pretty">${escapeHtml(
+              u.lotacao || u.observacao
+            )}</div>`
+          : ""
+      }
+    </div>`;
+}
+
 function blocoUnidadeExport(u, minuta) {
   const titular = titularDaUnidade(u);
   const pessoas = pessoasDaUnidade(u).filter((p) => p !== titular);
@@ -6121,6 +6189,7 @@ function blocoUnidadeExport(u, minuta) {
 
 function construirExtratoEstrutura(visao) {
   const minuta = minutaEmTela(visao);
+  const estrutural = visaoEstrutural(visao);
   const unidades = [visao.topo, ...unidadesDaVisao(visao)];
   const efetivos = contarVinculo(visao, "Efetivo");
   const comissionados = contarVinculo(visao, "Comissionado");
@@ -6158,9 +6227,13 @@ function construirExtratoEstrutura(visao) {
       <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
         <span style="font:700 22px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.01em">${escapeHtml(visao.rotulo)}</span>
         <span style="font:400 11px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(
-          `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
-            `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
-            `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`
+          estrutural
+            ? `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
+              `${plural(visao.totalDeCargos || 0, "cargo", "cargos")}: estrutura proposta por nível e cargo, ` +
+              `sem lotação de pessoas`
+            : `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
+              `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
+              `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`
         )}</span>
       </div>
       ${
@@ -6183,14 +6256,20 @@ function construirExtratoEstrutura(visao) {
 
     <div style="display:flex;flex-direction:column;flex:1">
       <div style="font:600 9.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:${EXP.texto2};padding-bottom:10px;border-bottom:1px solid ${EXP.borda};margin-bottom:14px">
-        EQUIPE POR UNIDADE
+        ${estrutural ? "CARGOS POR UNIDADE" : "EQUIPE POR UNIDADE"}
       </div>
-      ${unidades.map((u) => blocoUnidadeExport(u, minuta)).join("")}
+      ${unidades
+        .map((u) => (estrutural ? blocoCargoExport(u) : blocoUnidadeExport(u, minuta)))
+        .join("")}
     </div>
 
     <div style="margin-top:auto;padding-top:14px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
       <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:620px;text-wrap:pretty">
-        Documento gerado a partir da relação de lotação e da alocação da equipe técnica da DTI. Os campos que as relações não declaram constam do arquivo de dados do módulo como pendências a confirmar.
+        ${
+          estrutural
+            ? "Minuta de estrutura: unidades, níveis e cargos propostos, sem lotação de pessoas. O dimensionamento em cargos foi informado pela Diretoria; a criação de unidade e a designação de chefia dependem de ato próprio do Tribunal."
+            : "Documento gerado a partir da relação de lotação e da alocação da equipe técnica da DTI. Os campos que as relações não declaram constam do arquivo de dados do módulo como pendências a confirmar."
+        }
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
         TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
@@ -6222,7 +6301,7 @@ function ajustarFluxogramaAoPapel(paper) {
   // A árvore é um flex centralizado: quando o conteúdo passa da largura, ele
   // sai pelos dois lados, e `scrollWidth` não conta o que transborda à
   // esquerda. Medir a extensão real das caixas evita cortar a primeira.
-  const caixas = Array.from(arvore.querySelectorAll(".fluxo-no"));
+  const caixas = Array.from(arvore.querySelectorAll(".fluxo-no, .fluxo-balao"));
   const bordas = caixas.map((c) => c.getBoundingClientRect());
   const largura = bordas.length
     ? Math.max(...bordas.map((r) => r.right)) - Math.min(...bordas.map((r) => r.left))
@@ -6283,11 +6362,14 @@ let elementoComFocoAntesDoExportEstrutura = null;
 function abrirDialogoExportEstrutura() {
   const visao = visaoDeEstrutura(state.estruturaVisao);
   if (!visao) return;
-  document.getElementById("estrutura-export-mensagem").textContent =
-    `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} e ` +
-    `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}. O documento sai em A4 paisagem, com o organograma ` +
-    `e a equipe de cada unidade` +
-    (minutaEmTela(visao) ? ", carimbado como minuta de proposta." : ".");
+  document.getElementById("estrutura-export-mensagem").textContent = visaoEstrutural(visao)
+    ? `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} e ` +
+      `${plural(visao.totalDeCargos || 0, "cargo", "cargos")}. O documento sai em A4 paisagem, com o organograma ` +
+      `e o cargo de cada unidade, carimbado como minuta de proposta.`
+    : `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} e ` +
+      `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}. O documento sai em A4 paisagem, com o organograma ` +
+      `e a equipe de cada unidade` +
+      (minutaEmTela(visao) ? ", carimbado como minuta de proposta." : ".");
 
   elementoComFocoAntesDoExportEstrutura = document.activeElement;
   document.getElementById("estrutura-export-backdrop").hidden = false;

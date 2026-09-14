@@ -261,10 +261,10 @@ quem responde em azul no título. Na estrutura atual os três DAS-3 da Divisão 
 Desenvolvimento de Sistemas aparecem assim, um em cada caixa, e sem linha de
 apoio: a relação de lotação não declara o escopo de nenhuma das três, e
 preencher a linha com "escopo a definir" repetido três vezes seria ocupar o
-desenho com o que ele não sabe. Onde a frente está declarada — o que a minuta
-propõe —, ela vira o próprio título da caixa, porque ali o desenho mostra
-posição e não pessoa. Quem decide é o campo `funcao` da pessoa no arquivo de
-dados, não uma opção de tela.
+desenho com o que ele não sabe. Na minuta, as frentes são da unidade e não de
+pessoas: o Núcleo de Desenvolvimento de Sistemas declara `frentes` —
+Desenvolvimento, Sustentação e Modernização de Sistema — e cada uma ganha uma
+caixa com o nome da frente e nada mais.
 
 **Cada camada tem a sua cor**, e a cor vem da natureza declarada da unidade, não
 da posição em que ela é desenhada — com Superintendência, Diretoria, Coordenação
@@ -285,15 +285,26 @@ em cor de aviso, não em azul: não é nome, é pendência. A caixa traz ainda o
 nível do cargo e o quadro em números; nome de quem não é chefia ou gerência não
 aparece no desenho.
 
-**A minuta, ao contrário, desenha cargo e não pessoa.** Cada caixa dela traz no
-selo o nível e o cargo que o ocupa — `DIRETORIA · DAS-4`, `COORDENAÇÃO · DAS-3`,
-`NÚCLEO · TERCEIRIZADOS` e, no Banco de Dados, `NÚCLEO · EFETIVOS` —, e o único nome no organograma proposto é o do
-titular de hoje na Superintendência. Enquanto a designação depende de ato,
-nomear quem ocupa o quê daria por decidido o que não está; o quadro de cada
-unidade continua na lista que abre no clique e na folha exportada, que é onde
-ele é informação e não anúncio. Quem controla isso é o campo `cargo` da unidade
-no arquivo de dados: declarado, a caixa vira posição; ausente, ela mostra o
-titular.
+**A minuta, ao contrário, desenha estrutura e não pessoas.** Nenhuma unidade
+dela declara quadro nominal: cada caixa traz no selo o nível e o cargo que o
+ocupa — `DIRETORIA · DAS-4`, `COORDENAÇÃO · DAS-3`, `NÚCLEO · TERCEIRIZADOS` e,
+no Banco de Dados, `NÚCLEO · EFETIVOS` —, e o único nome do desenho é o do
+titular de hoje na Superintendência. Não há contagem de pessoas na caixa, nem
+chamada de equipe, nem caixa clicável: sem quadro nominal não há lista para
+abrir. Enquanto a criação de unidade e a designação de chefia dependem de ato,
+lotar nomes na proposta daria por decidido o que não está — quem quiser ver
+quem está onde hoje usa a estrutura atual, que é onde esse dado existe.
+
+**Ao lado do topo, um balão verde com o total de cargos da proposta** — 45 —,
+que é o dimensionamento informado pela Diretoria e não uma conta do sistema: a
+relação de lotação traz 16 pessoas e a alocação da equipe técnica 27. O balão
+fica em posição absoluta dentro de um invólucro da largura do quadro, para não
+deslocar o topo do eixo vertical da árvore.
+
+Quem controla os dois comportamentos é o arquivo de dados, não a tela: a visão
+declara `estrutural: true` e `totalDeCargos`, e cada unidade declara `cargo` —
+com ele, a caixa vira posição; sem ele, mostra o titular, como na estrutura
+atual.
 
 **A estrutura sugerida.** A Diretoria passa a **Superintendência de Tecnologia
 da Informação**, e abaixo dela ficam **duas Diretorias**:
@@ -351,8 +362,8 @@ COPRO e COGOV são propostas — a denominação oficial vem no ato de criação
 a definir entre Processos de TIC, Núcleo de Banco de Dados e Governança
 Digital; a lacuna está registrada nas premissas, no arquivo de dados.
 
-**A equipe abre no clique.** Clicar na caixa de uma unidade abre, abaixo do
-desenho, a equipe alocada nela. Um painel por vez, e sempre no mesmo lugar:
+**Na estrutura atual, a equipe abre no clique.** Clicar na caixa de uma unidade
+abre, abaixo do desenho, a equipe alocada nela. Um painel por vez, e sempre no mesmo lugar:
 assim nenhuma caixa se mexe quando alguém abre uma divisão — a caixa que se
 quer ler não sai do lugar debaixo do cursor. A caixa aberta fica marcada e a
 chamada muda de "ver equipe alocada (36)" para "ocultar equipe (36)"; unidade
@@ -366,11 +377,12 @@ declarada, quando há) para quem vem da alocação. A distribuição por perfil 
 no título do bloco técnico: "1 master · 12 sêniores · 3 plenos · 7 juniores · 3
 estagiários".
 
-**Duas relações, contadas separadamente.** A linha de apoio do título resume o
-desenho em números: unidades, total de pessoas, quantas vêm da **relação de
-lotação** (com vínculo) e quantas da **equipe técnica** (alocada por perfil).
-Somá-las em um número só apagaria a diferença entre quadro próprio e equipe
-alocada.
+**Duas relações, contadas separadamente.** Na estrutura atual, a linha de apoio
+do título resume o desenho em números: unidades, total de pessoas, quantas vêm
+da **relação de lotação** (com vínculo) e quantas da **equipe técnica** (alocada
+por perfil). Somá-las em um número só apagaria a diferença entre quadro próprio
+e equipe alocada. Na minuta, onde não há quadro nominal, a mesma linha conta o
+que ela tem: **unidades e cargos**.
 
 **A árvore é `<ul>` aninhado com os conectores em CSS**: sem biblioteca, sem
 canvas e sem posição calculada em JavaScript, o desenho acompanha o texto
@@ -379,9 +391,9 @@ Em tela estreita ele rola dentro do próprio quadro, sem empurrar a página, e
 abre centrado na raiz.
 
 **A busca destaca, não recorta.** Com um termo em vigor, o fluxograma continua
-mostrando a estrutura inteira e acende as caixas correspondentes. Como os nomes
-estão atrás de um clique, um termo que case com pessoa **abre sozinho** o painel
-da unidade dela e destaca quem bate; quando o termo deixa de casar com alguém, o
+mostrando a estrutura inteira e acende as caixas correspondentes. Como na
+estrutura atual os nomes estão atrás de um clique, um termo que case com pessoa
+**abre sozinho** o painel da unidade dela e destaca quem bate; quando o termo deixa de casar com alguém, o
 painel que a busca abriu se fecha — o que foi aberto à mão fica aberto. Procura
 por unidade, sigla, pessoa, matrícula, cargo, perfil de senioridade, função
 declarada ou vínculo: "217406" traz a pessoa, "Sênior IV" traz os dois perfis,
@@ -398,7 +410,9 @@ nome da pessoa não caber. Traz o cabeçalho institucional, o título da visão 
 os números, **o mesmo organograma que está em tela** — desenhado pela mesma
 função, em modo de papel: sem botão, sem chamada de ação e sem caixa aberta — e
 a **equipe de cada unidade** listada com cargo, matrícula, vínculo ou perfil de
-senioridade. A folha sai branca mesmo com o app no tema escuro, porque os
+senioridade. Na minuta, onde não há quadro nominal, essa seção vira **cargos
+por unidade**: nível, cargo, as frentes declaradas e o que a proposta diz sobre
+a composição de cada uma. A folha sai branca mesmo com o app no tema escuro, porque os
 tokens de cor são redefinidos dentro dela em vez de a árvore ser redesenhada.
 
 **Quando a árvore não cabe na largura da folha, ela é reduzida em bloco** — a
