@@ -301,17 +301,22 @@ pessoas: o Núcleo de Desenvolvimento de Sistemas declara `frentes` —
 Desenvolvimento, Sustentação e Modernização de Sistema — e cada uma ganha uma
 caixa com o nome da frente e nada mais.
 
-**Cada camada tem a sua cor**, e a cor vem da natureza declarada da unidade, não
-da posição em que ela é desenhada — com Superintendência, Diretoria, Coordenação
-e Núcleo na mesma árvore, "nível 2" deixaria de significar uma coisa só. Navy no
-topo, azul nas Diretorias, navy institucional na camada de operação, tom mais
-claro nos Núcleos e azul de reunião na caixa das gerências. **Divisão,
-Coordenação e Seção seguem o mesmo padrão**: as três ocupam a mesma camada, e
-destacar uma delas em cor própria sugeriria uma hierarquia que não existe entre
-elas — é por isso que a Seção de Atendimento ao Usuário deixou de sair em
-vermelho. Unidade que a minuta cria fica **tracejada com o topo verde**,
-mantendo a cor da sua camada: trocar o fundo pelo verde apagaria a hierarquia
-justamente onde ela muda.
+**Uma medida e uma cor para toda caixa, e o destaque só no topo.** Com cinco
+camadas na mesma árvore, largura e cor diferentes em cada uma faziam a mesma
+linha parecer desalinhada e o desenho, desorganizado — e a profundidade já se lê
+pela posição e pelos conectores, que é para isso que eles existem. Todas as
+caixas são iguais: 182px, fundo azul-claro institucional e borda superior navy
+mais grossa. Só a caixa de onde o desenho parte — a Diretoria na estrutura
+atual, a Superintendência na minuta — sai do padrão, em painel navy cheio com a
+borda vermelha institucional.
+
+Duas distinções sobrevivem, e nenhuma é de camada: unidade que a **minuta cria**
+fica com a mesma caixa **tracejada**, porque a proposta cria cinco unidades e
+mantém as outras, e o **título da caixa de gerência** segue no azul dos
+responsáveis, porque ali ele é nome de pessoa e não de unidade. As classes de
+camada continuam no HTML (`--unidade`, `--diretoria-filha`, `--nucleo`,
+`--gerencia`) como marca do nível, para a busca e para o teste, sem cor nem
+medida próprias.
 
 **Na estrutura atual, o nome de quem responde pela unidade vai em azul, em linha
 própria** — é o que se procura primeiro em um organograma, e em cinza de apoio

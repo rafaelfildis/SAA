@@ -2923,16 +2923,20 @@ html, body { overflow-x: hidden; }
 }
 .fluxo-balao__seta { flex: 0 0 auto; }
 
+/* Caixa padrão do organograma. Uma medida e uma cor para toda unidade do
+   desenho: com cinco camadas, largura e cor diferentes em cada uma faziam a
+   mesma linha parecer desalinhada, e a profundidade já se lê pela posição na
+   árvore e pelos conectores. O destaque fica só no topo. */
 .fluxo-no {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 176px;
+  width: 182px;
   padding: 10px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-top: 3px solid var(--color-text-tertiary);
+  background: var(--cat-presencial-bg);
+  border: 1px solid var(--cat-presencial-borda);
+  border-top: 4px solid var(--cat-presencial);
   border-radius: var(--raio-pequeno);
   box-shadow: var(--sombra-leve);
   text-align: left;
@@ -2971,13 +2975,13 @@ button.fluxo-no:focus-visible { outline: 2px solid var(--color-secondary); outli
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-text-secondary);
+  color: var(--cat-presencial);
 }
 .fluxo-no__titulo {
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.25;
-  color: var(--color-heading);
+  color: var(--cat-presencial);
   text-wrap: pretty;
   overflow-wrap: break-word;
 }
@@ -3027,63 +3031,18 @@ button.fluxo-no:focus-visible { outline: 2px solid var(--color-secondary); outli
 button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 .fluxo-no--diretoria.is-aberta { box-shadow: 0 0 0 2px var(--color-brand-red), var(--sombra-cartao); }
 
-/* Divisão: camada de operação, no navy institucional. */
-.fluxo-no--unidade {
-  border-top: 4px solid var(--cat-presencial);
-  border-left: 1px solid var(--cat-presencial-borda);
-  border-right: 1px solid var(--cat-presencial-borda);
-  border-bottom: 1px solid var(--cat-presencial-borda);
-  background: var(--cat-presencial-bg);
-}
-.fluxo-no--unidade .fluxo-no__selo { color: var(--cat-presencial); }
-.fluxo-no--unidade .fluxo-no__titulo { color: var(--cat-presencial); }
+/* Unidade que a minuta cria: mesma caixa das demais, com a borda tracejada. A
+   distinção precisa existir — a proposta cria cinco unidades e mantém as
+   outras —, mas em cor própria ela voltaria a quebrar o padrão. */
+.fluxo-no--nova { border-style: dashed; }
 
-/* Diretoria subordinada à Superintendência: segunda camada de comando, entre
-   o navy do topo e o azul das divisões. Caixa mais larga porque é ela que
-   segura duas ou três divisões abaixo. */
-.fluxo-no--diretoria-filha {
-  width: 200px;
-  border-top: 5px solid var(--color-secondary);
-  border-left: 1px solid var(--color-secondary);
-  border-right: 1px solid var(--color-secondary);
-  border-bottom: 1px solid var(--color-secondary);
-  background: var(--color-secondary-tint);
-}
-.fluxo-no--diretoria-filha .fluxo-no__selo { color: var(--color-secondary); }
-.fluxo-no--diretoria-filha .fluxo-no__titulo { color: var(--color-secondary); font-size: 0.84rem; }
+/* As classes de camada — --unidade, --diretoria-filha, --nucleo, --gerencia —
+   seguem no HTML como marca do nível, e servem à busca e ao teste. Cor e
+   medida próprias elas não têm: o desenho é padronizado de propósito.
 
-/* Unidade que a minuta cria: tracejada e com o topo verde, mantendo a cor da
-   camada a que pertence. Trocar o fundo pelo verde apagaria a hierarquia
-   justamente onde ela muda. */
-.fluxo-no--nova { border-style: dashed; border-top-color: var(--color-success); }
-.fluxo-no--nova .fluxo-no__selo { color: var(--color-success); }
-
-/* Núcleo: camada mais fina da operação, subordinada a uma Coordenação. Fica na
-   mesma família azul da operação, em tom mais claro e caixa mais estreita —
-   mesma origem, um passo abaixo. Cor de outra família sugeriria unidade de
-   outra natureza, que não é o caso. */
-.fluxo-no--nucleo {
-  width: 158px;
-  border-top: 3px solid var(--color-accent);
-  border-left: 1px solid var(--cat-presencial-borda);
-  border-right: 1px solid var(--cat-presencial-borda);
-  border-bottom: 1px solid var(--cat-presencial-borda);
-  background: var(--color-surface-alt);
-}
-.fluxo-no--nucleo .fluxo-no__selo { color: var(--color-accent); }
-.fluxo-no--nucleo .fluxo-no__titulo { color: var(--cat-presencial); font-size: 0.78rem; }
-
-/* Gerência: terceiro nível, azul de reunião. O título é o nome da pessoa, e
-   por isso segue a mesma cor dos demais responsáveis. */
-.fluxo-no--gerencia {
-  width: 152px;
-  border-top: 4px solid var(--color-accent);
-  border-left: 1px solid var(--cat-online-borda);
-  border-right: 1px solid var(--cat-online-borda);
-  border-bottom: 1px solid var(--cat-online-borda);
-  background: var(--cat-online-bg);
-}
-.fluxo-no--gerencia .fluxo-no__selo { color: var(--color-accent); }
+   A exceção é o título da caixa de gerência, que ali é nome de pessoa e não de
+   unidade: segue no azul dos responsáveis, como em toda caixa do fluxo. É
+   distinção de conteúdo, não de camada. */
 .fluxo-no--gerencia .fluxo-no__titulo { color: var(--color-secondary); }
 /* Caixa que corresponde à busca em vigor: o fluxograma continua mostrando a
    estrutura inteira, e o destaque diz onde está o que se procurou. */
@@ -3103,9 +3062,8 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 }
 
 @media (max-width: 860px) {
-  .fluxo-no { width: 162px; }
+  .fluxo-no { width: 166px; }
   .fluxo-no--diretoria { width: 210px; }
-  .fluxo-no--gerencia { width: 146px; }
 
   /* O alternador da agenda (linha do tempo × tabela) sai no celular porque a
      tabela sai com ele. Aqui as duas visões são o próprio módulo: escolher
@@ -3275,20 +3233,18 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
    acumula três Coordenações sob uma Diretoria e mais duas sob a outra, e na
    medida de tela a árvore passaria da folha. As medidas deixam folga de
    propósito — acrescentar uma unidade não deve estourar a página. */
-.fluxo--export .fluxo-no { width: 124px; padding: 8px 9px; box-shadow: none; }
+.fluxo--export .fluxo-no { width: 140px; padding: 8px 9px; box-shadow: none; }
 .fluxo--export .fluxo-no--diretoria { width: 200px; }
-/* A caixa de gerência é mais larga no papel: na minuta o título dela é o nome
-   de uma frente ("Líder Técnica de Desenvolvimento de Sistemas"), e na medida
-   das demais uma palavra dessas quebrava no meio. */
-.fluxo--export .fluxo-no--gerencia { width: 136px; }
-.fluxo--export .fluxo-balao { left: calc(100% + 14px); top: 10px; padding: 5px 10px 5px 9px; font-size: 0.66rem; }
-.fluxo--export .fluxo-no--gerencia .fluxo-no__titulo { font-size: 0.72rem; }
-.fluxo--export .fluxo-no--diretoria-filha { width: 150px; }
-.fluxo--export .fluxo-no--nucleo { width: 118px; }
+.fluxo--export .fluxo-balao { left: calc(100% + 14px); top: 10px; padding: 5px 10px; font-size: 0.66rem; }
 .fluxo--export .fluxo-no__selo { font-size: 0.55rem; }
 /* No papel o título é a sigla, e o nome da unidade vem na primeira linha —
    por isso a sigla pode crescer e a linha seguinte ganha destaque. */
-.fluxo--export .fluxo-no__titulo { font-size: 0.82rem; letter-spacing: 0.01em; }
+/* Uma medida de título para todas as caixas, como o resto do padrão. A medida
+   é ditada pela palavra mais longa do desenho: "Desenvolvimento" ocupa 112px
+   nesta medida, contra 120px de texto disponível na caixa padronizada. Em
+   0.76rem a folga caía para 1px e a palavra quebrava no meio na rasterização.
+   */
+.fluxo--export .fluxo-no__titulo { font-size: 0.72rem; letter-spacing: 0.01em; }
 .fluxo--export .fluxo-no__linha { font-size: 0.63rem; line-height: 1.3; }
 .fluxo--export .fluxo-no__subtitulo { font-size: 0.63rem; }
 .fluxo--export .fluxo-no__responsavel { font-size: 0.68rem; }
