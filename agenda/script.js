@@ -5583,7 +5583,8 @@ function noDoFluxo({ classe, selo, titulo, linhas, destacado, unidade, aberta, c
   }`;
 
   // Só unidade abre equipe. Caixa de pessoa não é botão: um controle que não
-  // faz nada ao ser clicado é pior do que um texto que nunca prometeu nada.
+  // faz nada ao ser clicado é pior do que um texto que nunca prometeu nada. No
+  // papel, nada abre: toda caixa vira div.
   if (!unidade) return `<div class="${classes}">${corpo}</div>`;
 
   return `
@@ -5633,7 +5634,7 @@ function noDePessoa(pessoa, classe, busca) {
   });
 }
 
-function filhosDoFluxo(u, busca) {
+function filhosDoFluxo(u, busca, paraPapel) {
   const titular = titularDaUnidade(u);
   const gerencias = pessoasDoPapel(u, "gerencia")
     .filter((p) => p !== titular)
@@ -5642,29 +5643,94 @@ function filhosDoFluxo(u, busca) {
   const secoes = subunidadesDe(u).map((su) => {
     const titular = titularDaUnidade(su);
     const destacado =
+      !paraPapel &&
       Boolean(busca) &&
       (textoDaUnidade(su).includes(busca) ||
         pessoasDaUnidade(su).some((p) => pessoaBate(p, busca)));
-    const aberta = state.estruturaUnidadeAberta === su.sigla;
+    const aberta = !paraPapel && state.estruturaUnidadeAberta === su.sigla;
     const no = noDoFluxo({
       classe: "secao",
       selo: su.natureza || "",
-      titulo: `${su.sigla} — ${su.nome}`,
+      titulo: paraPapel ? su.sigla : `${su.sigla} — ${su.nome}`,
       linhas: [
+        paraPapel ? su.nome : "",
         titular ? titular.nome : "chefia a confirmar",
         titular ? papelResumido(titular, "Gerência") : "",
         su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
       ],
       destacado,
-      unidade: su.sigla,
+      unidade: paraPapel ? "" : su.sigla,
       aberta,
-      chamada: chamadaDeEquipe(su, aberta),
+      chamada: paraPapel ? "" : chamadaDeEquipe(su, aberta),
     });
-    const netos = filhosDoFluxo(su, busca);
+    const netos = filhosDoFluxo(su, busca, paraPapel);
     return `<li>${no}${netos ? `<ul>${netos}</ul>` : ""}</li>`;
   });
 
   return [...gerencias, ...secoes].filter(Boolean).join("");
+}
+
+// Monta a árvore e devolve o HTML. Serve a tela e o papel: o organograma
+// exportado é o mesmo que está em tela, e não um segundo desenho para
+// divergir do primeiro na próxima mudança.
+function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
+  const topo = visao.topo;
+  const diretor = titularDaUnidade(topo);
+  const topoAberto = !paraPapel && state.estruturaUnidadeAberta === topo.sigla;
+
+  const noTopo = noDoFluxo({
+    classe: "diretoria",
+    selo: topo.natureza || "",
+    titulo: paraPapel ? topo.sigla : `${topo.sigla} — ${topo.nome}`,
+    linhas: [
+      paraPapel ? topo.nome : "",
+      diretor ? `${diretor.nome}${diretor.cargo ? ` · ${diretor.cargo}` : ""}` : "chefia a confirmar",
+    ],
+    destacado:
+      !paraPapel &&
+      Boolean(busca) &&
+      (textoDaUnidade(topo).includes(busca) ||
+        pessoasDaUnidade(topo).some((p) => pessoaBate(p, busca))),
+    unidade: paraPapel ? "" : topo.sigla,
+    aberta: topoAberto,
+    chamada: paraPapel ? "" : chamadaDeEquipe(topo, topoAberto),
+  });
+
+  const ramos = visao.unidades
+    .map((u) => {
+      const titular = titularDaUnidade(u);
+      const aberta = !paraPapel && state.estruturaUnidadeAberta === u.sigla;
+      const destacado =
+        !paraPapel &&
+        Boolean(busca) &&
+        (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
+      const no = noDoFluxo({
+        classe: u.estado === "nova" ? "unidade-nova" : "unidade",
+        selo: u.natureza || "",
+        titulo: paraPapel ? u.sigla : `${u.sigla} — ${u.nome}`,
+        linhas: [
+          paraPapel ? u.nome : "",
+          titular ? titular.nome : minutaEmTela(visao) ? "chefia a designar" : "chefia a confirmar",
+          titular ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia") : "",
+          resumoDeQuadro(u),
+        ],
+        destacado,
+        unidade: paraPapel ? "" : u.sigla,
+        aberta,
+        chamada: paraPapel ? "" : chamadaDeEquipe(u, aberta),
+      });
+      const filhos = filhosDoFluxo(u, busca, paraPapel);
+      return `<li>${no}${filhos ? `<ul>${filhos}</ul>` : ""}</li>`;
+    })
+    .join("");
+
+  return `
+    <ul class="fluxo">
+      <li>
+        ${noTopo}
+        <ul>${ramos}</ul>
+      </li>
+    </ul>`;
 }
 
 function renderizarFluxograma(visao) {
@@ -5672,59 +5738,7 @@ function renderizarFluxograma(visao) {
   if (!alvo) return;
 
   const busca = buscaAtivaEstrutura();
-  const topo = visao.topo;
-  const diretor = titularDaUnidade(topo);
-
-  const topoAberto = state.estruturaUnidadeAberta === topo.sigla;
-  const noTopo = noDoFluxo({
-    classe: "diretoria",
-    selo: topo.natureza || "",
-    titulo: `${topo.sigla} — ${topo.nome}`,
-    linhas: [
-      diretor ? `${diretor.nome}${diretor.cargo ? ` · ${diretor.cargo}` : ""}` : "chefia a confirmar",
-    ],
-    destacado:
-      Boolean(busca) &&
-      (textoDaUnidade(topo).includes(busca) ||
-        pessoasDaUnidade(topo).some((p) => pessoaBate(p, busca))),
-    unidade: topo.sigla,
-    aberta: topoAberto,
-    chamada: chamadaDeEquipe(topo, topoAberto),
-  });
-
-  const ramos = visao.unidades
-    .map((u) => {
-      const titular = titularDaUnidade(u);
-      const destacado =
-        Boolean(busca) &&
-        (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
-      const aberta = state.estruturaUnidadeAberta === u.sigla;
-      const no = noDoFluxo({
-        classe: u.estado === "nova" ? "unidade-nova" : "unidade",
-        selo: u.natureza || "",
-        titulo: `${u.sigla} — ${u.nome}`,
-        linhas: [
-          titular ? titular.nome : minutaEmTela(visao) ? "chefia a designar" : "chefia a confirmar",
-          titular ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia") : "",
-          resumoDeQuadro(u),
-        ],
-        destacado,
-        unidade: u.sigla,
-        aberta,
-        chamada: chamadaDeEquipe(u, aberta),
-      });
-      const filhos = filhosDoFluxo(u, busca);
-      return `<li>${no}${filhos ? `<ul>${filhos}</ul>` : ""}</li>`;
-    })
-    .join("");
-
-  alvo.innerHTML = `
-    <ul class="fluxo">
-      <li>
-        ${noTopo}
-        <ul>${ramos}</ul>
-      </li>
-    </ul>`;
+  alvo.innerHTML = montarFluxograma(visao, { busca });
 
   // A árvore é centrada e mais larga que a tela em telefone: com a rolagem em
   // zero, o que aparece é a margem vazia à esquerda, e não a Diretoria.
@@ -5926,6 +5940,240 @@ function renderizarPortalEstrutura() {
   );
 }
 
+/* --------------------------------------------------------------------------
+   Exportação da estrutura em PDF e JPEG
+   --------------------------------------------------------------------------
+   Mesmo caminho dos demais módulos: a folha é montada em HTML no tamanho real
+   do artefato, rasterizada pelo html2canvas e entregue como JPEG ou paginada
+   em PDF pelo jsPDF. Um só ponto de construção, então os dois formatos não
+   divergem entre si nem do que está em tela.
+
+   Duas diferenças, e as duas por causa do conteúdo:
+
+   · A folha é A4 paisagem. Um organograma de quatro níveis em retrato
+     obrigaria a comprimir as caixas até o nome da pessoa não caber.
+   · O organograma sai do mesmo montarFluxograma() que desenha a tela, em modo
+     de papel — sem botão, sem chamada de ação e sem caixa aberta. Um segundo
+     desenho só para o PDF divergiria do primeiro na próxima mudança.
+   -------------------------------------------------------------------------- */
+
+// Linha de uma pessoa no papel: nome à esquerda, o que a identifica à direita.
+// Linhas em bloco, e não em colunas de texto, porque o html2canvas rasteriza
+// layout multicoluna de forma imprevisível — e uma lista de pessoal cortada ao
+// meio é pior do que uma lista mais longa.
+function linhaPessoaExport(pessoa) {
+  const direita =
+    pessoa.papel === "tecnica"
+      ? [pessoa.nivel, pessoa.funcao].filter(Boolean).join(" · ")
+      : [pessoa.cargo, pessoa.matricula ? `mat. ${pessoa.matricula}` : "", pessoa.vinculo]
+          .filter(Boolean)
+          .join(" · ");
+  return `
+    <div style="display:flex;align-items:baseline;gap:12px;padding:3px 0;border-bottom:1px solid ${EXP.bordaSuave}">
+      <span style="flex:1 1 auto;font:400 10.5px/1.4 'IBM Plex Sans',sans-serif;color:${EXP.tinta}">${escapeHtml(pessoa.nome)}</span>
+      <span style="flex:0 0 auto;font:400 9.5px/1.4 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right">${escapeHtml(direita)}</span>
+    </div>`;
+}
+
+function blocoUnidadeExport(u, minuta) {
+  const titular = titularDaUnidade(u);
+  const pessoas = pessoasDaUnidade(u).filter((p) => p !== titular);
+  const grupos = PAPEIS_UNIDADE.map((papel) => ({
+    ...papel,
+    pessoas: pessoas.filter((p) => (p.papel || "equipe") === papel.id),
+  })).filter((g) => g.pessoas.length);
+
+  const cabecalho = `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:5px;border-bottom:1.5px solid ${EXP.navy}">
+      <span style="font:700 11.5px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.navy}">${escapeHtml(`${u.sigla} — ${u.nome}`)}</span>
+      <span style="font:400 10px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-align:right">${escapeHtml(
+        [
+          titular
+            ? `${titular.nome} · ${papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")}`
+            : minuta
+            ? "Chefia a designar"
+            : "Chefia a confirmar",
+          resumoDeQuadro(u),
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      )}</span>
+    </div>`;
+
+  const corpo = grupos.length
+    ? grupos
+        .map((g) => {
+          const faixas = g.id === "tecnica" ? distribuicaoDeSenioridade(g.pessoas) : "";
+          return `
+        <div style="margin-top:9px">
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:3px">
+            <span style="font:600 9px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${EXP.texto2}">${escapeHtml(
+              `${g.rotulo.toUpperCase()} · ${g.pessoas.length}`
+            )}</span>
+            ${faixas ? `<span style="font:400 9px/1 'IBM Plex Sans',sans-serif;color:${EXP.link}">${escapeHtml(faixas)}</span>` : ""}
+          </div>
+          ${g.pessoas.map(linhaPessoaExport).join("")}
+        </div>`;
+        })
+        .join("")
+    : `<div style="margin-top:8px;font:400 10px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-wrap:pretty">${escapeHtml(
+        u.lotacao || u.observacao || "A unidade não registra equipe além da chefia."
+      )}</div>`;
+
+  return `<div style="margin-bottom:16px;break-inside:avoid">${cabecalho}${corpo}</div>`;
+}
+
+function construirExtratoEstrutura(visao) {
+  const minuta = minutaEmTela(visao);
+  const unidades = [visao.topo, ...unidadesDaVisao(visao)];
+  const efetivos = contarVinculo(visao, "Efetivo");
+  const comissionados = contarVinculo(visao, "Comissionado");
+  const tecnicos = contarTecnicos(visao);
+  const naRelacao = pessoasDaVisao(visao) - tecnicos;
+
+  const paper = document.createElement("div");
+  paper.className = "export-paper export-paper--paisagem";
+  paper.style.cssText =
+    "width:1123px;min-height:794px;background:#fff;padding:44px 48px 36px;display:flex;flex-direction:column;" +
+    "font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";box-sizing:border-box;";
+
+  paper.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px">
+      <div style="display:flex;align-items:center;gap:14px">
+        ${marcaImg("tcm-lockup.png", 44, "Tribunal de Contas dos Municípios do Estado da Bahia")}
+        ${marcaImg("tcm-55.png", 44, "55 anos de serviços prestados à sociedade")}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;text-align:right">
+        <span style="font:700 13px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">ESTRUTURA DTI</span>
+        <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Diretoria de Tecnologia da Informação</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">SAA · Sistema de Agenda Automatizada</span>
+      </div>
+    </div>
+
+    <div style="display:flex;margin:14px 0 22px">
+      <span style="width:64px;height:3px;background:${EXP.vermelho}"></span>
+      <span style="flex:1;height:3px;background:${EXP.navy}"></span>
+    </div>
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-bottom:18px">
+      <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+        <span style="font:700 22px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.01em">${escapeHtml(visao.rotulo)}</span>
+        <span style="font:400 11px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(
+          `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
+            `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
+            `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`
+        )}</span>
+      </div>
+      ${
+        // A minuta sai carimbada. Um organograma proposto impresso sem
+        // ressalva circula como se fosse a estrutura vigente.
+        minuta
+          ? `<div style="flex:0 0 auto;padding:7px 13px;border:1.5px solid ${EXP.vermelho};border-radius:4px;text-align:center">
+               <div style="font:700 10px/1.2 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${EXP.vermelhoTexto}">MINUTA DE PROPOSTA</div>
+               <div style="font:400 9px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.texto2};margin-top:2px">sem valor de ato administrativo</div>
+             </div>`
+          : ""
+      }
+    </div>
+
+    <div class="fluxograma fluxo--export" style="align-self:center;margin-bottom:26px">
+      ${montarFluxograma(visao, { paraPapel: true })}
+    </div>
+
+    <div style="display:flex;flex-direction:column;flex:1">
+      <div style="font:600 9.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:${EXP.texto2};padding-bottom:10px;border-bottom:1px solid ${EXP.borda};margin-bottom:14px">
+        EQUIPE POR UNIDADE
+      </div>
+      ${unidades.map((u) => blocoUnidadeExport(u, minuta)).join("")}
+    </div>
+
+    <div style="margin-top:auto;padding-top:14px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+      <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:620px;text-wrap:pretty">
+        Documento gerado pelo SAA a partir da relação de lotação e da alocação da equipe técnica da DTI. Os campos que as relações não declaram constam do arquivo de dados do módulo como pendências a confirmar.
+      </div>
+      <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
+        TCM-BA · SAA<br>${escapeHtml(formatarDataLonga(new Date()))}
+      </div>
+    </div>
+  `;
+  return paper;
+}
+
+async function exportarEstrutura(tipo) {
+  await precarregarMarcas();
+  const visao = visaoDeEstrutura(state.estruturaVisao);
+  const paper = construirExtratoEstrutura(visao);
+  const canvas = await renderizarCanvasElemento(paper, 2);
+
+  const carimbo = new Date().toISOString().slice(0, 10);
+  const nomeBase = `estrutura-dti-tcm-ba-${state.estruturaVisao}-${carimbo}`;
+
+  if (tipo === "jpeg") {
+    const link = document.createElement("a");
+    link.download = `${nomeBase}.jpg`;
+    link.href = canvas.toDataURL("image/jpeg", 0.95);
+    link.click();
+    return;
+  }
+
+  // Mesma paginação dos demais extratos, em paisagem: a folha é desenhada
+  // inteira e reposicionada página a página quando passa de uma.
+  const { jsPDF } = window.jspdf;
+  const img = canvas.toDataURL("image/jpeg", 0.95);
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const larguraMm = 297;
+  const alturaPaginaMm = 210;
+  const alturaTotalMm = (canvas.height * larguraMm) / canvas.width;
+  let deslocamento = 0;
+  let primeira = true;
+  while (deslocamento < alturaTotalMm - 1) {
+    if (!primeira) pdf.addPage();
+    pdf.addImage(img, "JPEG", 0, -deslocamento, larguraMm, alturaTotalMm);
+    deslocamento += alturaPaginaMm;
+    primeira = false;
+  }
+  pdf.save(`${nomeBase}.pdf`);
+}
+
+let elementoComFocoAntesDoExportEstrutura = null;
+
+function abrirDialogoExportEstrutura() {
+  const visao = visaoDeEstrutura(state.estruturaVisao);
+  if (!visao) return;
+  document.getElementById("estrutura-export-mensagem").textContent =
+    `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} e ` +
+    `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}. O documento sai em A4 paisagem, com o organograma ` +
+    `e a equipe de cada unidade` +
+    (minutaEmTela(visao) ? ", carimbado como minuta de proposta." : ".");
+
+  elementoComFocoAntesDoExportEstrutura = document.activeElement;
+  document.getElementById("estrutura-export-backdrop").hidden = false;
+  document.getElementById("estrutura-export-modal").hidden = false;
+  document.getElementById("btn-estrutura-pdf").focus();
+}
+
+function fecharDialogoExportEstrutura() {
+  document.getElementById("estrutura-export-backdrop").hidden = true;
+  document.getElementById("estrutura-export-modal").hidden = true;
+  if (elementoComFocoAntesDoExportEstrutura) elementoComFocoAntesDoExportEstrutura.focus();
+}
+
+async function baixarEstrutura(tipo, btn) {
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = tipo === "pdf" ? "Gerando PDF…" : "Gerando JPEG…";
+  try {
+    await exportarEstrutura(tipo);
+    fecharDialogoExportEstrutura();
+  } catch (erro) {
+    console.error("Erro ao exportar a estrutura:", erro);
+    window.alert("Não foi possível gerar o arquivo: " + erro.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+  }
+}
+
 function inicializarModuloEstrutura() {
   // Delegação no fluxograma: o desenho é reconstruído a cada render, e um
   // ouvinte por caixa se perderia junto.
@@ -5940,11 +6188,18 @@ function inicializarModuloEstrutura() {
   const fechar = document.getElementById("btn-fechar-painel-unidade");
   if (fechar) fechar.addEventListener("click", fecharPainelDeUnidade);
 
-  // Esc fecha o painel quando ele é o que está aberto no módulo.
+  document.getElementById("btn-exportar-estrutura").addEventListener("click", abrirDialogoExportEstrutura);
+  document.getElementById("btn-fechar-estrutura-export").addEventListener("click", fecharDialogoExportEstrutura);
+  document.getElementById("estrutura-export-backdrop").addEventListener("click", fecharDialogoExportEstrutura);
+  document.getElementById("btn-estrutura-pdf").addEventListener("click", (ev) => baixarEstrutura("pdf", ev.currentTarget));
+  document.getElementById("btn-estrutura-jpeg").addEventListener("click", (ev) => baixarEstrutura("jpeg", ev.currentTarget));
+
+  // Esc fecha o que estiver aberto no módulo, na ordem em que se empilham: o
+  // diálogo de exportação vem por cima do painel de equipe.
   document.addEventListener("keydown", (ev) => {
-    if (ev.key !== "Escape") return;
-    if (state.modulo !== "estrutura" || !state.estruturaUnidadeAberta) return;
-    fecharPainelDeUnidade();
+    if (ev.key !== "Escape" || state.modulo !== "estrutura") return;
+    if (!document.getElementById("estrutura-export-modal").hidden) fecharDialogoExportEstrutura();
+    else if (state.estruturaUnidadeAberta) fecharPainelDeUnidade();
   });
 
   const grupo = document.getElementById("estrutura-visoes");

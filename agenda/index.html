@@ -652,6 +652,10 @@
                 <span>Estrutura sugerida</span>
               </button>
             </div>
+            <button id="btn-exportar-estrutura" class="btn btn--secondary" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span class="btn__label">Exportar estrutura</span>
+            </button>
           </div>
         </div>
 
@@ -933,6 +937,17 @@
       <button id="btn-fechar-plano-export" class="btn btn--ghost" type="button">Cancelar</button>
       <button id="btn-plano-jpeg" class="btn btn--secondary" type="button">Baixar JPEG</button>
       <button id="btn-plano-pdf" class="btn btn--primary" type="button">Baixar PDF</button>
+    </div>
+  </div>
+
+  <div id="estrutura-export-backdrop" class="panel-backdrop" hidden></div>
+  <div id="estrutura-export-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="estrutura-export-titulo" aria-describedby="estrutura-export-mensagem" hidden>
+    <h2 id="estrutura-export-titulo">Exportar estrutura da DTI</h2>
+    <p id="estrutura-export-mensagem"></p>
+    <div class="confirm-modal__acoes">
+      <button id="btn-fechar-estrutura-export" class="btn btn--ghost" type="button">Cancelar</button>
+      <button id="btn-estrutura-jpeg" class="btn btn--secondary" type="button">Baixar JPEG</button>
+      <button id="btn-estrutura-pdf" class="btn btn--primary" type="button">Baixar PDF</button>
     </div>
   </div>
 

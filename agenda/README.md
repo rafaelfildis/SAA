@@ -297,6 +297,26 @@ por unidade, sigla, pessoa, matrícula, cargo, perfil de senioridade, função
 declarada ou vínculo: "217406" traz a pessoa, "Sênior IV" traz os dois perfis,
 "QA" traz quem responde por QA e requisitos.
 
+**Exportar estrutura em PDF e JPEG.** Mesmo caminho dos demais módulos: o
+botão no cabeçalho abre o diálogo de formato e o documento é montado em HTML no
+tamanho real, rasterizado e entregue nos dois formatos pelo mesmo ponto de
+construção — PDF e JPEG não divergem entre si nem do que está em tela.
+
+A folha é **A4 paisagem**, e não retrato como o extrato do plano: um
+organograma de quatro níveis em retrato obrigaria a comprimir as caixas até o
+nome da pessoa não caber. Traz o cabeçalho institucional, o título da visão com
+os números, **o mesmo organograma que está em tela** — desenhado pela mesma
+função, em modo de papel: sem botão, sem chamada de ação e sem caixa aberta — e
+a **equipe de cada unidade** listada com cargo, matrícula, vínculo ou perfil de
+senioridade. A folha sai branca mesmo com o app no tema escuro, porque os
+tokens de cor são redefinidos dentro dela em vez de a árvore ser redesenhada.
+
+No papel, a sigla é o título da caixa e o nome da unidade desce para a primeira
+linha: a mesma informação, na ordem que o espaço permite. E **a minuta sai
+carimbada** — "MINUTA DE PROPOSTA · sem valor de ato administrativo" —, porque
+um organograma proposto impresso sem ressalva circula como se fosse a estrutura
+vigente.
+
 **O que o arquivo de dados guarda além do que a tela mostra.** O levantamento
 completo continua em `dados/estrutura.js` — atribuições de cada unidade,
 pendências ("chefia a confirmar", "quem executa o primeiro nível"), as

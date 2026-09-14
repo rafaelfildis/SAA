@@ -3053,3 +3053,54 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   .unidade-painel { padding: 14px 15px; }
   .unidade-painel__lista { columns: 1; }
 }
+
+/* ==========================================================================
+   ORGANOGRAMA NO PAPEL (exportação em PDF e JPEG)
+
+   A folha é sempre branca, mesmo quando o app está no tema escuro: os tokens
+   de cor são redefinidos aqui dentro, em vez de a árvore ser redesenhada com
+   estilo embutido. Assim o organograma exportado é o mesmo que está em tela —
+   um segundo desenho só para o PDF divergiria do primeiro na próxima mudança.
+   ========================================================================== */
+
+.export-paper--paisagem {
+  --color-surface: #FFFFFF;
+  --color-background: #F4F7FB;
+  --color-border: #DCE3EE;
+  --color-border-soft: #EDF1F7;
+  --color-primary: #0B3163;
+  --color-primary-dark: #071C38;
+  --color-secondary: #14448A;
+  --color-accent: #2C63B0;
+  --color-brand-red: #E30521;
+  --color-success: #0F7B5F;
+  --color-error: #D80425;
+  --color-error-strong: #B00320;
+  --color-heading: #0B3163;
+  --color-text-primary: #12203A;
+  --color-text-secondary: #5F6E88;
+  --color-text-tertiary: #64718E;
+  --sombra-leve: none;
+}
+
+/* Caixas mais estreitas no papel: a estrutura sugerida tem sete caixas no
+   nível mais largo, e na medida de tela a árvore passaria da folha. */
+.fluxo--export .fluxo-no { width: 132px; padding: 8px 10px; box-shadow: none; }
+.fluxo--export .fluxo-no--diretoria { width: 212px; }
+.fluxo--export .fluxo-no--gerencia { width: 124px; }
+.fluxo--export .fluxo-no__selo { font-size: 0.55rem; }
+/* No papel o título é a sigla, e o nome da unidade vem na primeira linha —
+   por isso a sigla pode crescer e a linha seguinte ganha destaque. */
+.fluxo--export .fluxo-no__titulo { font-size: 0.82rem; letter-spacing: 0.01em; }
+.fluxo--export .fluxo-no__linha:first-of-type { font-weight: 600; color: var(--color-text-primary); }
+.fluxo--export .fluxo-no__linha { font-size: 0.63rem; line-height: 1.3; }
+.fluxo--export .fluxo li { padding: 18px 5px 0; }
+.fluxo--export .fluxo li::before,
+.fluxo--export .fluxo li::after { height: 18px; }
+.fluxo--export .fluxo li:only-child { padding-top: 18px; }
+.fluxo--export .fluxo li:only-child > .fluxo-no::before,
+.fluxo--export .fluxo ul::before { top: -18px; height: 18px; }
+.fluxo--export .fluxo > li > ul { margin-top: 18px; }
+/* No papel nada abre: a chamada de ação e a seta não têm o que fazer. */
+.fluxo--export .fluxo-no__chamada,
+.fluxo--export .fluxo-no__seta { display: none; }
