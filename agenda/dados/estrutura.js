@@ -287,7 +287,10 @@
     tecnico("Jorge Luis Cruz Duarte", "Sênior II", "DBA"),
   ];
 
-  window.SAA_ESTRUTURA_VERSAO = "2026-09-13";
+  // Data do levantamento em que a estrutura se baseia. Não há semente a
+  // aplicar por navegador — a estrutura é lida do arquivo a cada carga —, mas
+  // a marca serve de registro de qual versão do levantamento está em tela.
+  window.SAA_ESTRUTURA_VERSAO = "2026-09-14";
 
   window.SAA_ESTRUTURA = {
     // Funções de TI usadas na comparação entre as duas visões. A pergunta que
