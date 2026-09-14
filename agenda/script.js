@@ -5576,8 +5576,17 @@ function classeDaUnidade(u) {
   const natureza = normalizarTexto(u.natureza || "");
   if (natureza.startsWith("superintendencia")) return "diretoria";
   if (natureza.startsWith("diretoria")) return "diretoria-filha";
-  if (natureza.startsWith("secao")) return "secao";
+  if (natureza.startsWith("nucleo")) return "nucleo";
+  // Divisão, Coordenação e Seção ocupam a mesma camada de operação e seguem o
+  // mesmo padrão: destacar uma delas em cor própria sugeriria uma hierarquia
+  // que não existe entre as três.
   return "unidade";
+}
+
+// A Seção de Atendimento não carrega o selo "Seção": a Diretoria pediu o termo
+// fora da caixa, e o nível da unidade já se lê pela posição no fluxo.
+function seloDaUnidade(u) {
+  return normalizarTexto(u.natureza || "").startsWith("secao") ? "" : u.natureza || "";
 }
 
 function noDoFluxo({
@@ -5587,6 +5596,7 @@ function noDoFluxo({
   subtitulo,
   responsavel,
   vago,
+  nomes,
   linhas,
   destacado,
   nova,
@@ -5603,6 +5613,9 @@ function noDoFluxo({
           ? `<span class="fluxo-no__responsavel${vago ? " fluxo-no__responsavel--vago" : ""}">${escapeHtml(responsavel)}</span>`
           : ""
       }
+      ${(nomes || [])
+        .map((n) => `<span class="fluxo-no__responsavel">${escapeHtml(n)}</span>`)
+        .join("")}
       ${(linhas || [])
         .filter(Boolean)
         .map((l) => `<span class="fluxo-no__linha">${escapeHtml(l)}</span>`)
@@ -5652,6 +5665,19 @@ function papelResumido(pessoa, rotulo) {
   return pessoa.cargo ? `${rotulo} · ${pessoa.cargo}` : rotulo;
 }
 
+// Caixa de grupo: um cargo repetido não vira três unidades no desenho. Os
+// nomes vão dentro, cada um em destaque, porque são todos responsáveis.
+function noDeGrupoDeGerencias(pessoas, busca) {
+  const das = nivelDoCargo(pessoas[0]);
+  return noDoFluxo({
+    classe: "gerencia",
+    selo: das,
+    titulo: pessoas.length === 1 ? "Gerente de TI" : "Gerentes de TI",
+    nomes: pessoas.map((p) => p.nome),
+    destacado: Boolean(busca) && pessoas.some((p) => pessoaBate(p, busca)),
+  });
+}
+
 function noDePessoa(pessoa, classe, busca) {
   return noDoFluxo({
     classe,
@@ -5669,9 +5695,8 @@ let visaoEmMontagem = null;
 
 function filhosDoFluxo(u, busca, paraPapel) {
   const titular = titularDaUnidade(u);
-  const gerencias = pessoasDoPapel(u, "gerencia")
-    .filter((p) => p !== titular)
-    .map((p) => `<li>${noDePessoa(p, "gerencia", busca)}</li>`);
+  const gerentes = pessoasDoPapel(u, "gerencia").filter((p) => p !== titular);
+  const gerencias = gerentes.length ? [`<li>${noDeGrupoDeGerencias(gerentes, busca)}</li>`] : [];
 
   const secoes = subunidadesDe(u).map((su) => {
     const titular = titularDaUnidade(su);
@@ -5683,7 +5708,7 @@ function filhosDoFluxo(u, busca, paraPapel) {
     const aberta = !paraPapel && state.estruturaUnidadeAberta === su.sigla;
     const no = noDoFluxo({
       classe: classeDaUnidade(su),
-      selo: classeDaUnidade(su) === "secao" ? "" : su.natureza || "",
+      selo: seloDaUnidade(su),
       titulo: paraPapel ? su.sigla : `${su.sigla} — ${su.nome}`,
       subtitulo: paraPapel ? su.nome : "",
       responsavel: titular
@@ -5747,7 +5772,7 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
         (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
       const no = noDoFluxo({
         classe: classeDaUnidade(u),
-        selo: classeDaUnidade(u) === "secao" ? "" : u.natureza || "",
+        selo: seloDaUnidade(u),
         titulo: paraPapel ? u.sigla : `${u.sigla} — ${u.nome}`,
         subtitulo: paraPapel ? u.nome : "",
         responsavel: titular
@@ -5997,7 +6022,7 @@ function renderizarPortalEstrutura() {
 
    Duas diferenças, e as duas por causa do conteúdo:
 
-   · A folha é A4 paisagem. Um organograma de quatro níveis em retrato
+   · A folha é A4 paisagem. Um organograma de cinco níveis em retrato
      obrigaria a comprimir as caixas até o nome da pessoa não caber.
    · O organograma sai do mesmo montarFluxograma() que desenha a tela, em modo
      de papel — sem botão, sem chamada de ação e sem caixa aberta. Um segundo

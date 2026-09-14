@@ -35,10 +35,15 @@
 // lado de pessoa certa. Quem procura número usa o módulo Ramal DTI.
 //
 // A ESTRUTURA SUGERIDA é minuta de trabalho, e a tela diz isso em todo lugar
-// onde ela aparece. Não pressupõe criação de cargo nem contratação: redistribui
-// atribuições sobre as mesmas pessoas, preserva as divisões existentes e faz
-// aparecer no organograma três responsabilidades que hoje existem sem unidade
-// própria.
+// onde ela aparece. Nenhuma unidade de hoje é extinta e nenhuma perde quadro: a
+// camada de operação muda de denominação — Divisão passa a Coordenação, a Seção
+// de Atendimento sobe a Coordenação de Suporte Técnico e o Banco de Dados passa
+// a Núcleo sob a Coordenação de Sistemas —, uma camada de direção é criada
+// acima dela e as responsabilidades que hoje existem sem unidade própria ganham
+// uma. As unidades novas (a Diretoria de Projetos de TIC, suas duas
+// Coordenações e o Núcleo de UX/UI) nascem sem titular e sem quadro na minuta,
+// porque provimento, remanejamento e criação de cargo comissionado são atos do
+// Tribunal, e as siglas propostas ficam declaradas como propostas.
 //
 // Os quadros ficam em constantes compartilhadas porque as duas visões usam as
 // mesmas pessoas: repetir 37 nomes em cada uma criaria duas listas para
@@ -349,20 +354,23 @@
 
     sugerida: {
       rotulo: "Estrutura sugerida",
-      chamada: "Minuta de proposta — Superintendência com duas Diretorias",
+      chamada: "Minuta de proposta — Superintendência, duas Diretorias e Coordenações",
       minuta: true,
       resumo:
-        "A Diretoria de Tecnologia da Informação passa a Superintendência, e abaixo dela ficam duas Diretorias: a de Tecnologia da Informação, que recebe a estrutura de hoje inteira — Desenvolvimento de Sistemas, Infraestrutura Tecnológica e Banco de Dados —, e a de Projetos de TIC, nova, com a Divisão de Processos de TIC e a Divisão de Governança Digital e Segurança da Informação. Nenhuma unidade existente é extinta nem perde quadro: o que muda é a camada acima delas e a criação da segunda Diretoria.",
+        "A Diretoria de Tecnologia da Informação passa a Superintendência, e abaixo dela ficam duas Diretorias. A de Tecnologia da Informação recebe a operação de hoje convertida em Coordenações — Sistemas, Infraestrutura e Suporte Técnico, as três no mesmo nível —, com o Banco de Dados como Núcleo sob a Coordenação de Sistemas e um Núcleo de UX/UI ao lado dele. A de Projetos de TIC é nova, com as Coordenações de Processos de TIC e de Governança Digital e Segurança da Informação. Nenhuma unidade existente é extinta nem perde quadro: o que muda é a denominação da camada de operação, o nível do Atendimento e a criação da segunda Diretoria.",
       procedencia:
-        "Minuta de trabalho, sem valor de ato administrativo. Criação de superintendência, de diretoria e de divisão, assim como denominação e designação de chefia, dependem de ato próprio do Tribunal; o que esta tela propõe é o desenho.",
+        "Minuta de trabalho, sem valor de ato administrativo. Criação de superintendência, de diretoria, de coordenação e de núcleo, assim como denominação e designação de chefia, dependem de ato próprio do Tribunal; o que esta tela propõe é o desenho.",
       notasTitulo: "Premissas da minuta",
       notas: [
-        "Nenhuma unidade existente é extinta ou perde quadro: DDES, DINT, SEATU e DBAD continuam como estão, uma camada abaixo.",
-        "O titular de hoje passa a Superintendente. A chefia das duas Diretorias e das duas Divisões novas fica a designar pela Diretoria.",
-        "A Divisão de Governança Digital e Segurança da Informação reúne o que hoje é acúmulo: governança de TI, exercida pela Diretoria, e segurança da informação, exercida pela Infraestrutura.",
-        "As duas Divisões novas nascem sem quadro declarado. Compô-las exige remanejamento interno ou provimento, e isso é decisão do Tribunal — a minuta não pressupõe nenhum dos dois.",
-        "Informação gerencial e painéis seguem sem unidade responsável nesta minuta: a definir se ficam com Processos de TIC, com o Banco de Dados ou com a Governança Digital.",
-        "As siglas DPTIC, DPRO e DGDS são propostas: a denominação oficial vem no ato de criação.",
+        "Nenhuma unidade existente é extinta ou perde quadro: DDES, DINT, SEATU e DBAD continuam com a mesma chefia e o mesmo pessoal, sob nova denominação.",
+        "A camada de operação passa a se chamar Coordenação: Sistemas (ex-DDES), Infraestrutura (ex-DINT) e Suporte Técnico (ex-SEATU). O Atendimento sobe de Seção subordinada à Infraestrutura para Coordenação no mesmo nível das outras duas.",
+        "O Banco de Dados passa de Divisão a Núcleo sob a Coordenação de Sistemas, junto com um Núcleo de UX/UI novo. O quadro de hoje do Banco de Dados vai inteiro com ele.",
+        "O Núcleo de UX/UI nasce sem quadro declarado: a alocação atual não traz profissional de experiência do usuário, e compor o núcleo exige remanejamento ou provimento.",
+        "O titular de hoje passa a Superintendente. A chefia das duas Diretorias, das Coordenações novas e dos Núcleos fica a designar pela Diretoria — o cargo comissionado correspondente a Coordenação e a Núcleo também é decisão do ato de criação.",
+        "As duas unidades sob a Diretoria de Projetos de TIC vêm como Coordenação por coerência com a camada: se a Diretoria preferir mantê-las como Divisão, basta a denominação mudar, o desenho é o mesmo.",
+        "A Coordenação de Governança Digital e Segurança da Informação reúne o que hoje é acúmulo: governança de TI, exercida pela Diretoria, e segurança da informação, exercida pela Infraestrutura.",
+        "Informação gerencial e painéis seguem sem unidade responsável nesta minuta: a definir se ficam com Processos de TIC, com o Núcleo de Banco de Dados ou com a Governança Digital.",
+        "As siglas COSIS, COINFRA, COSTEC, NBD, NUX, DPTIC, COPRO e COGOV são propostas: a denominação oficial vem no ato de criação.",
       ],
       topo: {
         sigla: "STI",
@@ -385,75 +393,101 @@
           estado: "mantida",
           subordinacao: "Superintendência de Tecnologia da Informação",
           atribuicoes: [
-            "Direção das divisões de operação: sistemas, infraestrutura e banco de dados",
+            "Direção das três Coordenações de operação: sistemas, infraestrutura e suporte técnico",
             "Entrega e sustentação dos serviços de TI do Tribunal",
           ],
           lotacao:
-            "Recebe as três divisões de hoje, com a mesma chefia e o mesmo quadro. Chefia da Diretoria a designar.",
+            "Recebe a operação de hoje inteira, com a mesma chefia e o mesmo quadro. Chefia da Diretoria a designar.",
           justificativa:
             "A estrutura que hoje responde direto ao Diretor passa a responder a uma Diretoria própria, e a Superintendência deixa de acumular direção superior com direção de operação.",
           subunidades: [
             {
-              sigla: "DDES",
-              nome: "Divisão de Desenvolvimento de Sistemas",
-              natureza: "Divisão",
-              estado: "mantida",
+              sigla: "COSIS",
+              nome: "Coordenação de Sistemas",
+              natureza: "Coordenação",
+              estado: "renomeada",
+              origem: "Divisão de Desenvolvimento de Sistemas (DDES)",
               funcoes: ["sistemas"],
               atribuicoes: [
                 "Ciclo de vida dos sistemas do Tribunal: requisitos, desenvolvimento, homologação e sustentação",
-                "Três gerências (DAS-3) com seção e escopo declarados — a definir pela Diretoria",
+                "Três gerências (DAS-3) com escopo declarado — a definir pela Diretoria",
                 "Gestão técnica da equipe alocada pelo contrato de serviços especializados",
+                "Direção dos Núcleos de Banco de Dados e de UX/UI",
               ],
-              lotacao: "Mantém a chefia e as 37 pessoas hoje na Divisão.",
+              lotacao: "Mantém a chefia e as 37 pessoas hoje na Divisão de Desenvolvimento de Sistemas.",
               pessoas: QUADRO_DDES,
-            },
-            {
-              sigla: "DINT",
-              nome: "Divisão de Infraestrutura Tecnológica",
-              natureza: "Divisão",
-              estado: "mantida",
-              funcoes: ["infraestrutura"],
-              atribuicoes: [
-                "Datacenter, rede, servidores, nuvem e estações de trabalho",
-                "Backup, monitoramento, capacidade e continuidade dos serviços",
-                "Segundo nível de solução para o que a Seção encaminhar",
-              ],
-              lotacao:
-                "Mantém a chefia e a Seção subordinada. Quadro técnico a dimensionar: a alocação atual não contempla a unidade.",
-              justificativa:
-                "A Divisão deixa de acumular segurança da informação, que passa à Divisão de Governança Digital e Segurança da Informação, e responde pelo que é próprio da infraestrutura.",
-              pessoas: QUADRO_DINT,
               subunidades: [
                 {
-                  sigla: "SEATU",
-                  nome: "Seção de Atendimento ao Usuário",
-                  natureza: "Seção",
-                  estado: "mantida",
-                  ramal: "4631",
-                  portaDeEntrada: true,
-                  funcoes: ["atendimento"],
+                  sigla: "NBD",
+                  nome: "Núcleo de Banco de Dados",
+                  natureza: "Núcleo",
+                  estado: "renomeada",
+                  origem: "Divisão de Banco de Dados (DBAD)",
+                  funcoes: ["dados"],
                   atribuicoes: [
-                    "Porta de entrada única da operação pelo ramal 4631, com catálogo de serviços e prazo declarado",
-                    "Triagem, registro e acompanhamento de todo chamado até o encerramento",
-                    "Primeiro nível de solução; o que exceder vai à Infraestrutura ou ao Desenvolvimento com registro",
+                    "Administração dos bancos de dados corporativos",
+                    "Desempenho, integridade e recuperação das bases",
+                    "Modelagem e padrões de dados dos sistemas do Tribunal",
                   ],
-                  lotacao: "Mantém a gerência. Quadro de atendimento a dimensionar junto com a Divisão.",
-                  pessoas: QUADRO_SEATU,
+                  lotacao: "Mantém a chefia e os dois analistas de hoje.",
+                  justificativa:
+                    "O trabalho de banco de dados sustenta os sistemas e se decide com eles. Como Núcleo sob a Coordenação de Sistemas, a mesma equipe passa a ter a prioridade definida onde o sistema é construído, em vez de negociada entre duas unidades de mesmo nível.",
+                  pessoas: QUADRO_DADOS,
+                },
+                {
+                  sigla: "NUX",
+                  nome: "Núcleo de UX/UI",
+                  natureza: "Núcleo",
+                  estado: "nova",
+                  atribuicoes: [
+                    "Pesquisa com o usuário e desenho da experiência dos sistemas do Tribunal",
+                    "Padrão de interface, biblioteca de componentes e guia visual",
+                    "Avaliação de usabilidade e de acessibilidade antes da entrega",
+                  ],
+                  lotacao:
+                    "Composição a definir. A alocação atual não traz profissional de experiência do usuário, e hoje o desenho de interface é absorvido pela equipe de desenvolvimento.",
+                  justificativa:
+                    "Interface desenhada por quem também programa fica em último lugar na fila. Um núcleo próprio, junto de quem constrói o sistema, dá ao usuário do Tribunal um responsável pela tela que ele usa.",
                 },
               ],
             },
             {
-              sigla: "DBAD",
-              nome: "Divisão de Banco de Dados",
-              natureza: "Divisão",
-              estado: "mantida",
-              funcoes: ["dados"],
+              sigla: "COINFRA",
+              nome: "Coordenação de Infraestrutura",
+              natureza: "Coordenação",
+              estado: "renomeada",
+              origem: "Divisão de Infraestrutura Tecnológica (DINT)",
+              funcoes: ["infraestrutura"],
               atribuicoes: [
-                "Administração dos bancos de dados corporativos",
-                "Desempenho, integridade e recuperação das bases",
+                "Datacenter, rede, servidores, nuvem e estações de trabalho",
+                "Backup, monitoramento, capacidade e continuidade dos serviços",
+                "Segundo nível de solução para o que o Suporte Técnico encaminhar",
               ],
-              lotacao: "Mantém a chefia e os dois analistas de hoje.",
-              pessoas: QUADRO_DADOS,
+              lotacao:
+                "Mantém a chefia. Quadro técnico a dimensionar: a alocação atual não contempla a unidade.",
+              justificativa:
+                "A unidade deixa de acumular segurança da informação, que passa à Coordenação de Governança Digital e Segurança da Informação, e responde pelo que é próprio da infraestrutura.",
+              pessoas: QUADRO_DINT,
+            },
+            {
+              sigla: "COSTEC",
+              nome: "Coordenação de Suporte Técnico",
+              natureza: "Coordenação",
+              estado: "renomeada",
+              origem: "Seção de Atendimento ao Usuário (SEATU)",
+              ramal: "4631",
+              portaDeEntrada: true,
+              funcoes: ["atendimento"],
+              atribuicoes: [
+                "Porta de entrada única da operação pelo ramal 4631, com catálogo de serviços e prazo declarado",
+                "Triagem, registro e acompanhamento de todo chamado até o encerramento",
+                "Primeiro nível de solução; o que exceder vai à Infraestrutura ou aos Sistemas com registro",
+              ],
+              lotacao:
+                "Mantém a gerência de hoje. Quadro de atendimento a dimensionar, e cargo de chefia da Coordenação a definir no ato de criação.",
+              justificativa:
+                "O atendimento é a porta de entrada de toda a área e responde a quem usa o Tribunal inteiro, não só à infraestrutura. No mesmo nível das outras duas Coordenações, encaminha chamado para Sistemas e para Infraestrutura em igualdade, sem depender da fila de uma delas.",
+              pessoas: QUADRO_SEATU,
             },
           ],
         },
@@ -464,7 +498,7 @@
           estado: "nova",
           subordinacao: "Superintendência de Tecnologia da Informação",
           atribuicoes: [
-            "Direção das divisões de processos e de governança digital",
+            "Direção das Coordenações de processos e de governança digital",
             "Portfólio de projetos de TIC, do planejamento à entrega",
           ],
           lotacao: "Diretoria nova: chefia e quadro a definir pela Diretoria.",
@@ -472,9 +506,9 @@
             "Projeto, processo e governança hoje disputam a capacidade da operação, e perdem: quem responde por entrega de serviço não tem folga para conduzir projeto. Uma Diretoria própria separa as duas agendas.",
           subunidades: [
             {
-              sigla: "DPRO",
-              nome: "Divisão de Processos de TIC",
-              natureza: "Divisão",
+              sigla: "COPRO",
+              nome: "Coordenação de Processos de TIC",
+              natureza: "Coordenação",
               estado: "nova",
               atribuicoes: [
                 "Mapeamento, desenho e melhoria dos processos de TIC",
@@ -484,9 +518,9 @@
               lotacao: "Composição a definir. Hoje estas atribuições não têm unidade responsável.",
             },
             {
-              sigla: "DGDS",
-              nome: "Divisão de Governança Digital e Segurança da Informação",
-              natureza: "Divisão",
+              sigla: "COGOV",
+              nome: "Coordenação de Governança Digital e Segurança da Informação",
+              natureza: "Coordenação",
               estado: "nova",
               funcoes: ["governanca", "seguranca"],
               atribuicoes: [
@@ -499,7 +533,7 @@
               lotacao:
                 "Composição a definir. Hoje a governança é exercida pela Diretoria por acúmulo e a segurança pela Infraestrutura.",
               justificativa:
-                "Segurança acumulada por quem opera o ambiente é avaliada pelo próprio executor, e um contrato de mais de R$ 9 milhões por ano não tem unidade que responda por ele. As duas lacunas cabem na mesma divisão.",
+                "Segurança acumulada por quem opera o ambiente é avaliada pelo próprio executor, e um contrato de mais de R$ 9 milhões por ano não tem unidade que responda por ele. As duas lacunas cabem na mesma unidade.",
             },
           ],
         },
@@ -513,21 +547,39 @@
         },
         {
           tipo: "renomeada",
-          titulo: "A estrutura de hoje desce uma camada, sem perder nada",
+          titulo: "A operação de hoje passa a Coordenação, sem perder nada",
           detalhe:
-            "DDES, DINT, SEATU e DBAD passam a integrar a Diretoria de Tecnologia da Informação, com a mesma chefia, o mesmo quadro e as mesmas atribuições. Nenhuma unidade é extinta.",
+            "Desenvolvimento de Sistemas passa a Coordenação de Sistemas e Infraestrutura Tecnológica a Coordenação de Infraestrutura, com a mesma chefia, o mesmo quadro e as mesmas atribuições, agora sob a Diretoria de Tecnologia da Informação. Nenhuma unidade é extinta.",
+        },
+        {
+          tipo: "renomeada",
+          titulo: "O Atendimento sobe de Seção a Coordenação de Suporte Técnico",
+          detalhe:
+            "A porta de entrada da área sai de dentro da Infraestrutura e passa ao mesmo nível das outras duas Coordenações, com o ramal 4631 e a gerência de hoje. Chamado de sistema e chamado de infraestrutura passam a ser encaminhados em igualdade.",
+        },
+        {
+          tipo: "renomeada",
+          titulo: "O Banco de Dados passa a Núcleo sob a Coordenação de Sistemas",
+          detalhe:
+            "A mesma equipe, com a mesma chefia, deixa de ser Divisão de mesmo nível e passa a Núcleo junto de quem constrói os sistemas que ela sustenta, onde a prioridade do dado se decide com a do sistema.",
         },
         {
           tipo: "nova",
-          titulo: "Diretoria de Projetos de TIC, com duas divisões novas",
+          titulo: "Núcleo de UX/UI, novo, ao lado do Banco de Dados",
           detalhe:
-            "Divisão de Processos de TIC, para processo e portfólio de projetos, e Divisão de Governança Digital e Segurança da Informação, para plano diretor, contratos, política de segurança e resposta a incidente.",
+            "Pesquisa com o usuário, padrão de interface e avaliação de usabilidade passam a ter unidade responsável. Hoje o desenho de tela é absorvido pela equipe de desenvolvimento e fica no fim da fila.",
+        },
+        {
+          tipo: "nova",
+          titulo: "Diretoria de Projetos de TIC, com duas Coordenações novas",
+          detalhe:
+            "Coordenação de Processos de TIC, para processo e portfólio de projetos, e Coordenação de Governança Digital e Segurança da Informação, para plano diretor, contratos, política de segurança e resposta a incidente.",
         },
         {
           tipo: "processo",
           titulo: "Governança e segurança deixam de ser acúmulo",
           detalhe:
-            "Hoje a governança é exercida pela Diretoria junto com a direção da área, e a segurança pela Infraestrutura, que opera o ambiente que deveria avaliar. As duas passam à Divisão de Governança Digital e Segurança da Informação.",
+            "Hoje a governança é exercida pela Diretoria junto com a direção da área, e a segurança pela Infraestrutura, que opera o ambiente que deveria avaliar. As duas passam à Coordenação de Governança Digital e Segurança da Informação.",
         },
         {
           tipo: "processo",
@@ -539,7 +591,7 @@
           tipo: "governanca",
           titulo: "Chefias e quadros novos ficam declarados como decisão a tomar",
           detalhe:
-            "As duas Diretorias e as duas Divisões novas nascem sem titular e sem quadro na minuta. Provimento e remanejamento são atos do Tribunal, e a proposta não os pressupõe.",
+            "As duas Diretorias, as duas Coordenações da Diretoria de Projetos e o Núcleo de UX/UI nascem sem titular e sem quadro na minuta. Provimento, remanejamento e criação de cargo comissionado são atos do Tribunal, e a proposta não os pressupõe.",
         },
       ],
     },

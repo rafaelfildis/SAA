@@ -252,17 +252,24 @@ unidade**. Nenhum texto corrido, nenhum comparativo, nenhuma nota — a leitura 
 o desenho.
 
 **Esqueleto fixo.** Na estrutura atual, de cima para baixo: **Diretor → chefes
-de divisão (DAS-4) → gerências de TI (DAS-3)**, com a **Seção de Atendimento ao
-Usuário** dentro da Divisão de Infraestrutura Tecnológica, no nível das
-gerências, porque é onde ela está e quem a chefia é um gerente.
+de divisão (DAS-4) → Gerentes de TI (DAS-3)**, com a **Seção de Atendimento ao
+Usuário** dentro da Divisão de Infraestrutura Tecnológica, porque é onde ela
+está e quem a chefia é um gerente. Os três DAS-3 da Divisão de Desenvolvimento
+de Sistemas vêm em **uma caixa só, "Gerentes de TI"**, com os três nomes: três
+caixas idênticas lado a lado ocupavam a largura de uma camada inteira para
+dizer a mesma coisa três vezes.
 
 **Cada camada tem a sua cor**, e a cor vem da natureza declarada da unidade, não
-da posição em que ela é desenhada — com Superintendência, Diretoria, Divisão e
-Seção na mesma árvore, "nível 2" deixaria de significar uma coisa só. Navy no
-topo, azul nas Diretorias, navy institucional nas Divisões, azul de reunião nas
-gerências e vermelho na porta de entrada. Unidade que a minuta cria fica
-**tracejada com o topo verde**, mantendo a cor da sua camada: trocar o fundo
-pelo verde apagaria a hierarquia justamente onde ela muda.
+da posição em que ela é desenhada — com Superintendência, Diretoria, Coordenação
+e Núcleo na mesma árvore, "nível 2" deixaria de significar uma coisa só. Navy no
+topo, azul nas Diretorias, navy institucional na camada de operação, tom mais
+claro nos Núcleos e azul de reunião na caixa das gerências. **Divisão,
+Coordenação e Seção seguem o mesmo padrão**: as três ocupam a mesma camada, e
+destacar uma delas em cor própria sugeriria uma hierarquia que não existe entre
+elas — é por isso que a Seção de Atendimento ao Usuário deixou de sair em
+vermelho. Unidade que a minuta cria fica **tracejada com o topo verde**,
+mantendo a cor da sua camada: trocar o fundo pelo verde apagaria a hierarquia
+justamente onde ela muda.
 
 **O nome de quem responde pela unidade vai em azul, em linha própria** — é o que
 se procura primeiro em um organograma, e em cinza de apoio ele se perdia entre o
@@ -273,26 +280,41 @@ em números; nome de quem não é chefia ou gerência não aparece no desenho.
 **A estrutura sugerida.** A Diretoria passa a **Superintendência de Tecnologia
 da Informação**, e abaixo dela ficam **duas Diretorias**:
 
-- **Diretoria de Tecnologia da Informação**, que recebe a estrutura de hoje
-  inteira — DDES, DINT (com a SEATU) e DBAD —, com a mesma chefia, o mesmo
-  quadro e as mesmas atribuições;
-- **Diretoria de Projetos de TIC**, nova, com a **Divisão de Processos de TIC**
-  e a **Divisão de Governança Digital e Segurança da Informação**.
+- **Diretoria de Tecnologia da Informação**, que recebe a operação de hoje com
+  a camada renomeada para **Coordenação**: **Coordenação de Sistemas (COSIS)**,
+  ex-DDES, **Coordenação de Infraestrutura (COINFRA)**, ex-DINT, e
+  **Coordenação de Suporte Técnico (COSTEC)**, ex-SEATU, as três no mesmo
+  nível. Sob a Coordenação de Sistemas ficam dois Núcleos: o **Núcleo de Banco
+  de Dados**, ex-DBAD, com a chefia e o quadro de hoje, e o **Núcleo de UX/UI**,
+  novo;
+- **Diretoria de Projetos de TIC**, nova, com a **Coordenação de Processos de
+  TIC** e a **Coordenação de Governança Digital e Segurança da Informação**.
 
-**Nenhuma unidade existente é extinta ou perde quadro:** o que muda é a camada
-acima delas e a criação da segunda Diretoria. A Divisão de Governança Digital e
-Segurança da Informação reúne o que hoje é acúmulo — governança de TI, exercida
-pela Diretoria junto com a direção da área, e segurança da informação, exercida
-pela Infraestrutura, que opera o ambiente que deveria avaliar.
+**Nenhuma unidade existente é extinta ou perde quadro:** o que muda é a
+denominação da camada de operação, o nível do Atendimento e a criação da segunda
+Diretoria. Três movimentos têm razão declarada no arquivo de dados: o
+**Atendimento sai de dentro da Infraestrutura** e passa ao mesmo nível das
+outras Coordenações, porque é a porta de entrada de toda a área e encaminha
+chamado para as duas; o **Banco de Dados desce a Núcleo sob a Coordenação de
+Sistemas**, onde a prioridade do dado se decide junto com a do sistema que ele
+sustenta, em vez de negociada entre unidades de mesmo nível; e a **Coordenação
+de Governança Digital e Segurança da Informação** reúne o que hoje é acúmulo —
+governança de TI, exercida pela Diretoria junto com a direção da área, e
+segurança da informação, exercida pela Infraestrutura, que opera o ambiente que
+deveria avaliar.
 
-**O que a minuta não pressupõe.** A chefia das duas Diretorias e das duas
-Divisões novas fica a designar, e as Divisões novas nascem sem quadro
-declarado: compô-las exige remanejamento ou provimento, e os dois são atos do
-Tribunal. As siglas DPTIC, DPRO e DGDS são propostas — a denominação oficial vem
-no ato de criação. **Informação gerencial e painéis seguem sem unidade
-responsável** nesta versão, a definir entre Processos de TIC, Banco de Dados e
-Governança Digital; a lacuna está registrada nas premissas, no arquivo de
-dados.
+**O que a minuta não pressupõe.** A chefia das duas Diretorias, das Coordenações
+novas e dos Núcleos fica a designar, e a Diretoria de Projetos de TIC, as suas
+duas Coordenações e o Núcleo de UX/UI nascem sem quadro declarado: compô-los
+exige remanejamento ou provimento, e o cargo comissionado correspondente a
+Coordenação e a Núcleo depende do ato de criação — os três são atos do Tribunal.
+As duas unidades sob a Diretoria de Projetos vêm como Coordenação por coerência
+com a camada; se a Diretoria preferir mantê-las como Divisão, muda a
+denominação, não o desenho. As siglas COSIS, COINFRA, COSTEC, NBD, NUX, DPTIC,
+COPRO e COGOV são propostas — a denominação oficial vem no ato de criação.
+**Informação gerencial e painéis seguem sem unidade responsável** nesta versão,
+a definir entre Processos de TIC, Núcleo de Banco de Dados e Governança
+Digital; a lacuna está registrada nas premissas, no arquivo de dados.
 
 **A equipe abre no clique.** Clicar na caixa de uma unidade abre, abaixo do
 desenho, a equipe alocada nela. Um painel por vez, e sempre no mesmo lugar:
@@ -336,7 +358,7 @@ tamanho real, rasterizado e entregue nos dois formatos pelo mesmo ponto de
 construção — PDF e JPEG não divergem entre si nem do que está em tela.
 
 A folha é **A4 paisagem**, e não retrato como o extrato do plano: um
-organograma de quatro níveis em retrato obrigaria a comprimir as caixas até o
+organograma de cinco níveis em retrato obrigaria a comprimir as caixas até o
 nome da pessoa não caber. Traz o cabeçalho institucional, o título da visão com
 os números, **o mesmo organograma que está em tela** — desenhado pela mesma
 função, em modo de papel: sem botão, sem chamada de ação e sem caixa aberta — e

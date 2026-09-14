@@ -2954,17 +2954,20 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 .fluxo-no--nova { border-style: dashed; border-top-color: var(--color-success); }
 .fluxo-no--nova .fluxo-no__selo { color: var(--color-success); }
 
-/* Seção: terceiro nível, e a porta de entrada da operação — vermelho de
-   interface, o mesmo que a linha do "agora" usa na agenda. */
-.fluxo-no--secao {
-  border-top: 4px solid var(--color-error);
-  border-left: 1px solid var(--cat-viagem-borda);
-  border-right: 1px solid var(--cat-viagem-borda);
-  border-bottom: 1px solid var(--cat-viagem-borda);
-  background: var(--color-error-tint);
+/* Núcleo: camada mais fina da operação, subordinada a uma Coordenação. Fica na
+   mesma família azul da operação, em tom mais claro e caixa mais estreita —
+   mesma origem, um passo abaixo. Cor de outra família sugeriria unidade de
+   outra natureza, que não é o caso. */
+.fluxo-no--nucleo {
+  width: 158px;
+  border-top: 3px solid var(--color-accent);
+  border-left: 1px solid var(--cat-presencial-borda);
+  border-right: 1px solid var(--cat-presencial-borda);
+  border-bottom: 1px solid var(--cat-presencial-borda);
+  background: var(--color-surface-alt);
 }
-.fluxo-no--secao .fluxo-no__selo { color: var(--color-error-strong); }
-.fluxo-no--secao .fluxo-no__titulo { color: var(--color-error-strong); }
+.fluxo-no--nucleo .fluxo-no__selo { color: var(--color-accent); }
+.fluxo-no--nucleo .fluxo-no__titulo { color: var(--cat-presencial); font-size: 0.78rem; }
 
 /* Gerência: terceiro nível, azul de reunião. O título é o nome da pessoa, e
    por isso segue a mesma cor dos demais responsáveis. */
@@ -3135,6 +3138,7 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 
 .export-paper--paisagem {
   --color-surface: #FFFFFF;
+  --color-surface-alt: #FAFCFE;
   --color-background: #F4F7FB;
   --color-border: #DCE3EE;
   --color-border-soft: #EDF1F7;
@@ -3144,15 +3148,12 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   --color-accent: #2C63B0;
   --color-brand-red: #E30521;
   --color-success: #0F7B5F;
-  --color-error: #D80425;
-  --color-error-strong: #B00320;
   --color-heading: #0B3163;
   --color-text-primary: #12203A;
   --color-text-secondary: #5F6E88;
   --color-text-tertiary: #64718E;
   --color-primary-mid: #0A2A55;
   --color-secondary-tint: #EAF0F9;
-  --color-error-tint: #FDECEF;
   --color-warning: #A65A05;
   --cat-presencial: #0B3163;
   --cat-presencial-bg: #EAF0F9;
@@ -3160,19 +3161,18 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   --cat-online: #2C63B0;
   --cat-online-bg: #EAF2FC;
   --cat-online-borda: #C9DCF4;
-  --cat-viagem-borda: #F0DCBE;
-  --cat-escola-borda: #C4E3D9;
   --sombra-leve: none;
 }
 
-/* Caixas mais estreitas no papel: com quatro camadas, a estrutura sugerida
-   acumula cinco divisões e três gerências no nível mais largo, e na medida de
-   tela a árvore passaria da folha. As medidas deixam folga de propósito —
-   acrescentar uma divisão não deve estourar a página. */
+/* Caixas mais estreitas no papel: com cinco camadas, a estrutura sugerida
+   acumula três Coordenações sob uma Diretoria e mais duas sob a outra, e na
+   medida de tela a árvore passaria da folha. As medidas deixam folga de
+   propósito — acrescentar uma unidade não deve estourar a página. */
 .fluxo--export .fluxo-no { width: 124px; padding: 8px 9px; box-shadow: none; }
 .fluxo--export .fluxo-no--diretoria { width: 200px; }
 .fluxo--export .fluxo-no--gerencia { width: 116px; }
 .fluxo--export .fluxo-no--diretoria-filha { width: 150px; }
+.fluxo--export .fluxo-no--nucleo { width: 118px; }
 .fluxo--export .fluxo-no__selo { font-size: 0.55rem; }
 /* No papel o título é a sigla, e o nome da unidade vem na primeira linha —
    por isso a sigla pode crescer e a linha seguinte ganha destaque. */
