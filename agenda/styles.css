@@ -3172,7 +3172,11 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
    propósito — acrescentar uma unidade não deve estourar a página. */
 .fluxo--export .fluxo-no { width: 124px; padding: 8px 9px; box-shadow: none; }
 .fluxo--export .fluxo-no--diretoria { width: 200px; }
-.fluxo--export .fluxo-no--gerencia { width: 124px; }
+/* A caixa de gerência é mais larga no papel: na minuta o título dela é o nome
+   de uma frente ("Líder Técnica de Desenvolvimento de Sistemas"), e na medida
+   das demais uma palavra dessas quebrava no meio. */
+.fluxo--export .fluxo-no--gerencia { width: 136px; }
+.fluxo--export .fluxo-no--gerencia .fluxo-no__titulo { font-size: 0.72rem; }
 .fluxo--export .fluxo-no--diretoria-filha { width: 150px; }
 .fluxo--export .fluxo-no--nucleo { width: 118px; }
 .fluxo--export .fluxo-no__selo { font-size: 0.55rem; }

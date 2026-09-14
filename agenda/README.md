@@ -262,8 +262,9 @@ Desenvolvimento de Sistemas aparecem assim, um em cada caixa, e sem linha de
 apoio: a relação de lotação não declara o escopo de nenhuma das três, e
 preencher a linha com "escopo a definir" repetido três vezes seria ocupar o
 desenho com o que ele não sabe. Onde a frente está declarada — o que a minuta
-propõe —, ela entra na linha de apoio da caixa. Quem decide é o campo `funcao`
-da pessoa no arquivo de dados, não uma opção de tela.
+propõe —, ela vira o próprio título da caixa, porque ali o desenho mostra
+posição e não pessoa. Quem decide é o campo `funcao` da pessoa no arquivo de
+dados, não uma opção de tela.
 
 **Cada camada tem a sua cor**, e a cor vem da natureza declarada da unidade, não
 da posição em que ela é desenhada — com Superintendência, Diretoria, Coordenação
@@ -277,11 +278,22 @@ vermelho. Unidade que a minuta cria fica **tracejada com o topo verde**,
 mantendo a cor da sua camada: trocar o fundo pelo verde apagaria a hierarquia
 justamente onde ela muda.
 
-**O nome de quem responde pela unidade vai em azul, em linha própria** — é o que
-se procura primeiro em um organograma, e em cinza de apoio ele se perdia entre o
-cargo e a contagem de pessoas. Chefia sem titular aparece em cor de aviso, não
-em azul: não é nome, é pendência. A caixa traz ainda o nível do cargo e o quadro
-em números; nome de quem não é chefia ou gerência não aparece no desenho.
+**Na estrutura atual, o nome de quem responde pela unidade vai em azul, em linha
+própria** — é o que se procura primeiro em um organograma, e em cinza de apoio
+ele se perdia entre o cargo e a contagem de pessoas. Chefia sem titular aparece
+em cor de aviso, não em azul: não é nome, é pendência. A caixa traz ainda o
+nível do cargo e o quadro em números; nome de quem não é chefia ou gerência não
+aparece no desenho.
+
+**A minuta, ao contrário, desenha cargo e não pessoa.** Cada caixa dela traz no
+selo o nível e o cargo que o ocupa — `DIRETORIA · DAS-4`, `COORDENAÇÃO · DAS-3`,
+`NÚCLEO · TERCEIRIZADOS` —, e o único nome no organograma proposto é o do
+titular de hoje na Superintendência. Enquanto a designação depende de ato,
+nomear quem ocupa o quê daria por decidido o que não está; o quadro de cada
+unidade continua na lista que abre no clique e na folha exportada, que é onde
+ele é informação e não anúncio. Quem controla isso é o campo `cargo` da unidade
+no arquivo de dados: declarado, a caixa vira posição; ausente, ela mostra o
+titular.
 
 **A estrutura sugerida.** A Diretoria passa a **Superintendência de Tecnologia
 da Informação**, e abaixo dela ficam **duas Diretorias**:
@@ -297,6 +309,15 @@ da Informação**, e abaixo dela ficam **duas Diretorias**:
   quadro de hoje, e o **Núcleo de UX/UI**, novo;
 - **Diretoria de Projetos de TIC**, nova, com a **Coordenação de Processos de
   TIC** e a **Coordenação de Governança Digital e Segurança da Informação**.
+
+O cargo de cada camada vem declarado no desenho: **Diretoria em DAS-4,
+Coordenação em DAS-3 e Núcleo com equipe terceirizada**. Duas consequências
+ficam registradas nas premissas em vez de resolvidas por conta própria: o
+**Núcleo de Banco de Dados** segue a regra dos Núcleos mas mantém dois
+analistas efetivos — a confirmar se passa a ser operado por contrato ou se a
+regra abre exceção —, e o **Núcleo de Desenvolvimento de Sistemas** é operado
+por equipe contratada e conduzido por três gerências DAS-3, o que explica um
+Núcleo terceirizado com três comissionados no quadro.
 
 **Nenhuma unidade existente é extinta ou perde quadro:** o que muda é a
 denominação da camada de operação, o nível do Atendimento e a criação da segunda

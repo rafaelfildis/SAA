@@ -5590,8 +5590,18 @@ function classeDaUnidade(u) {
 
 // A Seção de Atendimento não carrega o selo "Seção": a Diretoria pediu o termo
 // fora da caixa, e o nível da unidade já se lê pela posição no fluxo.
+// Unidade que declara `cargo` é desenhada como posição, não como pessoa: o
+// selo diz o nível e o cargo que o ocupa — "COORDENAÇÃO · DAS-3" —, e nome de
+// responsável não entra na caixa. É o que a minuta pede: enquanto a
+// designação depende de ato, nomear quem ocupa o quê seria dar por decidido o
+// que não está.
+function desenhadaComoPosicao(u) {
+  return Boolean(u.cargo);
+}
 function seloDaUnidade(u) {
-  return normalizarTexto(u.natureza || "").startsWith("secao") ? "" : u.natureza || "";
+  if (normalizarTexto(u.natureza || "").startsWith("secao")) return "";
+  const natureza = u.natureza || "";
+  return u.cargo ? `${natureza} · ${u.cargo}` : natureza;
 }
 
 function noDoFluxo({
@@ -5648,7 +5658,13 @@ function noDoFluxo({
 function chamadaDeEquipe(u, aberta) {
   const titular = titularDaUnidade(u);
   const equipe = pessoasDaUnidade(u).filter((p) => p !== titular).length;
-  if (!equipe) return "sem equipe além da chefia";
+  if (!equipe) {
+    // Unidade proposta sem quadro nenhum não tem chefia de quem se excetuar, e
+    // a caixa desenhada como posição não nomeia nenhuma: o que a chamada tem a
+    // dizer ali é que a composição é decisão a tomar.
+    if (!pessoasDaUnidade(u).length) return "quadro a definir";
+    return desenhadaComoPosicao(u) ? "sem equipe além do titular" : "sem equipe além da chefia";
+  }
   return aberta
     ? `ocultar equipe (${equipe})`
     : `ver equipe alocada (${equipe})`;
@@ -5670,16 +5686,16 @@ function papelResumido(pessoa, rotulo) {
   return pessoa.cargo ? `${rotulo} · ${pessoa.cargo}` : rotulo;
 }
 
-// Uma caixa por gerência: o nome de quem responde é o título, em azul como
-// nas demais caixas, e a frente que ela conduz — quando declarada — vem na
-// linha de apoio. Ali o texto longo quebra por palavra, em vez de estourar a
-// caixa quando o desenho é reduzido para caber na folha.
-function noDeGerencia(pessoa, busca) {
+// Uma caixa por gerência. Onde a unidade é desenhada como estrutura vigente,
+// o título é o nome de quem responde, em azul como nas demais caixas, e a
+// frente que ela conduz vem na linha de apoio. Onde é desenhada como posição,
+// a frente ocupa o título e o nome não entra.
+function noDeGerencia(pessoa, busca, posicao) {
   return noDoFluxo({
     classe: "gerencia",
     selo: nivelDoCargo(pessoa),
-    titulo: pessoa.nome,
-    linhas: [pessoa.funcao],
+    titulo: posicao ? pessoa.funcao || "Gerência de TI" : pessoa.nome,
+    linhas: posicao ? [] : [pessoa.funcao],
     destacado: Boolean(busca) && pessoaBate(pessoa, busca),
   });
 }
@@ -5692,7 +5708,9 @@ let visaoEmMontagem = null;
 function filhosDoFluxo(u, busca, paraPapel) {
   const titular = titularDaUnidade(u);
   const gerentes = pessoasDoPapel(u, "gerencia").filter((p) => p !== titular);
-  const gerencias = gerentes.map((p) => `<li>${noDeGerencia(p, busca)}</li>`);
+  const gerencias = gerentes.map(
+    (p) => `<li>${noDeGerencia(p, busca, desenhadaComoPosicao(u))}</li>`
+  );
 
   const secoes = subunidadesDe(u).map((su) => {
     const titular = titularDaUnidade(su);
@@ -5702,19 +5720,24 @@ function filhosDoFluxo(u, busca, paraPapel) {
       (textoDaUnidade(su).includes(busca) ||
         pessoasDaUnidade(su).some((p) => pessoaBate(p, busca)));
     const aberta = !paraPapel && state.estruturaUnidadeAberta === su.sigla;
+    const posicao = desenhadaComoPosicao(su);
     const no = noDoFluxo({
       classe: classeDaUnidade(su),
       selo: seloDaUnidade(su),
       titulo: paraPapel ? su.sigla : `${su.sigla} — ${su.nome}`,
       subtitulo: paraPapel ? su.nome : "",
-      responsavel: titular
+      responsavel: posicao
+        ? ""
+        : titular
         ? titular.nome
         : minutaEmTela(visaoEmMontagem) && su.estado === "nova"
         ? "chefia a designar"
         : "chefia a confirmar",
       vago: !titular,
       linhas: [
-        titular ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia") : "",
+        !posicao && titular
+          ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")
+          : "",
         su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
         resumoDeQuadro(su),
       ],
@@ -5766,19 +5789,24 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
         !paraPapel &&
         Boolean(busca) &&
         (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
+      const posicao = desenhadaComoPosicao(u);
       const no = noDoFluxo({
         classe: classeDaUnidade(u),
         selo: seloDaUnidade(u),
         titulo: paraPapel ? u.sigla : `${u.sigla} — ${u.nome}`,
         subtitulo: paraPapel ? u.nome : "",
-        responsavel: titular
+        responsavel: posicao
+          ? ""
+          : titular
           ? titular.nome
           : minutaEmTela(visao)
           ? "chefia a designar"
           : "chefia a confirmar",
         vago: !titular,
         linhas: [
-          titular ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia") : "",
+          !posicao && titular
+            ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")
+            : "",
           resumoDeQuadro(u),
         ],
         destacado,
