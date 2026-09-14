@@ -251,15 +251,48 @@ A tela tem duas coisas e só: **o fluxograma** e **a lista de quem está em cada
 unidade**. Nenhum texto corrido, nenhum comparativo, nenhuma nota — a leitura é
 o desenho.
 
-**Esqueleto fixo.** De cima para baixo: **Diretor → chefes de divisão (DAS-4) →
-gerências de TI (DAS-3)**, com a **Seção de Atendimento ao Usuário** dentro da
-Divisão de Infraestrutura Tecnológica, no nível das gerências, porque é onde
-ela está e quem a chefia é um gerente. Cada nível tem cor própria — navy na
-Diretoria, azul nas divisões, azul claro nas gerências, vermelho na porta de
-entrada e tracejado nas unidades que a minuta cria —, o que permite ler a
-profundidade sem seguir as linhas com o dedo. A caixa traz o titular, o nível
-do cargo e o quadro em números; nome de quem não é chefia ou gerência não
-aparece no desenho.
+**Esqueleto fixo.** Na estrutura atual, de cima para baixo: **Diretor → chefes
+de divisão (DAS-4) → gerências de TI (DAS-3)**, com a **Seção de Atendimento ao
+Usuário** dentro da Divisão de Infraestrutura Tecnológica, no nível das
+gerências, porque é onde ela está e quem a chefia é um gerente.
+
+**Cada camada tem a sua cor**, e a cor vem da natureza declarada da unidade, não
+da posição em que ela é desenhada — com Superintendência, Diretoria, Divisão e
+Seção na mesma árvore, "nível 2" deixaria de significar uma coisa só. Navy no
+topo, azul nas Diretorias, navy institucional nas Divisões, azul de reunião nas
+gerências e vermelho na porta de entrada. Unidade que a minuta cria fica
+**tracejada com o topo verde**, mantendo a cor da sua camada: trocar o fundo
+pelo verde apagaria a hierarquia justamente onde ela muda.
+
+**O nome de quem responde pela unidade vai em azul, em linha própria** — é o que
+se procura primeiro em um organograma, e em cinza de apoio ele se perdia entre o
+cargo e a contagem de pessoas. Chefia sem titular aparece em cor de aviso, não
+em azul: não é nome, é pendência. A caixa traz ainda o nível do cargo e o quadro
+em números; nome de quem não é chefia ou gerência não aparece no desenho.
+
+**A estrutura sugerida.** A Diretoria passa a **Superintendência de Tecnologia
+da Informação**, e abaixo dela ficam **duas Diretorias**:
+
+- **Diretoria de Tecnologia da Informação**, que recebe a estrutura de hoje
+  inteira — DDES, DINT (com a SEATU) e DBAD —, com a mesma chefia, o mesmo
+  quadro e as mesmas atribuições;
+- **Diretoria de Projetos de TIC**, nova, com a **Divisão de Processos de TIC**
+  e a **Divisão de Governança Digital e Segurança da Informação**.
+
+**Nenhuma unidade existente é extinta ou perde quadro:** o que muda é a camada
+acima delas e a criação da segunda Diretoria. A Divisão de Governança Digital e
+Segurança da Informação reúne o que hoje é acúmulo — governança de TI, exercida
+pela Diretoria junto com a direção da área, e segurança da informação, exercida
+pela Infraestrutura, que opera o ambiente que deveria avaliar.
+
+**O que a minuta não pressupõe.** A chefia das duas Diretorias e das duas
+Divisões novas fica a designar, e as Divisões novas nascem sem quadro
+declarado: compô-las exige remanejamento ou provimento, e os dois são atos do
+Tribunal. As siglas DPTIC, DPRO e DGDS são propostas — a denominação oficial vem
+no ato de criação. **Informação gerencial e painéis seguem sem unidade
+responsável** nesta versão, a definir entre Processos de TIC, Banco de Dados e
+Governança Digital; a lacuna está registrada nas premissas, no arquivo de
+dados.
 
 **A equipe abre no clique.** Clicar na caixa de uma unidade abre, abaixo do
 desenho, a equipe alocada nela. Um painel por vez, e sempre no mesmo lugar:
@@ -311,9 +344,10 @@ a **equipe de cada unidade** listada com cargo, matrícula, vínculo ou perfil d
 senioridade. A folha sai branca mesmo com o app no tema escuro, porque os
 tokens de cor são redefinidos dentro dela em vez de a árvore ser redesenhada.
 
-No papel, a sigla é o título da caixa e o nome da unidade desce para a primeira
-linha: a mesma informação, na ordem que o espaço permite. E **a minuta sai
-carimbada** — "MINUTA DE PROPOSTA · sem valor de ato administrativo" —, porque
+No papel, a sigla é o título da caixa e o nome da unidade desce para a linha
+seguinte: a mesma informação, na ordem que o espaço permite. O cabeçalho
+acompanha a unidade do topo da visão — na minuta o topo é uma Superintendência,
+e o cabeçalho não pode anunciar uma Diretoria. E **a minuta sai carimbada** — "MINUTA DE PROPOSTA · sem valor de ato administrativo" —, porque
 um organograma proposto impresso sem ressalva circula como se fosse a estrutura
 vigente.
 
