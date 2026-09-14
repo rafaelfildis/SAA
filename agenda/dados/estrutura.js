@@ -309,6 +309,10 @@
     atual: {
       rotulo: "Estrutura atual",
       chamada: "Como a DTI está lotada hoje",
+      // O balão ao lado do topo conta o quadro que está em tela, em vez de
+      // trazer um número gravado: acrescentar ou remover uma pessoa move o
+      // balão junto, e um total à mão envelheceria na primeira atualização.
+      cargosDoQuadro: true,
       resumo:
         "Três divisões sob a Diretoria e uma seção subordinada à Infraestrutura, com 43 pessoas: 16 na relação de lotação e 27 na equipe técnica alocada por perfil. As quatro unidades cobrem desenvolvimento, infraestrutura, banco de dados e atendimento — quatro das sete funções de TI. Governança, segurança da informação e informação gerencial não têm unidade própria: são exercidas por acúmulo ou não têm dono declarado.",
       procedencia:

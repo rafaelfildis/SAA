@@ -2846,8 +2846,9 @@ html, body { overflow-x: hidden; }
    absoluta, para que o topo não saia do eixo vertical da árvore. */
 .fluxo-topo { position: relative; display: flex; }
 
-/* Balão ao lado do topo: o dimensionamento da proposta em cargos. Verde
-   porque é o número que a minuta propõe, não o que existe hoje. */
+/* Balão ao lado do topo, com o total de cargos. A cor diz de que número se
+   trata: vermelho de interface no quadro que existe hoje, verde no
+   dimensionamento que a minuta propõe. */
 .fluxo-balao {
   position: absolute;
   left: calc(100% + 18px);
@@ -2855,17 +2856,23 @@ html, body { overflow-x: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 13px 6px 11px;
+  padding: 6px 13px;
   white-space: nowrap;
-  background: var(--color-success-tint);
-  border: 1.5px solid var(--color-success);
+  border: 1.5px solid currentColor;
   border-radius: 15px;
-  color: var(--color-success);
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.2;
 }
-/* Bico apontando para o quadro da Superintendência. */
+.fluxo-balao--vigente { color: var(--color-error-strong); background: var(--color-error-tint); }
+.fluxo-balao--proposto {
+  color: var(--color-success);
+  background: var(--color-success-tint);
+  padding-left: 11px;
+}
+/* Bico apontando para o quadro do topo. A borda herda a cor do balão, e o
+   triângulo é desenhado com bordas: um pseudo-elemento não recebe a cor de
+   texto em `border-right` por herança, então ela vem de currentColor. */
 .fluxo-balao::before {
   content: "";
   position: absolute;
@@ -2876,7 +2883,7 @@ html, body { overflow-x: hidden; }
   transform: translateY(-50%);
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
-  border-right: 8px solid var(--color-success);
+  border-right: 8px solid currentColor;
 }
 .fluxo-balao__seta { flex: 0 0 auto; }
 
@@ -3210,6 +3217,8 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   --color-brand-red: #E30521;
   --color-success: #0F7B5F;
   --color-success-tint: #E7F4F0;
+  --color-error-strong: #B00320;
+  --color-error-tint: #FDECEF;
   --color-heading: #0B3163;
   --color-text-primary: #12203A;
   --color-text-secondary: #5F6E88;

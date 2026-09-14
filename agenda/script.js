@@ -5898,15 +5898,23 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
     })
     .join("");
 
-  // Balão ao lado do topo: o total de cargos da proposta, informado pela
-  // Diretoria. Fica em posição absoluta dentro de um invólucro da largura da
-  // caixa, para não deslocar o topo do eixo vertical da árvore.
-  const balao = visao.totalDeCargos
-    ? `<span class="fluxo-balao">
-         <svg class="fluxo-balao__seta" viewBox="0 0 24 24" width="15" height="15" fill="none"
+  // Balão ao lado do topo. Na estrutura vigente ele conta o quadro que está em
+  // tela, em vermelho, porque é o que existe; na minuta traz o total informado
+  // pela Diretoria, em verde e com seta, porque é o que se propõe. Fica em
+  // posição absoluta dentro de um invólucro da largura da caixa, para não
+  // deslocar o topo do eixo vertical da árvore.
+  const doQuadro = Boolean(visao.cargosDoQuadro);
+  const cargos = doQuadro ? pessoasDaVisao(visao) : visao.totalDeCargos;
+  const balao = cargos
+    ? `<span class="fluxo-balao fluxo-balao--${doQuadro ? "vigente" : "proposto"}">
+         ${
+           doQuadro
+             ? ""
+             : `<svg class="fluxo-balao__seta" viewBox="0 0 24 24" width="15" height="15" fill="none"
               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-              aria-hidden="true"><line x1="6" y1="18" x2="18" y2="6"></line><polyline points="10 6 18 6 18 14"></polyline></svg>
-         <span class="fluxo-balao__texto">${escapeHtml(plural(visao.totalDeCargos, "cargo", "cargos"))}</span>
+              aria-hidden="true"><line x1="6" y1="18" x2="18" y2="6"></line><polyline points="10 6 18 6 18 14"></polyline></svg>`
+         }
+         <span class="fluxo-balao__texto">${escapeHtml(plural(cargos, "cargo", "cargos"))}</span>
        </span>`
     : "";
 

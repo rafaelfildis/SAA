@@ -319,11 +319,17 @@ abrir. Enquanto a criação de unidade e a designação de chefia dependem de at
 lotar nomes na proposta daria por decidido o que não está — quem quiser ver
 quem está onde hoje usa a estrutura atual, que é onde esse dado existe.
 
-**Ao lado do topo, um balão verde com o total de cargos da proposta** — 45 —,
-que é o dimensionamento informado pela Diretoria e não uma conta do sistema: a
-relação de lotação traz 16 pessoas e a alocação da equipe técnica 27. O balão
-fica em posição absoluta dentro de um invólucro da largura do quadro, para não
-deslocar o topo do eixo vertical da árvore.
+**Ao lado do topo, um balão com o total de cargos**, e a cor diz de que número
+se trata. Na estrutura atual ele é **vermelho** e conta o quadro que está em
+tela — 59 hoje —, derivado das unidades a cada carga: acrescentar ou remover uma
+pessoa move o balão junto, e um total gravado à mão envelheceria na primeira
+atualização. Na minuta ele é **verde, com seta**, e traz os **45 cargos**
+informados pela Diretoria, que não é conta do sistema — a relação de lotação tem
+16 pessoas e a alocação 43. Vermelho é o que existe, verde é o que se propõe.
+
+O balão fica em posição absoluta dentro de um invólucro da largura do quadro,
+para não deslocar o topo do eixo vertical da árvore, e entra na medida de folga
+da folha, senão passaria da margem no papel.
 
 Quem controla os dois comportamentos é o arquivo de dados, não a tela: a visão
 declara `estrutural: true` e `totalDeCargos`, e cada unidade declara `cargo` —
