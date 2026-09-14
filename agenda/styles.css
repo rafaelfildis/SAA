@@ -2084,6 +2084,26 @@ html, body { overflow-x: hidden; }
   text-transform: uppercase;
 }
 
+/* Etiqueta de unidade da DTI no projeto e no contrato: diz de quem é o
+   instrumento na própria lista, sem obrigar a abrir o registro. Uma cor por
+   Divisão, tomada das mesmas famílias que o resto da interface usa, e contorno
+   em vez de fundo cheio para não competir com o selo de situação, que é o que
+   pede ação. Contrato de fiscalização compartilhada traz mais de uma. */
+.etiqueta-unidade {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font: 700 10.5px/1.4 var(--font-sans, "IBM Plex Sans", sans-serif);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.etiqueta-unidade--ddes { color: var(--cat-presencial); background: var(--cat-presencial-bg); }
+.etiqueta-unidade--dint { color: var(--cat-online); background: var(--cat-online-bg); }
+.etiqueta-unidade--dbad { color: var(--cat-escola); background: var(--cat-escola-bg); }
+
 /* --- Formulários --------------------------------------------------------- */
 
 .proj-modal {

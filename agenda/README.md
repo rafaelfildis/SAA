@@ -99,8 +99,8 @@ e vira ruído.
 **Cartão da Estrutura DTI:** unidades abaixo da Diretoria hoje, unidades
 previstas na minuta e quantas funções de TI seguem sem unidade própria — a cela
 de alerta só acende quando existe alguma. O destaque nomeia as unidades que a
-minuta cria, e o selo traz o total de pessoas no organograma com a ressalva de
-que a proposta está em discussão.
+minuta cria, e o selo traz o total de pessoas no organograma (59, hoje) com a
+ressalva de que a proposta está em discussão.
 
 Os números do portal ignoram os filtros em vigor nas telas internas: a página
 inicial resume a base, não o recorte que ficou selecionado em outro módulo.
@@ -134,8 +134,27 @@ calendário, e o painel não grava nada.
 Projetos em desenvolvimento com entrega prevista dentro de um horizonte
 (100, 30 ou 7 dias), e o histórico de status de cada um.
 
-**Cadastro do projeto:** nome, objetivo/escopo, responsável, área, data de
-lançamento, prazo de entrega, situação e progresso.
+**Cadastro do projeto:** nome, objetivo/escopo, responsável, área, **unidade da
+DTI**, **fornecedor**, data de lançamento, prazo de entrega, situação e
+progresso.
+
+**Etiqueta de unidade.** Cada registro mostra na própria lista de quem é o
+instrumento — `DDES`, `DINT` ou `DBAD` —, com uma cor por Divisão e contorno em
+vez de fundo cheio, para não competir com o selo de situação, que é o que pede
+ação. Contrato de **fiscalização compartilhada traz mais de uma etiqueta**,
+porque é o que ele é: o 65/2022, dos postos de serviço, é gerido pelas três
+Divisões, e o 25/2022, de nuvem, pela Infraestrutura e pelo Banco de Dados. No
+formulário a unidade é um seletor de uma opção; salvar sem tocar nele preserva
+a lista original, inclusive a de mais de uma unidade, que o seletor não sabe
+representar. Projeto sem unidade declarada simplesmente não recebe etiqueta.
+
+**Fornecedor.** A empresa contratada aparece na lista (só a razão social) e no
+painel de detalhe (com o CNPJ, onde o documento de origem o traz). O campo
+`responsavel`, nos contratos, é o **fiscal ou a comissão de fiscalização**
+declarada — e o painel rotula a linha como "Fiscalização" em vez de
+"Responsável" quando o registro é um contrato. A busca alcança os dois campos e
+a sigla da unidade: "X-Site" traz os cinco contratos da empresa, "DBAD" os doze
+sob a Divisão de Banco de Dados.
 
 **Situações:** não iniciado, em andamento, em risco, concluído, suspenso e
 vencido. *Atrasado* não é uma delas: é derivado do prazo vencido sem entrega.
@@ -153,6 +172,11 @@ vigência**, e o campo aparece travado com a regra escrita ao lado.
 | já passou | **Vencido** |
 | faltam 90 dias ou menos | **Em risco** |
 | mais que isso | **Em andamento** |
+
+A carteira vem de `dados/contratos.js`, e **fornecedor, unidade responsável e
+fiscalização vieram das respostas das três Divisões** ao levantamento da
+Presidência, de agosto de 2026 — antes disso os 30 contratos estavam sem essas
+três informações.
 
 A antecedência de 90 dias é a janela para prorrogar ou abrir nova licitação.
 Derivar em vez de gravar é o que impede o painel de envelhecer: no dia em que
@@ -381,8 +405,21 @@ estagiários".
 do título resume o desenho em números: unidades, total de pessoas, quantas vêm
 da **relação de lotação** (com vínculo) e quantas da **equipe técnica** (alocada
 por perfil). Somá-las em um número só apagaria a diferença entre quadro próprio
-e equipe alocada. Na minuta, onde não há quadro nominal, a mesma linha conta o
-que ela tem: **unidades e cargos**.
+e equipe alocada — hoje são **16 e 43**, e a proporção é o dado: a operação
+contínua é contratada. Na minuta, onde não há quadro nominal, a mesma linha
+conta o que ela tem: **unidades e cargos**.
+
+**As respostas das Divisões ao levantamento da Presidência** (agosto de 2026)
+trouxeram o que a alocação inicial não tinha: a **equipe da DINT** (14 pessoas
+na Divisão mais a gerência na Seção — três postos de infraestrutura, quatro de
+apoio aos sistemas, quatro de transmissão e eventos e dois estagiários) e a
+**equipe da DBAD** (o Chefe, uma analista do quadro e três postos de banco de
+dados). O mesmo documento **fechou duas pendências** que a relação de lotação
+deixava abertas: o cargo do Chefe da DBAD, declarado como DAS-4, e o quadro de
+atendimento — a resposta da DINT informa que a Seção deixou de constituir
+chefia autônoma e que a equipe de atendimento está lotada na Divisão. O
+organograma mantém a Seção enquanto não houver ato que a extinga, e registra a
+informação na observação da unidade.
 
 **A árvore é `<ul>` aninhado com os conectores em CSS**: sem biblioteca, sem
 canvas e sem posição calculada em JavaScript, o desenho acompanha o texto

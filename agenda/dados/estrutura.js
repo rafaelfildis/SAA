@@ -9,9 +9,11 @@
 //
 //   · a RELAÇÃO DE LOTAÇÃO — 16 pessoas com matrícula, vínculo e cargo, do
 //     Diretor aos analistas e técnicos de nível médio;
-//   · a EQUIPE TÉCNICA — 27 pessoas alocadas por unidade com perfil de
+//   · a EQUIPE TÉCNICA — 43 pessoas alocadas por unidade com perfil de
 //     senioridade (Júnior, Pleno, Sênior, Master, Estagiário), sem matrícula
-//     nem vínculo declarados.
+//     nem vínculo declarados. As 27 primeiras vieram da alocação da Diretoria;
+//     as 16 restantes, das respostas da DINT (13) e da DBAD (3) de agosto de
+//     2026, que trouxeram o quadro que a alocação inicial não contemplava.
 //
 // Somá-las em um número só apagaria a diferença entre quadro próprio e equipe
 // alocada por perfil, que é justamente o que uma discussão de estrutura precisa
@@ -27,10 +29,14 @@
 //
 // O que as relações NÃO declaram fica marcado como "a confirmar", em vez de ser
 // preenchido por conta própria: o escopo de cada uma das três gerências da
-// DDES, o cargo do Diretor, o quadro de atendimento da SEATU e o quadro técnico
-// da DINT. Cada gerência tem a sua caixa no fluxograma, com o nome de quem
-// responde; o escopo aparece na linha de apoio só onde está declarado, que
-// hoje é a minuta.
+// DDES e o cargo do Diretor. Cada gerência tem a sua caixa no fluxograma, com
+// o nome de quem responde; o escopo aparece na linha de apoio só onde está
+// declarado, que hoje é a minuta.
+//
+// As respostas das Divisões ao levantamento da Presidência (agosto de 2026)
+// fecharam três pendências que a relação de lotação deixava abertas: o quadro
+// da DINT, o quadro da DBAD e o cargo do Chefe da DBAD, que o documento
+// declara como DAS-4.
 //
 // Ramal não entra aqui de propósito. As relações não trazem ramal, e cruzar
 // nome com a lista de ramais pelo primeiro nome produziria número errado ao
@@ -219,6 +225,11 @@
     tecnico("Yuri Figueiredo Ribeiro", "Estagiário", "QA e Analista de Requisitos"),
   ];
 
+  // A equipe da DINT vem do Quadro do Bloco 5 da resposta da Divisão
+  // (03/08/2026): duas pessoas do quadro próprio — o Chefe da Divisão e o
+  // Gerente de Tecnologia da Informação, este lotado na Seção —, onze postos
+  // do Contrato 65/2022 e dois estagiários. A resposta organiza os postos em
+  // três frentes: infraestrutura, apoio aos sistemas e transmissão e eventos.
   const QUADRO_DINT = [
     {
       nome: "Rafael José Levita de Almeida",
@@ -227,6 +238,19 @@
       cargo: "Chefe da Divisão de Infraestrutura Tecnológica, DAS-4",
       papel: "chefia",
     },
+    tecnico("Adson Alexandre Borges de Jesus", "Sênior III", "Infraestrutura"),
+    tecnico("Edvaldo Souza dos Santos", "Pleno III", "Infraestrutura"),
+    tecnico("Diego Viana Santos", "Pleno II", "Infraestrutura"),
+    tecnico("Vinícius Matias dos Santos Santana", "Pleno I", "Apoio aos sistemas"),
+    tecnico("Lucas Silva Gonçalves", "Júnior I", "Apoio aos sistemas"),
+    tecnico("Valmirete Paula Santos da Silva", "Técnico", "Apoio aos sistemas"),
+    tecnico("Aisla dos Santos da Anunciação", "Técnico", "Apoio aos sistemas"),
+    tecnico("Eduardo Nascimento da Silva", "Pleno I", "Transmissão e eventos"),
+    tecnico("Ivan de Jesus Júnior", "Técnico", "Transmissão e eventos"),
+    tecnico("Ian de Aguiar Fagundes", "Técnico", "Transmissão e eventos"),
+    tecnico("Caique Nascimento da Anunciação", "Técnico", "Transmissão e eventos"),
+    tecnico("Albert Erico Santos Portela", "Estagiário", "Atendimento de 1º nível"),
+    tecnico("Doglas Matos de Sousa", "Estagiário", "Atendimento de 1º nível"),
   ];
 
   const QUADRO_SEATU = [
@@ -239,12 +263,16 @@
     },
   ];
 
+  // A equipe da DBAD vem do Bloco 5 da resposta da Divisão: o Chefe, uma
+  // servidora e três postos terceirizados de administração de banco de dados.
+  // O documento declara o Chefe como "DAS-4, Chefe da Divisão", o que resolve
+  // a pendência que a relação de lotação deixava aberta.
   const QUADRO_DADOS = [
     {
       nome: "Sérvulo Dourado Cruz Lino",
       matricula: "217410",
       vinculo: "Efetivo",
-      cargo: "Analista de Sistemas",
+      cargo: "Chefe da Divisão de Banco de Dados, DAS-4",
       papel: "chefia",
     },
     {
@@ -254,6 +282,9 @@
       cargo: "Analista de Sistemas",
       papel: "equipe",
     },
+    tecnico("Cristiano Araujo Silva", "Sênior V", "DBA"),
+    tecnico("Larissa de Oliveira Pinheiro", "Sênior III", "Administração de dados"),
+    tecnico("Jorge Luis Cruz Duarte", "Sênior II", "DBA"),
   ];
 
   window.SAA_ESTRUTURA_VERSAO = "2026-09-13";
@@ -281,13 +312,14 @@
         "Montada a partir de duas relações da DTI: a de lotação (matrícula, vínculo e cargo) e a da equipe técnica alocada por unidade (perfil de senioridade, sem vínculo declarado). O que as relações não declaram aparece como “a confirmar”, não preenchido por conta própria. Ramais ficam no módulo Ramal DTI.",
       notasTitulo: "Leitura da estrutura atual",
       notas: [
-        "O desenvolvimento concentra 37 das 43 pessoas do organograma, e 26 dos 27 técnicos alocados. A estrutura está desenhada para produzir sistema; as demais funções de TI se sustentam com o que sobra.",
+        "O desenvolvimento concentra 37 das 59 pessoas do organograma, e 26 dos 43 postos alocados. A estrutura está desenhada para produzir sistema; as demais funções de TI se sustentam com o que sobra.",
+        "O quadro próprio do Tribunal é de 16 pessoas em toda a Diretoria, e a operação contínua é contratada: 43 das 59 pessoas do organograma vêm da alocação por perfil, quase todas do Contrato 65/2022. Na Infraestrutura a proporção é de 2 servidores para 13 postos e estagiários.",
         "Segurança da informação não tem unidade responsável: o papel recai sobre a Divisão de Infraestrutura Tecnológica, que opera o ambiente — quem opera acaba avaliando a própria operação.",
         "Governança de TI — plano diretor, portfólio, indicadores, gestão de contratos e de fornecedores — não tem unidade própria, embora um único contrato de serviços especializados passe de R$ 9 milhões por ano.",
         "Informação gerencial não tem dono declarado: painéis e indicadores nascem por demanda, sem unidade que responda pela fonte e pelo número.",
-        "A alocação de técnicos não contempla a Infraestrutura nem o Banco de Dados. A DINT segue com a chefia da Divisão e a gerência da Seção, sem quadro técnico próprio, e os nomes que atendem infraestrutura na lista de ramais não constam de nenhuma das duas relações — a confirmar.",
-        "A Seção de Atendimento ao Usuário é a porta de entrada da operação e registra apenas a gerência: não há quadro próprio de atendimento — a confirmar quem executa o primeiro nível.",
-        "A chefia da Divisão de Banco de Dados é exercida por analista de sistemas efetivo, sem o cargo comissionado de DAS-4 que titulariza as outras duas divisões — a confirmar se há designação formal.",
+        "A equipe da Infraestrutura e a do Banco de Dados vêm das respostas das próprias Divisões, de agosto de 2026, e não da alocação inicial de técnicos, que não as contemplava. A DINT registra 14 pessoas — o Chefe, três postos de infraestrutura, quatro de apoio aos sistemas, quatro de transmissão e eventos e dois estagiários — e a DBAD, cinco.",
+        "A Seção de Atendimento ao Usuário segue como porta de entrada e registra apenas a gerência: a resposta da DINT lota a equipe de atendimento na própria Divisão, porque, desde a última reorganização, infraestrutura e atendimento operam como unidade única — a Seção deixou de constituir chefia autônoma e o Gerente passou a integrar a DINT.",
+        "Nenhum servidor do quadro atua exclusivamente em cibersegurança: a cobertura contínua é prestada 24 horas por dia, sete dias por semana, pelo centro de operações contratado.",
         "As três gerências (DAS-3) da Divisão de Desenvolvimento de Sistemas estão lotadas na própria Divisão, sem seção nomeada: nem a relação de lotação nem a alocação dizem o escopo de cada gerência ou a qual delas cada técnico responde. No fluxograma, por isso, a equipe aparece ligada à Divisão, e não distribuída entre as três.",
         "A relação da equipe técnica não declara vínculo. Os perfis — Júnior, Pleno, Sênior, Master e Estagiário — são os de contrato de serviços especializados, a confirmar junto à Diretoria.",
       ],
@@ -327,13 +359,14 @@
           funcoes: ["infraestrutura"],
           funcoesAcumuladas: ["seguranca"],
           atribuicoes: [
-            "Rede, servidores, estações de trabalho e ambiente de datacenter",
-            "Backup, monitoramento e continuidade dos serviços",
-            "Atendimento ao usuário pela Seção subordinada (SEATU), no ramal 4631",
+            "Nuvem, contêineres, servidores, redes, telefonia, datacenter, energia e estações de trabalho",
+            "Backup, monitoramento e continuidade dos serviços, com suporte de nível 3 às demais equipes",
+            "Atendimento ao usuário pela Seção subordinada (SEATU), no ramal 4631, e transmissão das sessões",
+            "Gestão e fiscalização dos contratos de tecnologia: 15 instrumentos vigentes",
             "Segurança da informação exercida por acúmulo, sem unidade própria",
           ],
           observacao:
-            "A relação de lotação traz a chefia da Divisão e a gerência da Seção, e a alocação de técnicos não contempla esta unidade. Os nomes que atendem infraestrutura na lista de ramais não constam de nenhuma das duas relações — a confirmar se são do contrato de serviços especializados.",
+            "Quadro da resposta da Divisão de 03/08/2026: 14 pessoas aqui e a gerência na Seção, 15 no total. Duas são do quadro próprio — o Chefe e o Gerente —, onze são postos do Contrato 65/2022, em três frentes (infraestrutura, apoio aos sistemas e transmissão e eventos), e duas são estagiárias. A resposta lota o atendimento na Divisão porque, desde a última reorganização, infraestrutura e atendimento operam como unidade única.",
           pessoas: QUADRO_DINT,
           subunidades: [
             {
@@ -348,7 +381,7 @@
                 "Atendimento ao usuário interno e apoio às sessões do Plenário",
               ],
               observacao:
-                "A relação registra apenas a gerência: a seção não tem quadro próprio de atendimento — a confirmar quem executa o primeiro nível.",
+                "Registra apenas a gerência: a resposta da DINT informa que a Seção deixou de constituir chefia autônoma e que o Gerente de Tecnologia da Informação passou a integrar a Divisão, com a equipe de atendimento lotada nela — quatro postos de apoio aos sistemas, quatro de transmissão e eventos e dois estagiários. O organograma mantém a Seção enquanto não houver ato que a extinga.",
               pessoas: QUADRO_SEATU,
             },
           ],
@@ -360,11 +393,12 @@
           subordinacao: "Diretoria de Tecnologia da Informação",
           funcoes: ["dados"],
           atribuicoes: [
-            "Administração dos bancos de dados corporativos",
-            "Desempenho, integridade e recuperação das bases",
+            "Administração dos bancos de dados corporativos: 10 SGBDs, 340 bancos, 194 TB",
+            "Desempenho, integridade e recuperação das bases, com 38 rotinas automáticas",
+            "Extrações e correções de dados: cerca de 15 por mês",
           ],
           observacao:
-            "A chefia é exercida por analista de sistemas efetivo. A relação não registra, para esta Divisão, o cargo comissionado de DAS-4 que titulariza as outras duas — a confirmar se há designação formal. A alocação de técnicos não contempla a unidade.",
+            "Quadro da resposta da Divisão: cinco pessoas — o Chefe, uma analista do quadro e três postos terceirizados de administração de banco de dados. A resposta declara o Chefe como DAS-4, Chefe da Divisão, o que resolve a pendência que a relação de lotação deixava aberta. A equipe administra 10 SGBDs e 340 bancos, com 38 rotinas automáticas acompanhadas.",
           pessoas: QUADRO_DADOS,
         },
       ],

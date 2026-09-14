@@ -4041,7 +4041,12 @@ function projetosFiltrados({ ignorarHorizonte = false } = {}) {
       }
       if (situacoes.size && !situacoes.has(situacaoEfetiva(p))) return false;
       if (busca) {
-        const alvo = normalizarTexto(`${p.nome} ${p.descricao || ""} ${p.responsavel || ""} ${p.area || ""}`);
+        const alvo = normalizarTexto(
+          `${p.nome} ${p.descricao || ""} ${p.responsavel || ""} ${p.area || ""} ` +
+            `${p.fornecedor || ""} ${unidadesDoProjeto(p)
+              .map((u) => `${u} ${UNIDADES_DTI[u].nome}`)
+              .join(" ")}`
+        );
         if (!alvo.includes(normalizarTexto(busca))) return false;
       }
       return true;
@@ -4300,6 +4305,8 @@ function renderizarListaProjetos(lista) {
             <span class="proj-card__titulo">${escapeHtml(p.nome)}</span>
             <span class="proj-card__meta">
               ${seloSituacao(p)}
+              ${etiquetasDeUnidade(p)}
+              ${p.fornecedor ? `<span>${escapeHtml(p.fornecedor.split(" · ")[0])}</span>` : ""}
               ${p.responsavel ? `<span>${escapeHtml(p.responsavel)}</span>` : ""}
               ${p.area ? `<span>${escapeHtml(p.area)}</span>` : ""}
               ${ultima && ultima.nota ? `<span>${escapeHtml(ultima.nota.slice(0, 90))}</span>` : ""}
@@ -4313,6 +4320,31 @@ function renderizarListaProjetos(lista) {
           </span>
         </button>`;
     })
+    .join("");
+}
+
+// Unidades da DTI que respondem por projeto e contrato. A etiqueta na lista
+// diz de quem é o instrumento sem obrigar a abrir o registro — e um contrato
+// de fiscalização compartilhada traz mais de uma, porque é o que ele é.
+const UNIDADES_DTI = {
+  DDES: { rotulo: "DDES", nome: "Divisão de Desenvolvimento de Sistemas" },
+  DINT: { rotulo: "DINT", nome: "Divisão de Infraestrutura Tecnológica" },
+  DBAD: { rotulo: "DBAD", nome: "Divisão de Banco de Dados" },
+};
+
+function unidadesDoProjeto(p) {
+  const brutas = Array.isArray(p && p.unidades) ? p.unidades : [];
+  return brutas.map((u) => String(u).trim().toUpperCase()).filter((u) => UNIDADES_DTI[u]);
+}
+
+function etiquetasDeUnidade(p) {
+  return unidadesDoProjeto(p)
+    .map(
+      (u) =>
+        `<span class="etiqueta-unidade etiqueta-unidade--${u.toLowerCase()}" title="${escapeAttr(
+          UNIDADES_DTI[u].nome
+        )}">${escapeHtml(UNIDADES_DTI[u].rotulo)}</span>`
+    )
     .join("");
 }
 
@@ -4450,8 +4482,11 @@ function linhaPlanoExport(p) {
   const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
   const ultimo = (p.historico || [])[0];
   const responsavel = [p.responsavel, p.area].filter(Boolean).join(" · ");
+  const unidades = unidadesDoProjeto(p).join(" · ");
 
   const apoio = [];
+  if (unidades) apoio.push(escapeHtml(unidades));
+  if (p.fornecedor) apoio.push(escapeHtml(p.fornecedor));
   if (responsavel) apoio.push(escapeHtml(responsavel));
   if (p.descricao) apoio.push(escapeHtml(p.descricao));
   const nota = ultimo && ultimo.nota ? ultimo.nota : "";
@@ -4767,7 +4802,14 @@ function abrirPainelProjeto(id) {
     ${linha("Progresso", `${Math.max(0, Math.min(100, Number(p.progresso) || 0))}%`)}
     ${linha("Lançamento", dataLegivel(p.dataInicio))}
     ${linha("Prazo de entrega", `${dataLegivel(p.prazoEntrega)} — ${rotuloPrazo(p)}`)}
-    ${linha("Responsável", p.responsavel)}
+    ${linha("Fornecedor", p.fornecedor)}
+    ${linha(
+      unidadesDoProjeto(p).length > 1 ? "Unidades responsáveis" : "Unidade responsável",
+      unidadesDoProjeto(p)
+        .map((u) => `${UNIDADES_DTI[u].rotulo} — ${UNIDADES_DTI[u].nome}`)
+        .join("; ")
+    )}
+    ${linha(p.tipo === "contrato" ? "Fiscalização" : "Responsável", p.responsavel)}
     ${linha("Área", p.area)}
     <div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">Histórico</span></div>
     ${historico}`;
@@ -4982,6 +5024,11 @@ function abrirFormProjeto(id) {
   document.getElementById("proj-descricao").value = p ? p.descricao || "" : "";
   document.getElementById("proj-responsavel").value = p ? p.responsavel || "" : "";
   document.getElementById("proj-area").value = p ? p.area || "" : "";
+  document.getElementById("proj-fornecedor").value = p ? p.fornecedor || "" : "";
+  // O seletor guarda uma unidade. Contrato de fiscalização compartilhada tem
+  // mais de uma, e o formulário não as reduz a uma: mostra a primeira e, ao
+  // salvar, preserva a lista se ela não foi trocada.
+  document.getElementById("proj-unidade").value = p ? unidadesDoProjeto(p)[0] || "" : "";
   document.getElementById("proj-inicio").value = p ? p.dataInicio || hojeChave() : hojeChave();
   // Sem prazo digitado, o padrão é o fim do horizonte: é o que "próximos 100
   // dias" quer dizer, e evita abrir o seletor de datas no vazio.
@@ -5026,9 +5073,23 @@ function salvarProjeto() {
   const nota = document.getElementById("proj-nota").value.trim();
   const agora = new Date().toISOString();
 
+  const existenteAgora = projetoPorId(state.projetoEditando);
+  const unidadeEscolhida = document.getElementById("proj-unidade").value;
+  const unidadesAtuais = existenteAgora ? unidadesDoProjeto(existenteAgora) : [];
+  // Sem troca no seletor, a lista original fica de pé — inclusive a de mais de
+  // uma unidade, que o seletor não sabe representar.
+  const unidades =
+    unidadeEscolhida === (unidadesAtuais[0] || "")
+      ? unidadesAtuais
+      : unidadeEscolhida
+      ? [unidadeEscolhida]
+      : [];
+
   const campos = {
     nome,
     descricao: document.getElementById("proj-descricao").value.trim(),
+    fornecedor: document.getElementById("proj-fornecedor").value.trim(),
+    unidades,
     responsavel: document.getElementById("proj-responsavel").value.trim(),
     area: document.getElementById("proj-area").value.trim(),
     dataInicio: inicio,
@@ -5038,7 +5099,7 @@ function salvarProjeto() {
     atualizadoEm: agora,
   };
 
-  const existente = projetoPorId(state.projetoEditando);
+  const existente = existenteAgora;
   if (existente) {
     // Editar dados cadastrais não inventa lançamento no histórico. Só entra
     // registro quando a situação, o progresso ou uma nota mudam de fato.

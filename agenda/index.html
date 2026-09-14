@@ -822,6 +822,22 @@
 
       <div class="campo-linha">
         <label class="campo">
+          <span class="campo__rotulo">Unidade da DTI</span>
+          <select id="proj-unidade" class="input">
+            <option value="">Sem etiqueta</option>
+            <option value="DDES">DDES — Divisão de Desenvolvimento de Sistemas</option>
+            <option value="DINT">DINT — Divisão de Infraestrutura Tecnológica</option>
+            <option value="DBAD">DBAD — Divisão de Banco de Dados</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Fornecedor</span>
+          <input id="proj-fornecedor" class="input" type="text" maxlength="160" placeholder="Empresa contratada, com o CNPJ se houver" />
+        </label>
+      </div>
+
+      <div class="campo-linha">
+        <label class="campo">
           <span class="campo__rotulo">Lançamento <span class="campo__obrigatorio">*</span></span>
           <input id="proj-inicio" class="input" type="date" required />
         </label>
