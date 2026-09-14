@@ -28,9 +28,9 @@
 // O que as relações NÃO declaram fica marcado como "a confirmar", em vez de ser
 // preenchido por conta própria: o escopo de cada uma das três gerências da
 // DDES, o cargo do Diretor, o quadro de atendimento da SEATU e o quadro técnico
-// da DINT. Por isso as três gerências vêm agrupadas em uma caixa só na
-// estrutura atual: sem escopo declarado, três caixas idênticas não informam
-// nada — é na minuta, onde cada frente é nomeada, que cada uma ganha a sua.
+// da DINT. Cada gerência tem a sua caixa no fluxograma, com o nome de quem
+// responde; o escopo aparece na linha de apoio só onde está declarado, que
+// hoje é a minuta.
 //
 // Ramal não entra aqui de propósito. As relações não trazem ramal, e cruzar
 // nome com a lista de ramais pelo primeiro nome produziria número errado ao
@@ -56,8 +56,8 @@
 // `titularADesignar`, `pessoas`, `subunidades`, `funcoes`/`funcoesAcumuladas`
 // (que alimentam a métrica do portal) e `lotacao`/`observacao` (exibidos no
 // painel de uma unidade sem equipe própria). Em `pessoas`, o campo `funcao` de
-// uma gerência é a frente que ela conduz: declarado, rende caixa própria no
-// fluxo; ausente, as gerências de mesmo cargo vêm agrupadas em uma só.
+// uma gerência é a frente que ela conduz: aparece na caixa dela no fluxo, na
+// lista da unidade e no papel. Sem ele, a caixa fica só com o cargo e o nome.
 //
 // Os demais campos — `chamada`, `resumo`, `procedencia`, `atribuicoes`,
 // `justificativa`, `origem`, `subordinacao`, `notas`, `notasTitulo` e

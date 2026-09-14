@@ -256,14 +256,13 @@ de divisão (DAS-4) → Gerentes de TI (DAS-3)**, com a **Seção de Atendimento
 Usuário** dentro da Divisão de Infraestrutura Tecnológica, porque é onde ela
 está e quem a chefia é um gerente.
 
-**Gerência sem escopo declarado vem agrupada; com escopo, ganha caixa
-própria.** Na estrutura atual os três DAS-3 da Divisão de Desenvolvimento de
-Sistemas vêm em **uma caixa só, "Gerentes de TI"**, com os três nomes: a
-relação de lotação não diz o escopo de nenhuma das três, e três caixas
-idênticas lado a lado ocupavam a largura de uma camada inteira para dizer a
-mesma coisa três vezes. Quando cada gerência conduz uma frente nomeada — o que
-a minuta propõe —, cada uma passa a ter a sua caixa, com o nome de quem
-responde no título e a frente na linha de apoio. Quem decide é o campo `funcao`
+**Cada gerência tem a sua caixa**, com o selo do cargo comissionado e o nome de
+quem responde em azul no título. Na estrutura atual os três DAS-3 da Divisão de
+Desenvolvimento de Sistemas aparecem assim, um em cada caixa, e sem linha de
+apoio: a relação de lotação não declara o escopo de nenhuma das três, e
+preencher a linha com "escopo a definir" repetido três vezes seria ocupar o
+desenho com o que ele não sabe. Onde a frente está declarada — o que a minuta
+propõe —, ela entra na linha de apoio da caixa. Quem decide é o campo `funcao`
 da pessoa no arquivo de dados, não uma opção de tela.
 
 **Cada camada tem a sua cor**, e a cor vem da natureza declarada da unidade, não

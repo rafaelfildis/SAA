@@ -5670,24 +5670,11 @@ function papelResumido(pessoa, rotulo) {
   return pessoa.cargo ? `${rotulo} · ${pessoa.cargo}` : rotulo;
 }
 
-// Caixa de grupo: um cargo repetido não vira três unidades no desenho. Os
-// nomes vão dentro, cada um em destaque, porque são todos responsáveis.
-function noDeGrupoDeGerencias(pessoas, busca) {
-  const das = nivelDoCargo(pessoas[0]);
-  return noDoFluxo({
-    classe: "gerencia",
-    selo: das,
-    titulo: pessoas.length === 1 ? "Gerente de TI" : "Gerentes de TI",
-    nomes: pessoas.map((p) => p.nome),
-    destacado: Boolean(busca) && pessoas.some((p) => pessoaBate(p, busca)),
-  });
-}
-
-// Gerência com escopo declarado ganha caixa própria: o nome de quem responde
-// é o título, em azul como nas demais caixas, e a frente que ela conduz vem
-// na linha de apoio — é texto longo, e ali ele quebra por palavra em vez de
-// estourar a caixa quando o desenho é reduzido para caber na folha.
-function noDeFrente(pessoa, busca) {
+// Uma caixa por gerência: o nome de quem responde é o título, em azul como
+// nas demais caixas, e a frente que ela conduz — quando declarada — vem na
+// linha de apoio. Ali o texto longo quebra por palavra, em vez de estourar a
+// caixa quando o desenho é reduzido para caber na folha.
+function noDeGerencia(pessoa, busca) {
   return noDoFluxo({
     classe: "gerencia",
     selo: nivelDoCargo(pessoa),
@@ -5705,15 +5692,7 @@ let visaoEmMontagem = null;
 function filhosDoFluxo(u, busca, paraPapel) {
   const titular = titularDaUnidade(u);
   const gerentes = pessoasDoPapel(u, "gerencia").filter((p) => p !== titular);
-  // Três caixas idênticas lado a lado dizem a mesma coisa três vezes: quando o
-  // escopo não está declarado, as gerências vêm em uma caixa só. Quando cada
-  // uma conduz uma frente nomeada, a caixa própria passa a informar algo.
-  const comEscopo = gerentes.filter((p) => p.funcao);
-  const gerencias = !gerentes.length
-    ? []
-    : comEscopo.length === gerentes.length
-    ? gerentes.map((p) => `<li>${noDeFrente(p, busca)}</li>`)
-    : [`<li>${noDeGrupoDeGerencias(gerentes, busca)}</li>`];
+  const gerencias = gerentes.map((p) => `<li>${noDeGerencia(p, busca)}</li>`);
 
   const secoes = subunidadesDe(u).map((su) => {
     const titular = titularDaUnidade(su);
