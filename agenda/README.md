@@ -287,7 +287,7 @@ aparece no desenho.
 
 **A minuta, ao contrário, desenha cargo e não pessoa.** Cada caixa dela traz no
 selo o nível e o cargo que o ocupa — `DIRETORIA · DAS-4`, `COORDENAÇÃO · DAS-3`,
-`NÚCLEO · TERCEIRIZADOS` —, e o único nome no organograma proposto é o do
+`NÚCLEO · TERCEIRIZADOS` e, no Banco de Dados, `NÚCLEO · EFETIVOS` —, e o único nome no organograma proposto é o do
 titular de hoje na Superintendência. Enquanto a designação depende de ato,
 nomear quem ocupa o quê daria por decidido o que não está; o quadro de cada
 unidade continua na lista que abre no clique e na folha exportada, que é onde
@@ -311,13 +311,13 @@ da Informação**, e abaixo dela ficam **duas Diretorias**:
   TIC** e a **Coordenação de Governança Digital e Segurança da Informação**.
 
 O cargo de cada camada vem declarado no desenho: **Diretoria em DAS-4,
-Coordenação em DAS-3 e Núcleo com equipe terceirizada**. Duas consequências
-ficam registradas nas premissas em vez de resolvidas por conta própria: o
-**Núcleo de Banco de Dados** segue a regra dos Núcleos mas mantém dois
-analistas efetivos — a confirmar se passa a ser operado por contrato ou se a
-regra abre exceção —, e o **Núcleo de Desenvolvimento de Sistemas** é operado
-por equipe contratada e conduzido por três gerências DAS-3, o que explica um
-Núcleo terceirizado com três comissionados no quadro.
+Coordenação em DAS-3 e Núcleo com equipe contratada** — com uma exceção
+decidida pela Diretoria, o **Núcleo de Banco de Dados**, que fica com os dois
+analistas efetivos de hoje, porque a administração das bases corporativas
+continua em quadro próprio. O **Núcleo de Desenvolvimento de Sistemas**, esse
+sim terceirizado, é conduzido por três gerências DAS-3, o que explica um Núcleo
+de equipe contratada com três comissionados no quadro; a explicação está nas
+premissas, no arquivo de dados.
 
 **Nenhuma unidade existente é extinta ou perde quadro:** o que muda é a
 denominação da camada de operação, o nível do Atendimento e a criação da segunda
