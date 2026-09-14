@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-09-14.3";
+window.SAA_TAREFAS_VERSAO = "2026-09-14.4";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -140,6 +140,17 @@ window.SAA_TAREFAS = [
     "categoria": "infraestrutura",
     "unidade": "DINT",
     "responsavel": "Diego Daltro",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "a-fazer"
+  },
+  {
+    "id": "tarefa-defensoria-sistema-gol",
+    "titulo": "Ligar para a Defensoria para saber os problemas do sistema GOL e o valor do suporte",
+    "descricao": "",
+    "categoria": "sistemas",
+    "unidade": "",
+    "responsavel": "",
     "prazo": "",
     "prioridade": "media",
     "status": "a-fazer"
