@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-09-14";
+window.SAA_TAREFAS_VERSAO = "2026-09-14.3";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -39,11 +39,23 @@ window.SAA_TAREFAS_COLUNAS = [
   { id: "concluida", rotulo: "Concluída", descricao: "Encerrada", encerra: true },
 ];
 
-// Carteira inicial, informada pela Diretoria em 14/09/2026. Todas entram como
-// pendentes, na primeira coluna. Prazo e prioridade não foram informados e por
-// isso ficam em branco — preenchê-los por conta própria criaria cobrança que
+// Carteira inicial, informada pela Diretoria em 14/09/2026. Entram na coluna
+// que a Diretoria indicou — as sete primeiras como pendentes e a cotação de
+// computadores em andamento. Prazo e prioridade não foram informados e por
+// isso ficam em branco: preenchê-los por conta própria criaria cobrança que
 // ninguém combinou.
 window.SAA_TAREFAS = [
+  {
+    "id": "tarefa-cotacao-computadores",
+    "titulo": "Cotar novos valores para 200 computadores, na mesma configuração da Simpress",
+    "descricao": "Cotação de novos valores para computador (mesma configuração SIMPRESS) — 200 computadores.",
+    "categoria": "contratos",
+    "unidade": "DINT",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "em-andamento"
+  },
   {
     "id": "tarefa-ia-licencas-desenvolvimento",
     "titulo": "Definir a quantidade de desenvolvedores com licença de IA para desenvolvimento",
@@ -106,6 +118,17 @@ window.SAA_TAREFAS = [
     "categoria": "contratos",
     "unidade": "DINT",
     "responsavel": "Rafael José Levita de Almeida e Diego Daltro",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "a-fazer"
+  },
+  {
+    "id": "tarefa-apresentacao-transformacao-digital",
+    "titulo": "Apresentar à Presidência, à Chefia de Gabinete e aos Conselheiros a Estratégia de Transformação Digital do TCM-BA",
+    "descricao": "Apresentação para a Presidência, a Chefia de Gabinete e os Conselheiros.\n\nDIAGNÓSTICO REAL\nDiagnóstico inicial e diagnóstico real.\n\nPLANO DE 100 DIAS\nPacote de entregas imediatas até completar os 100 dias.\n\nESTRATÉGIA DE TRANSFORMAÇÃO DIGITAL\n\nCurto prazo: execução do plano de 100 dias, subir os sistemas novos e implementação de IA no desenvolvimento; reestruturação tecnológica dos sistemas; Programa de Regularização Processual (contratos vencidos, a vencer e futuros), no recorte de 100 dias; e, por fim, iniciar o projeto TCM Digital.\n\nMédio prazo: reestruturação física e regimental da DTI para atender à plena necessidade do TCM; contratualização das tecnologias e equipamentos necessários à modernização do TCM; desenvolvimento do TCM Digital com todas as plataformas unificadas e BIs para agilizar o trabalho dos gabinetes e auditores — até a finalização do 1º semestre de 2027.\n\nLongo prazo, 1 ano: implementação plena do ferramental do TCM Digital e implantação plena do SEI; transparência integrada ao SEI; IA contínua nos processos de uso dos servidores e no desenvolvimento, para entregas mais rápidas; qualificação tecnológica de todos os profissionais do TCM, para aprimoramento contínuo e educação permanente e continuada em TI; e modelos de inovação e de predição para os gabinetes e auditores do TCM, de forma contínua.",
+    "categoria": "governanca",
+    "unidade": "",
+    "responsavel": "Daniel",
     "prazo": "",
     "prioridade": "media",
     "status": "a-fazer"

@@ -7157,7 +7157,14 @@ function renderizarPainelDeTarefa() {
 
   document.getElementById("tarefa-painel-titulo").textContent = t.titulo;
   document.getElementById("tarefa-painel-corpo").innerHTML = `
-    ${t.descricao ? `<p class="detail-panel__descricao">${escapeHtml(t.descricao)}</p>` : ""}
+    ${
+      // A descrição de tarefa pode vir estruturada — uma estratégia com curto,
+      // médio e longo prazo chega assim. As quebras de linha do texto original
+      // são preservadas em tela em vez de virarem um parágrafo corrido.
+      t.descricao
+        ? `<p class="detail-panel__descricao tarefa-descricao">${escapeHtml(t.descricao)}</p>`
+        : ""
+    }
     ${linha("Status", colunaPorId(t.status).rotulo)}
     ${linha("Categoria", cat ? cat.rotulo : "")}
     ${linha(

@@ -3336,6 +3336,11 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   color: var(--color-text-tertiary);
 }
 
+/* Descrição de tarefa preserva as quebras do texto original: uma estratégia
+   com curto, médio e longo prazo chega estruturada, e virar parágrafo corrido
+   apagaria justamente a estrutura. */
+.tarefa-descricao { white-space: pre-line; }
+
 .quadro-vazio {
   margin: 0 0 14px;
   padding: 14px 16px;

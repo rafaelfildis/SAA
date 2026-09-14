@@ -557,7 +557,9 @@ em 14/09/2026 e entram por semente, aplicada uma vez por navegador e mesclada
 por id: mover de coluna, editar ou apagar uma tarefa semeada não é desfeito no
 carregamento seguinte. O **título é a ação** e a **descrição guarda o texto como
 a Diretoria o escreveu** — reescrever a demanda sem deixar o original em algum
-lugar transformaria a interpretação de quem lançou em registro.
+lugar transformaria a interpretação de quem lançou em registro. A descrição
+**preserva as quebras de linha**: uma estratégia com curto, médio e longo prazo
+chega estruturada, e virar parágrafo corrido apagaria justamente a estrutura.
 
 ## Stack
 
