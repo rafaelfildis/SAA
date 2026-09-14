@@ -101,6 +101,13 @@ state.estruturaUnidadeAberta = null;
 // Quem abriu o painel: a busca ou o clique. A busca que abriu também fecha
 // quando o termo deixa de casar com pessoa; o que se abriu à mão fica aberto.
 state.estruturaPainelPelaBusca = false;
+// Módulo Tarefas: o quadro por status. A busca é própria do módulo, como nos
+// demais, e o filtro de categorias fica vazio quando o quadro mostra tudo — é
+// o mesmo padrão do filtro de modalidade da agenda.
+state.filtroTarefas = "";
+state.filtroCategoriasTarefa = new Set();
+state.tarefaEditando = null;
+state.tarefaAberta = null;
 state.projetoEditando = null;
 state.filtrosProjeto = {
   horizonte: HORIZONTE_TODAS,
@@ -3462,6 +3469,11 @@ function inicializarInterface() {
       renderizarEstrutura();
       return;
     }
+    if (state.modulo === "tarefas") {
+      state.filtroTarefas = ev.target.value;
+      renderizarQuadro();
+      return;
+    }
     state.filtros.busca = ev.target.value;
     renderizarConteudo();
   });
@@ -3790,6 +3802,8 @@ function aplicarFiltrosDaURL() {
       ? "ramais"
       : pedido === "organograma"
       ? "estrutura"
+      : pedido === "tarefa" || pedido === "quadro" || pedido === "kanban"
+      ? "tarefas"
       : pedido;
 
   // "?visao=" escolhe a estrutura exibida no módulo Estrutura DTI. Aceita
@@ -6673,7 +6687,9 @@ function renderizarPortal() {
   renderizarPortalProjetos();
   renderizarPortalRamais();
   renderizarPortalEstrutura();
+  renderizarPortalTarefas();
   atualizarBadgeProjetos();
+  atualizarBadgeTarefas();
 }
 
 function inicializarPortal() {
@@ -6698,10 +6714,796 @@ function inicializarPortal() {
 }
 
 /* --------------------------------------------------------------------------
+   Módulo Tarefas — quadro por status
+   --------------------------------------------------------------------------
+   Quadro de colunas, uma por status, com as tarefas em cartões que se movem
+   entre elas. As colunas e as categorias vêm de dados/tarefas.js, porque são
+   vocabulário institucional; as tarefas são digitadas e ficam no navegador,
+   como os projetos do Plano 100 dias.
+
+   Arrastar não é a única forma de mover. Cada cartão traz as setas de coluna
+   anterior e seguinte, e o painel traz os botões de destino: arrastar não
+   funciona com teclado, e no celular funciona mal. O mesmo caminho de código
+   serve aos três gestos.
+   -------------------------------------------------------------------------- */
+
+const TAREFAS_STORAGE_KEY = "saaTcm.tarefas.v1";
+const SEMENTE_TAREFAS_KEY = "saaTcm.tarefas.semente";
+
+const COLUNAS_PADRAO = [
+  { id: "a-fazer", rotulo: "A fazer" },
+  { id: "em-andamento", rotulo: "Em andamento" },
+  { id: "em-revisao", rotulo: "Em revisão" },
+  { id: "concluida", rotulo: "Concluída", encerra: true },
+];
+
+const PRIORIDADES = {
+  alta: { rotulo: "Alta", ordem: 0 },
+  media: { rotulo: "Média", ordem: 1 },
+  baixa: { rotulo: "Baixa", ordem: 2 },
+};
+
+// Catálogo do arquivo de dados, com o mínimo embutido como reserva: se o
+// arquivo falhar ao carregar, o quadro abre com as quatro colunas em vez de
+// não abrir.
+function colunasDeTarefa() {
+  const d = window.SAA_TAREFAS_COLUNAS;
+  return Array.isArray(d) && d.length ? d : COLUNAS_PADRAO;
+}
+
+function categoriasDeTarefa() {
+  const d = window.SAA_TAREFAS_CATEGORIAS;
+  return Array.isArray(d) ? d : [];
+}
+
+function colunaPorId(id) {
+  return colunasDeTarefa().find((c) => c.id === id) || colunasDeTarefa()[0];
+}
+
+function categoriaPorId(id) {
+  return categoriasDeTarefa().find((c) => c.id === id) || null;
+}
+
+function colunaDeEncerramento() {
+  const cols = colunasDeTarefa();
+  return cols.find((c) => c.encerra) || cols[cols.length - 1];
+}
+
+function tarefaEncerrada(t) {
+  return t && t.status === colunaDeEncerramento().id;
+}
+
+/* ---------------------------------------------------- Armazenamento */
+
+function tarefaValida(t) {
+  return Boolean(t && typeof t.id === "string" && typeof t.titulo === "string" && t.titulo.trim());
+}
+
+function lerTarefas() {
+  try {
+    const bruto = localStorage.getItem(TAREFAS_STORAGE_KEY);
+    if (!bruto) return [];
+    const dados = JSON.parse(bruto);
+    if (!Array.isArray(dados)) return [];
+    // Status gravado que não existe mais no catálogo volta para a primeira
+    // coluna: melhor a tarefa aparecer no lugar errado do que desaparecer do
+    // quadro porque alguém renomeou um id.
+    const ids = new Set(colunasDeTarefa().map((c) => c.id));
+    return dados.filter(tarefaValida).map((t) => ({
+      ...t,
+      status: ids.has(t.status) ? t.status : colunasDeTarefa()[0].id,
+    }));
+  } catch (e) {
+    console.warn("Não foi possível ler as tarefas salvas:", e);
+    return [];
+  }
+}
+
+function gravarTarefas(tarefas) {
+  try {
+    localStorage.setItem(TAREFAS_STORAGE_KEY, JSON.stringify(tarefas));
+    return true;
+  } catch (e) {
+    console.error("Não foi possível gravar as tarefas:", e);
+    mostrarErroTarefa("Não foi possível salvar. O armazenamento do navegador pode estar cheio ou bloqueado.");
+    return false;
+  }
+}
+
+function tarefaPorId(id) {
+  return (state.tarefas || []).find((t) => t.id === id) || null;
+}
+
+/* ---------------------------------------------------- Cálculos */
+
+// Prazo de tarefa fala a língua da tarefa: "venceu ontem" e "vence hoje"
+// dizem mais do que uma data solta no cartão.
+function rotuloPrazoTarefa(t) {
+  if (!t || !t.prazo) return "";
+  const dias = diasEntreChaves(hojeChave(), t.prazo);
+  if (tarefaEncerrada(t)) return dataCurtaDaChave(t.prazo);
+  if (dias < -1) return `venceu há ${Math.abs(dias)} dias`;
+  if (dias === -1) return "venceu ontem";
+  if (dias === 0) return "vence hoje";
+  if (dias === 1) return "vence amanhã";
+  return `em ${dias} dias`;
+}
+
+function tarefaAtrasada(t) {
+  return Boolean(t && t.prazo && !tarefaEncerrada(t) && diasEntreChaves(hojeChave(), t.prazo) < 0);
+}
+
+function tarefaBate(t, busca) {
+  if (!busca) return true;
+  const cat = categoriaPorId(t.categoria);
+  const alvo = normalizarTexto(
+    [t.titulo, t.descricao, t.responsavel, t.unidade, cat && cat.rotulo, (PRIORIDADES[t.prioridade] || {}).rotulo]
+      .filter(Boolean)
+      .join(" ")
+  );
+  return alvo.includes(busca);
+}
+
+// O que o quadro mostra: a busca do módulo e o filtro de categorias, aplicados
+// na ordem em que a tela os apresenta.
+function tarefasVisiveis() {
+  const busca = normalizarTexto(state.filtroTarefas || "").trim();
+  const cats = state.filtroCategoriasTarefa;
+  return (state.tarefas || [])
+    .filter((t) => tarefaBate(t, busca))
+    .filter((t) => !cats.size || cats.has(t.categoria || ""))
+    .sort(ordenarTarefas);
+}
+
+// Dentro da coluna: atrasada primeiro, depois por prioridade, depois pelo
+// prazo mais próximo, e o resto pela ordem de criação. Quem olha uma coluna
+// quer ver em cima o que cobra providência.
+function ordenarTarefas(a, b) {
+  const atraso = Number(tarefaAtrasada(b)) - Number(tarefaAtrasada(a));
+  if (atraso) return atraso;
+  const prio =
+    (PRIORIDADES[a.prioridade] || PRIORIDADES.media).ordem -
+    (PRIORIDADES[b.prioridade] || PRIORIDADES.media).ordem;
+  if (prio) return prio;
+  if (a.prazo && b.prazo && a.prazo !== b.prazo) return a.prazo < b.prazo ? -1 : 1;
+  if (a.prazo && !b.prazo) return -1;
+  if (!a.prazo && b.prazo) return 1;
+  return String(a.criadoEm || "").localeCompare(String(b.criadoEm || ""));
+}
+
+function responsaveisDeTarefa() {
+  const nomes = new Set();
+  (state.tarefas || []).forEach((t) => {
+    if (t.responsavel) nomes.add(t.responsavel.trim());
+  });
+  return [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+/* ---------------------------------------------------- Cartão e quadro */
+
+function etiquetaDeCategoria(t) {
+  const cat = categoriaPorId(t.categoria);
+  if (!cat) return "";
+  return `<span class="tarefa-categoria tarefa-categoria--${escapeAttr(
+    cat.familia || "neutra"
+  )}">${escapeHtml(cat.rotulo)}</span>`;
+}
+
+function cartaoDeTarefa(t, indiceColuna) {
+  const colunas = colunasDeTarefa();
+  const anterior = colunas[indiceColuna - 1];
+  const seguinte = colunas[indiceColuna + 1];
+  const atrasada = tarefaAtrasada(t);
+  const prazo = rotuloPrazoTarefa(t);
+  const prioridade = PRIORIDADES[t.prioridade] || PRIORIDADES.media;
+  const historico = t.historico || [];
+  const ultima = historico.length > 1 ? historico[0] : null;
+
+  return `
+    <article class="tarefa-card${atrasada ? " tarefa-card--atrasada" : ""}" draggable="true"
+             data-tarefa="${escapeAttr(t.id)}" aria-label="${escapeAttr(t.titulo)}">
+      <button class="tarefa-card__corpo" type="button" data-abrir="${escapeAttr(t.id)}">
+        <span class="tarefa-card__etiquetas">
+          ${etiquetaDeCategoria(t)}
+          ${etiquetasDeUnidade({ unidades: t.unidade ? [t.unidade] : [] })}
+          ${
+            t.prioridade === "alta"
+              ? `<span class="tarefa-prioridade tarefa-prioridade--alta">Prioridade alta</span>`
+              : ""
+          }
+        </span>
+        <span class="tarefa-card__titulo">${escapeHtml(t.titulo)}</span>
+        ${
+          t.responsavel
+            ? `<span class="tarefa-card__responsavel">${ICONE_PESSOA}<span>${escapeHtml(t.responsavel)}</span></span>`
+            : `<span class="tarefa-card__responsavel tarefa-card__responsavel--vago">${ICONE_PESSOA}<span>sem responsável</span></span>`
+        }
+        ${
+          prazo
+            ? `<span class="tarefa-card__prazo${atrasada ? " tarefa-card__prazo--alerta" : ""}">${escapeHtml(prazo)}</span>`
+            : ""
+        }
+        ${ultima && ultima.nota ? `<span class="tarefa-card__nota">${escapeHtml(ultima.nota.slice(0, 90))}</span>` : ""}
+      </button>
+      <div class="tarefa-card__mover">
+        <button class="icon-btn icon-btn--mini" type="button" data-mover="${escapeAttr(t.id)}"
+                data-destino="${escapeAttr(anterior ? anterior.id : "")}" ${anterior ? "" : "disabled"}
+                aria-label="${escapeAttr(anterior ? `Mover para ${anterior.rotulo}` : "Já está na primeira coluna")}"
+                title="${escapeAttr(anterior ? `Mover para ${anterior.rotulo}` : "")}">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <button class="icon-btn icon-btn--mini" type="button" data-mover="${escapeAttr(t.id)}"
+                data-destino="${escapeAttr(seguinte ? seguinte.id : "")}" ${seguinte ? "" : "disabled"}
+                aria-label="${escapeAttr(seguinte ? `Mover para ${seguinte.rotulo}` : "Já está na última coluna")}"
+                title="${escapeAttr(seguinte ? `Mover para ${seguinte.rotulo}` : "")}">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </article>`;
+}
+
+function renderizarQuadro() {
+  const alvo = document.getElementById("tarefas-quadro");
+  if (!alvo) return;
+
+  const colunas = colunasDeTarefa();
+  const lista = tarefasVisiveis();
+  const total = (state.tarefas || []).length;
+
+  alvo.innerHTML = colunas
+    .map((col, i) => {
+      const daColuna = lista.filter((t) => t.status === col.id);
+      const cartoes = daColuna.map((t) => cartaoDeTarefa(t, i)).join("");
+      const atrasadas = daColuna.filter(tarefaAtrasada).length;
+      return `
+        <section class="quadro-coluna" data-coluna="${escapeAttr(col.id)}" aria-label="${escapeAttr(col.rotulo)}">
+          <header class="quadro-coluna__topo">
+            <h3 class="quadro-coluna__titulo">${escapeHtml(col.rotulo)}</h3>
+            <span class="quadro-coluna__conta">${daColuna.length}</span>
+            ${atrasadas ? `<span class="quadro-coluna__alerta">${atrasadas} atrasada${atrasadas > 1 ? "s" : ""}</span>` : ""}
+          </header>
+          ${col.descricao ? `<p class="quadro-coluna__ajuda">${escapeHtml(col.descricao)}</p>` : ""}
+          <div class="quadro-coluna__pilha" data-pilha="${escapeAttr(col.id)}">
+            ${cartoes || `<p class="quadro-coluna__vazia">Nada aqui</p>`}
+          </div>
+        </section>`;
+    })
+    .join("");
+
+  const vazio = document.getElementById("tarefas-vazio");
+  if (vazio) {
+    const semFiltro = !state.filtroTarefas && !state.filtroCategoriasTarefa.size;
+    vazio.hidden = Boolean(lista.length) || (!total && !semFiltro);
+    if (!lista.length) {
+      vazio.innerHTML = total
+        ? 'Nenhuma tarefa corresponde à busca ou às categorias selecionadas.'
+        : 'Nenhuma tarefa lançada ainda. Use <strong>Nova tarefa</strong> para registrar a primeira.';
+    }
+  }
+
+  renderizarSubtituloTarefas();
+  renderizarFiltrosDeCategoria();
+  ligarArrastarTarefas();
+  atualizarBadgeTarefas();
+}
+
+function renderizarSubtituloTarefas() {
+  const sub = document.getElementById("tarefas-subtitulo");
+  if (!sub) return;
+  const tarefas = state.tarefas || [];
+  const encerrada = colunaDeEncerramento().id;
+  const abertas = tarefas.filter((t) => t.status !== encerrada).length;
+  const atrasadas = tarefas.filter(tarefaAtrasada).length;
+  if (!tarefas.length) {
+    sub.textContent = "O quadro começa vazio: cada tarefa entra com categoria, responsável, prazo e status.";
+    return;
+  }
+  sub.textContent =
+    `${plural(tarefas.length, "tarefa", "tarefas")} · ${abertas} em aberto e ` +
+    `${tarefas.length - abertas} concluída${tarefas.length - abertas === 1 ? "" : "s"}` +
+    (atrasadas ? ` · ${plural(atrasadas, "atrasada", "atrasadas")}` : "");
+}
+
+function renderizarFiltrosDeCategoria() {
+  const alvo = document.getElementById("tarefas-categorias-chips");
+  if (!alvo) return;
+  const tarefas = state.tarefas || [];
+  const usadas = categoriasDeTarefa().filter((c) => tarefas.some((t) => t.categoria === c.id));
+  const semCategoria = tarefas.some((t) => !t.categoria);
+
+  const chips = usadas.map((c) => {
+    const ativo = state.filtroCategoriasTarefa.has(c.id);
+    const quantos = tarefas.filter((t) => t.categoria === c.id).length;
+    return `
+      <button class="chip${ativo ? " is-active" : ""}" type="button" data-categoria="${escapeAttr(c.id)}"
+              aria-pressed="${ativo ? "true" : "false"}">
+        <span class="chip__ponto tarefa-ponto--${escapeAttr(c.familia || "neutra")}" aria-hidden="true"></span>
+        ${escapeHtml(c.rotulo)}<span class="chip__conta">${quantos}</span>
+      </button>`;
+  });
+
+  if (semCategoria) {
+    const ativo = state.filtroCategoriasTarefa.has("");
+    chips.push(`
+      <button class="chip${ativo ? " is-active" : ""}" type="button" data-categoria=""
+              aria-pressed="${ativo ? "true" : "false"}">
+        Sem categoria<span class="chip__conta">${tarefas.filter((t) => !t.categoria).length}</span>
+      </button>`);
+  }
+
+  alvo.innerHTML = chips.join("");
+  const bloco = document.getElementById("filtros-tarefas");
+  if (bloco) bloco.hidden = state.modulo !== "tarefas" || !chips.length;
+}
+
+function atualizarBadgeTarefas() {
+  const badge = document.getElementById("nav-badge-tarefas");
+  if (!badge) return;
+  const encerrada = colunaDeEncerramento().id;
+  const abertas = (state.tarefas || []).filter((t) => t.status !== encerrada).length;
+  badge.textContent = String(abertas);
+  badge.hidden = !abertas;
+}
+
+/* ---------------------------------------------------- Mover de coluna */
+
+function moverTarefa(id, destino) {
+  const t = tarefaPorId(id);
+  const col = colunasDeTarefa().find((c) => c.id === destino);
+  if (!t || !col || t.status === destino) return;
+  const agora = new Date().toISOString();
+  t.status = destino;
+  t.atualizadoEm = agora;
+  t.historico = [{ em: agora, status: destino, nota: `Movida para ${col.rotulo}.` }, ...(t.historico || [])];
+  if (!gravarTarefas(state.tarefas)) return;
+  renderizarQuadro();
+  if (state.tarefaAberta === id) renderizarPainelDeTarefa();
+}
+
+// Arrastar: o cartão leva o id, a coluna recebe. O realce de destino sai no
+// dragleave e no drop, senão a coluna fica acesa depois de o cartão ter ido.
+function ligarArrastarTarefas() {
+  const quadro = document.getElementById("tarefas-quadro");
+  if (!quadro || quadro.dataset.arrastarLigado === "1") return;
+  quadro.dataset.arrastarLigado = "1";
+
+  quadro.addEventListener("dragstart", (ev) => {
+    const card = ev.target.closest(".tarefa-card");
+    if (!card) return;
+    ev.dataTransfer.setData("text/plain", card.dataset.tarefa);
+    ev.dataTransfer.effectAllowed = "move";
+    card.classList.add("is-arrastando");
+  });
+
+  quadro.addEventListener("dragend", () => {
+    quadro.querySelectorAll(".is-arrastando").forEach((el) => el.classList.remove("is-arrastando"));
+    quadro.querySelectorAll(".is-alvo").forEach((el) => el.classList.remove("is-alvo"));
+  });
+
+  quadro.addEventListener("dragover", (ev) => {
+    const coluna = ev.target.closest(".quadro-coluna");
+    if (!coluna) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = "move";
+    quadro.querySelectorAll(".is-alvo").forEach((el) => el.classList.remove("is-alvo"));
+    coluna.classList.add("is-alvo");
+  });
+
+  quadro.addEventListener("dragleave", (ev) => {
+    const coluna = ev.target.closest(".quadro-coluna");
+    if (coluna && !coluna.contains(ev.relatedTarget)) coluna.classList.remove("is-alvo");
+  });
+
+  quadro.addEventListener("drop", (ev) => {
+    const coluna = ev.target.closest(".quadro-coluna");
+    if (!coluna) return;
+    ev.preventDefault();
+    coluna.classList.remove("is-alvo");
+    const id = ev.dataTransfer.getData("text/plain");
+    if (id) moverTarefa(id, coluna.dataset.coluna);
+  });
+}
+
+/* ---------------------------------------------------- Painel da tarefa */
+
+function abrirTarefa(id) {
+  const t = tarefaPorId(id);
+  if (!t) return;
+  state.tarefaAberta = id;
+  renderizarPainelDeTarefa();
+  const painel = document.getElementById("tarefa-painel");
+  painel.classList.add("is-aberto");
+  painel.setAttribute("aria-hidden", "false");
+  document.getElementById("tarefa-painel-backdrop").hidden = false;
+  document.getElementById("btn-fechar-tarefa-painel").focus();
+}
+
+function fecharPainelDeTarefa() {
+  state.tarefaAberta = null;
+  const painel = document.getElementById("tarefa-painel");
+  if (!painel) return;
+  painel.classList.remove("is-aberto");
+  painel.setAttribute("aria-hidden", "true");
+  document.getElementById("tarefa-painel-backdrop").hidden = true;
+}
+
+function renderizarPainelDeTarefa() {
+  const t = tarefaPorId(state.tarefaAberta);
+  if (!t) return fecharPainelDeTarefa();
+
+  const cat = categoriaPorId(t.categoria);
+  const dataLegivel = (chave) =>
+    chave ? formatarDataLonga(new Date(`${chave}T12:00:00${offsetBahia()}`)) : "";
+  const linha = (rotulo, valor) =>
+    valor
+      ? `<div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">${escapeHtml(
+          rotulo
+        )}</span><span class="detail-panel__linha-valor">${escapeHtml(valor)}</span></div>`
+      : "";
+
+  const historico = (t.historico || []).length
+    ? `<div class="historico">${(t.historico || [])
+        .map((h) => {
+          const col = colunaPorId(h.status);
+          return `
+            <div class="historico__item">
+              <span class="historico__quando">${formatarCarimbo(h.em)}</span>
+              <span class="historico__situacao">${escapeHtml(col ? col.rotulo : "")}</span>
+              ${h.nota ? `<p class="historico__nota">${escapeHtml(h.nota)}</p>` : ""}
+            </div>`;
+        })
+        .join("")}</div>`
+    : `<p class="historico__nota" style="color:var(--color-text-secondary)">Nenhum lançamento ainda.</p>`;
+
+  document.getElementById("tarefa-painel-titulo").textContent = t.titulo;
+  document.getElementById("tarefa-painel-corpo").innerHTML = `
+    ${t.descricao ? `<p class="detail-panel__descricao">${escapeHtml(t.descricao)}</p>` : ""}
+    ${linha("Status", colunaPorId(t.status).rotulo)}
+    ${linha("Categoria", cat ? cat.rotulo : "")}
+    ${linha(
+      "Unidade responsável",
+      t.unidade && UNIDADES_DTI[t.unidade] ? `${t.unidade} — ${UNIDADES_DTI[t.unidade].nome}` : ""
+    )}
+    ${linha("Responsável", t.responsavel)}
+    ${linha("Prioridade", (PRIORIDADES[t.prioridade] || PRIORIDADES.media).rotulo)}
+    ${
+      t.prazo
+        ? linha("Prazo", `${dataLegivel(t.prazo)} — ${rotuloPrazoTarefa(t)}`)
+        : linha("Prazo", "sem prazo definido")
+    }
+    <div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">Histórico</span></div>
+    ${historico}`;
+
+  // Destinos possíveis, menos a coluna onde a tarefa já está.
+  document.getElementById("tarefa-mover-chips").innerHTML = colunasDeTarefa()
+    .map(
+      (c) => `
+      <button class="chip${c.id === t.status ? " is-active" : ""}" type="button"
+              data-destino-tarefa="${escapeAttr(c.id)}" ${c.id === t.status ? "disabled" : ""}
+              aria-pressed="${c.id === t.status ? "true" : "false"}">${escapeHtml(c.rotulo)}</button>`
+    )
+    .join("");
+  document.getElementById("tarefa-status-nota").value = "";
+}
+
+function lancarAndamentoDeTarefa() {
+  const t = tarefaPorId(state.tarefaAberta);
+  if (!t) return;
+  const nota = document.getElementById("tarefa-status-nota").value.trim();
+  if (!nota) return;
+  const agora = new Date().toISOString();
+  t.atualizadoEm = agora;
+  t.historico = [{ em: agora, status: t.status, nota }, ...(t.historico || [])];
+  if (!gravarTarefas(state.tarefas)) return;
+  renderizarQuadro();
+  renderizarPainelDeTarefa();
+}
+
+/* ---------------------------------------------------- Formulário */
+
+function mostrarErroTarefa(msg) {
+  const p = document.getElementById("tarefa-form-erro");
+  if (!p) return;
+  p.textContent = msg;
+  p.hidden = false;
+}
+
+function esconderErroTarefa() {
+  const p = document.getElementById("tarefa-form-erro");
+  if (p) p.hidden = true;
+}
+
+function preencherSelectDeColunas(select, atual) {
+  if (!select) return;
+  select.innerHTML = colunasDeTarefa()
+    .map((c) => `<option value="${escapeAttr(c.id)}">${escapeHtml(c.rotulo)}</option>`)
+    .join("");
+  select.value = atual || colunasDeTarefa()[0].id;
+}
+
+function preencherSelectDeCategorias(select, atual) {
+  if (!select) return;
+  select.innerHTML =
+    `<option value="">Sem categoria</option>` +
+    categoriasDeTarefa()
+      .map((c) => `<option value="${escapeAttr(c.id)}">${escapeHtml(c.rotulo)}</option>`)
+      .join("");
+  select.value = atual || "";
+}
+
+function abrirFormTarefa(id) {
+  const t = id ? tarefaPorId(id) : null;
+  state.tarefaEditando = t ? t.id : null;
+  esconderErroTarefa();
+
+  document.getElementById("tarefa-form-titulo").textContent = t ? "Editar tarefa" : "Nova tarefa";
+  document.getElementById("tarefa-titulo").value = t ? t.titulo : "";
+  document.getElementById("tarefa-descricao").value = t ? t.descricao || "" : "";
+  document.getElementById("tarefa-responsavel").value = t ? t.responsavel || "" : "";
+  document.getElementById("tarefa-prazo").value = t ? t.prazo || "" : "";
+  document.getElementById("tarefa-prioridade").value = t ? t.prioridade || "media" : "media";
+  document.getElementById("tarefa-unidade").value = t ? t.unidade || "" : "";
+  preencherSelectDeCategorias(document.getElementById("tarefa-categoria"), t ? t.categoria : "");
+  preencherSelectDeColunas(document.getElementById("tarefa-status"), t ? t.status : "");
+  document.getElementById("tarefa-nota").value = "";
+  document.getElementById("btn-excluir-tarefa").hidden = !t;
+
+  // Nomes já usados entram como sugestão: o responsável costuma se repetir, e
+  // digitar o mesmo nome de três formas diferentes quebra o filtro depois.
+  const datalist = document.getElementById("tarefa-responsaveis");
+  if (datalist) {
+    datalist.innerHTML = responsaveisDeTarefa()
+      .map((n) => `<option value="${escapeAttr(n)}"></option>`)
+      .join("");
+  }
+
+  document.getElementById("tarefa-form-backdrop").hidden = false;
+  document.getElementById("tarefa-form").hidden = false;
+  document.getElementById("tarefa-titulo").focus();
+}
+
+function fecharFormTarefa() {
+  document.getElementById("tarefa-form").hidden = true;
+  document.getElementById("tarefa-form-backdrop").hidden = true;
+  state.tarefaEditando = null;
+}
+
+function salvarTarefa() {
+  const titulo = document.getElementById("tarefa-titulo").value.trim();
+  if (!titulo) return mostrarErroTarefa("Informe o que precisa ser feito.");
+  esconderErroTarefa();
+
+  const status = document.getElementById("tarefa-status").value;
+  const nota = document.getElementById("tarefa-nota").value.trim();
+  const agora = new Date().toISOString();
+  const campos = {
+    titulo,
+    descricao: document.getElementById("tarefa-descricao").value.trim(),
+    categoria: document.getElementById("tarefa-categoria").value,
+    unidade: document.getElementById("tarefa-unidade").value,
+    responsavel: document.getElementById("tarefa-responsavel").value.trim(),
+    prazo: document.getElementById("tarefa-prazo").value,
+    prioridade: document.getElementById("tarefa-prioridade").value,
+    status,
+    atualizadoEm: agora,
+  };
+
+  const existente = tarefaPorId(state.tarefaEditando);
+  if (existente) {
+    // Editar o cadastro não inventa lançamento: só entra no histórico quando o
+    // status muda ou quando há nota escrita.
+    const mudouStatus = existente.status !== status;
+    Object.assign(existente, campos);
+    if (mudouStatus || nota) {
+      existente.historico = [
+        { em: agora, status, nota: nota || `Movida para ${colunaPorId(status).rotulo}.` },
+        ...(existente.historico || []),
+      ];
+    }
+  } else {
+    state.tarefas.push({
+      id: `tar-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      ...campos,
+      criadoEm: agora,
+      historico: [{ em: agora, status, nota: nota || "Tarefa lançada." }],
+    });
+  }
+
+  if (!gravarTarefas(state.tarefas)) return;
+  fecharFormTarefa();
+  renderizarQuadro();
+  if (state.tarefaAberta) renderizarPainelDeTarefa();
+}
+
+function excluirTarefa() {
+  const t = tarefaPorId(state.tarefaEditando);
+  if (!t) return;
+  if (!window.confirm(`Excluir a tarefa "${t.titulo}"? O histórico dela vai embora com ela.`)) return;
+  state.tarefas = state.tarefas.filter((x) => x.id !== t.id);
+  if (!gravarTarefas(state.tarefas)) return;
+  fecharFormTarefa();
+  if (state.tarefaAberta === t.id) fecharPainelDeTarefa();
+  renderizarQuadro();
+}
+
+/* ---------------------------------------------------- Portal e ligação */
+
+function renderizarPortalTarefas() {
+  const definir = (id, valor) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = valor;
+  };
+  const tarefas = state.tarefas || [];
+  const colunas = colunasDeTarefa();
+  const conta = (idColuna) => tarefas.filter((t) => t.status === idColuna).length;
+  const atrasadas = tarefas.filter(tarefaAtrasada).length;
+
+  definir("portal-tarefas-afazer", String(conta(colunas[0].id)));
+  definir("portal-tarefas-andamento", String(conta((colunas[1] || colunas[0]).id)));
+  definir("portal-tarefas-atrasadas", String(atrasadas));
+
+  const cel = document.getElementById("portal-tarefas-cel-atrasadas");
+  if (cel) cel.classList.toggle("portal-metrica--acesa", atrasadas > 0);
+
+  const destaque = document.getElementById("portal-tarefas-destaque");
+  if (destaque) {
+    const encerrada = colunaDeEncerramento().id;
+    const proxima = tarefas
+      .filter((t) => t.prazo && t.status !== encerrada)
+      .sort((a, b) => a.prazo.localeCompare(b.prazo))[0];
+    destaque.textContent = !tarefas.length
+      ? "Nenhuma tarefa lançada ainda. O quadro abre vazio, com as quatro colunas do fluxo."
+      : proxima
+      ? `Próxima: ${proxima.titulo} — ${rotuloPrazoTarefa(proxima)}${
+          proxima.responsavel ? `, com ${proxima.responsavel}` : ""
+        }.`
+      : "Nenhuma tarefa em aberto com prazo definido.";
+    destaque.classList.toggle("portal-card__destaque--forte", atrasadas > 0);
+  }
+
+  const encerrada = colunaDeEncerramento().id;
+  const abertas = tarefas.filter((t) => t.status !== encerrada).length;
+  definir(
+    "portal-tarefas-selo",
+    tarefas.length ? `${plural(abertas, "tarefa", "tarefas")} em aberto` : "Quadro vazio"
+  );
+}
+
+// Carteira inicial de tarefas (dados/tarefas.js), aplicada uma vez por
+// navegador e mesclada por id. Mesma mecânica da carteira de contratos: quem
+// mover de coluna, editar ou apagar uma tarefa semeada não a vê voltar ao
+// lugar no carregamento seguinte, e acrescentar tarefas no arquivo alcança
+// quem já usa o sistema.
+function semearTarefas() {
+  const semente = Array.isArray(window.SAA_TAREFAS) ? window.SAA_TAREFAS : [];
+  const versao = window.SAA_TAREFAS_VERSAO || "";
+  if (!semente.length || !versao) return false;
+
+  let aplicada = "";
+  try {
+    aplicada = localStorage.getItem(SEMENTE_TAREFAS_KEY) || "";
+  } catch (e) {
+    // Navegador sem armazenamento: semeia em memória a cada carga, que é
+    // melhor do que o quadro abrir vazio.
+  }
+  if (aplicada === versao) return false;
+
+  const carimbo = `semeada-em-${versao}`;
+  const porId = new Map((state.tarefas || []).map((t) => [t.id, t]));
+  let mudou = 0;
+  semente.filter(tarefaValida).forEach((t) => {
+    const marcado = {
+      prioridade: "media",
+      status: colunasDeTarefa()[0].id,
+      ...t,
+      origem: "semente",
+      semeadoEm: carimbo,
+      criadoEm: carimbo,
+      atualizadoEm: carimbo,
+      historico: [{ em: new Date().toISOString(), status: t.status || colunasDeTarefa()[0].id, nota: "Tarefa lançada pela Diretoria." }],
+    };
+    const existente = porId.get(t.id);
+    if (!existente) {
+      porId.set(t.id, marcado);
+      mudou++;
+      return;
+    }
+    // Corrigir o texto de uma tarefa no arquivo precisa alcançar quem já abriu
+    // o sistema, mas sem atropelar quem a editou ou moveu: só substitui a que
+    // veio da semente e continua exatamente como foi semeada.
+    const intocada = existente.origem === "semente" && existente.semeadoEm === existente.atualizadoEm;
+    if (intocada && existente.semeadoEm !== carimbo) {
+      porId.set(t.id, marcado);
+      mudou++;
+    }
+  });
+  state.tarefas = [...porId.values()];
+
+  try {
+    localStorage.setItem(SEMENTE_TAREFAS_KEY, versao);
+  } catch (e) {
+    /* sem armazenamento: segue sem marcar */
+  }
+  if (mudou) gravarTarefas(state.tarefas);
+  return mudou > 0;
+}
+
+function inicializarModuloTarefas() {
+  state.tarefas = lerTarefas();
+  semearTarefas();
+
+  document.getElementById("btn-nova-tarefa").addEventListener("click", () => abrirFormTarefa(null));
+  document.getElementById("btn-salvar-tarefa").addEventListener("click", salvarTarefa);
+  document.getElementById("btn-cancelar-tarefa").addEventListener("click", fecharFormTarefa);
+  document.getElementById("btn-fechar-tarefa-form").addEventListener("click", fecharFormTarefa);
+  document.getElementById("tarefa-form-backdrop").addEventListener("click", fecharFormTarefa);
+  document.getElementById("btn-excluir-tarefa").addEventListener("click", excluirTarefa);
+  document.getElementById("btn-fechar-tarefa-painel").addEventListener("click", fecharPainelDeTarefa);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape" || state.modulo !== "tarefas") return;
+    if (!document.getElementById("tarefa-form").hidden) {
+      fecharFormTarefa();
+      return;
+    }
+    if (state.tarefaAberta) fecharPainelDeTarefa();
+  });
+  document.getElementById("tarefa-painel-backdrop").addEventListener("click", fecharPainelDeTarefa);
+  document.getElementById("btn-lancar-tarefa").addEventListener("click", lancarAndamentoDeTarefa);
+  document
+    .getElementById("btn-editar-tarefa")
+    .addEventListener("click", () => abrirFormTarefa(state.tarefaAberta));
+
+  // Enter no campo do título salva: em um formulário de uma linha só, exigir
+  // o clique no botão é atrito sem motivo.
+  document.getElementById("tarefa-titulo").addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      salvarTarefa();
+    }
+  });
+
+  // Um ouvinte no quadro serve a todos os cartões: eles são redesenhados a
+  // cada mudança, e religar ouvinte por cartão vazaria memória.
+  document.getElementById("tarefas-quadro").addEventListener("click", (ev) => {
+    const abrir = ev.target.closest("[data-abrir]");
+    if (abrir) return abrirTarefa(abrir.dataset.abrir);
+    const mover = ev.target.closest("[data-mover]");
+    if (mover && mover.dataset.destino) moverTarefa(mover.dataset.mover, mover.dataset.destino);
+  });
+
+  document.getElementById("tarefa-mover-chips").addEventListener("click", (ev) => {
+    const chip = ev.target.closest("[data-destino-tarefa]");
+    if (chip) moverTarefa(state.tarefaAberta, chip.dataset.destinoTarefa);
+  });
+
+  const chips = document.getElementById("tarefas-categorias-chips");
+  if (chips) {
+    chips.addEventListener("click", (ev) => {
+      const chip = ev.target.closest("[data-categoria]");
+      if (!chip) return;
+      const id = chip.dataset.categoria;
+      if (state.filtroCategoriasTarefa.has(id)) state.filtroCategoriasTarefa.delete(id);
+      else state.filtroCategoriasTarefa.add(id);
+      renderizarQuadro();
+    });
+  }
+
+  const limpar = document.getElementById("btn-limpar-categorias-tarefa");
+  if (limpar) {
+    limpar.addEventListener("click", () => {
+      state.filtroCategoriasTarefa.clear();
+      renderizarQuadro();
+    });
+  }
+
+  atualizarBadgeTarefas();
+}
+
+/* --------------------------------------------------------------------------
    Troca de módulo
    -------------------------------------------------------------------------- */
 
-const MODULOS = ["portal", "agenda", "projetos", "ramais", "estrutura"];
+const MODULOS = ["portal", "agenda", "projetos", "ramais", "estrutura", "tarefas"];
 
 const ROTULO_MODULO = {
   portal: "Portal",
@@ -6709,16 +7511,18 @@ const ROTULO_MODULO = {
   projetos: "Plano 100 dias",
   ramais: "Ramal DTI",
   estrutura: "Estrutura DTI",
+  tarefas: "Tarefas",
 };
 
 // A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
 // do Google Agenda" descreve a agenda, não o plano de entregas.
 const SUBTITULO_MODULO = {
-  portal: "TCM-BA — Agenda, Plano 100 dias, Ramal DTI e Estrutura DTI",
+  portal: "TCM-BA — Agenda, Plano 100 dias, Ramal DTI, Estrutura DTI e Tarefas",
   agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
   projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
   ramais: "TCM-BA — ramais da Diretoria de Tecnologia da Informação",
   estrutura: "TCM-BA — organograma da DTI: estrutura atual e estrutura sugerida",
+  tarefas: "TCM-BA — quadro de tarefas da DTI por status, categoria e responsável",
 };
 
 function trocarModulo(modulo) {
@@ -6730,8 +7534,11 @@ function trocarModulo(modulo) {
   document.getElementById("modulo-projetos").hidden = atual !== "projetos";
   document.getElementById("modulo-ramais").hidden = atual !== "ramais";
   document.getElementById("modulo-estrutura").hidden = atual !== "estrutura";
+  document.getElementById("modulo-tarefas").hidden = atual !== "tarefas";
   document.getElementById("filtros-agenda").hidden = atual !== "agenda";
   document.getElementById("filtros-projetos").hidden = atual !== "projetos";
+  const filtrosTarefas = document.getElementById("filtros-tarefas");
+  if (filtrosTarefas) filtrosTarefas.hidden = atual !== "tarefas";
 
   // Busca, exportação e atualização pertencem a módulos específicos; onde não
   // teriam o que fazer, saem da tela em vez de ficarem inertes.
@@ -6746,6 +7553,8 @@ function trocarModulo(modulo) {
         ? "Buscar por nome, equipe ou ramal…"
         : atual === "estrutura"
         ? "Buscar por unidade, pessoa ou atribuição…"
+        : atual === "tarefas"
+        ? "Buscar por tarefa, responsável ou categoria…"
         : "Buscar por título, descrição ou local…";
     // Cada módulo tem a sua busca. Carregar o texto de um para o outro daria
     // uma lista filtrada por um termo que não está mais escrito em lugar
@@ -6754,6 +7563,7 @@ function trocarModulo(modulo) {
       atual === "projetos" ? state.filtrosProjeto.busca || ""
       : atual === "ramais" ? state.filtroRamais || ""
       : atual === "estrutura" ? state.filtroEstrutura || ""
+      : atual === "tarefas" ? state.filtroTarefas || ""
       : state.filtros.busca || "";
   }
   document.getElementById("btn-abrir-export").hidden = atual !== "agenda";
@@ -6794,6 +7604,7 @@ function trocarModulo(modulo) {
   if (atual === "projetos") renderizarProjetos();
   if (atual === "ramais") renderizarRamais();
   if (atual === "estrutura") renderizarEstrutura();
+  if (atual === "tarefas") renderizarQuadro();
   if (atual === "portal") renderizarPortal();
 }
 
@@ -6975,6 +7786,7 @@ function iniciar() {
   inicializarModuloProjetos();
   inicializarModuloRamais();
   inicializarModuloEstrutura();
+  inicializarModuloTarefas();
   inicializarPortal();
   aplicarFiltrosDaURL();
 

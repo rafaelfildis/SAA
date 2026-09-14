@@ -91,6 +91,11 @@
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="5" rx="1.2"></rect><rect x="2" y="17" width="6" height="5" rx="1.2"></rect><rect x="16" y="17" width="6" height="5" rx="1.2"></rect><path d="M12 7v5"></path><path d="M5 17v-2.5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1V17"></path></svg>
           <span class="sidebar__nav-label">Estrutura DTI</span>
         </button>
+        <button class="sidebar__nav-item" data-modulo="tarefas" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"></rect><rect x="10" y="4" width="5" height="11" rx="1.5"></rect><rect x="17" y="4" width="4" height="7" rx="1.5"></rect></svg>
+          <span class="sidebar__nav-label">Tarefas</span>
+          <span class="sidebar__nav-badge" id="nav-badge-tarefas" hidden>0</span>
+        </button>
       </nav>
 
       <div class="sidebar__filters" id="filtros-agenda" hidden>
@@ -201,6 +206,14 @@
             Restaurar cópia
           </label>
           <input id="input-importar-projetos" type="file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+
+      <div class="sidebar__filters" id="filtros-tarefas" hidden>
+        <div class="filters__group">
+          <span class="filters__label" id="label-filtrar-categorias">Filtrar por categoria</span>
+          <div class="chip-group" id="tarefas-categorias-chips" role="group" aria-labelledby="label-filtrar-categorias"></div>
+          <button class="link-button" id="btn-limpar-categorias-tarefa" type="button">Mostrar todas</button>
         </div>
       </div>
 
@@ -370,6 +383,42 @@
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
               </span>
               <span class="portal-card__selo" id="portal-estrutura-selo">—</span>
+            </footer>
+          </article>
+
+          <article class="portal-card portal-card--tarefas" data-ir="tarefas" role="button" tabindex="0" aria-label="Abrir o módulo Tarefas">
+            <header class="portal-card__topo">
+              <span class="portal-card__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"></rect><rect x="10" y="4" width="5" height="11" rx="1.5"></rect><rect x="17" y="4" width="4" height="7" rx="1.5"></rect></svg>
+              </span>
+              <div>
+                <h4 class="portal-card__titulo">Tarefas</h4>
+                <p class="portal-card__descricao">Quadro de tarefas da Diretoria por categoria, com status, responsável e prazo. O que está em andamento, o que aguarda revisão e o que já venceu.</p>
+              </div>
+            </header>
+
+            <dl class="portal-card__metricas">
+              <div class="portal-metrica">
+                <dt>A fazer</dt>
+                <dd id="portal-tarefas-afazer">—</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Em andamento</dt>
+                <dd id="portal-tarefas-andamento">—</dd>
+              </div>
+              <div class="portal-metrica portal-metrica--alerta" id="portal-tarefas-cel-atrasadas">
+                <dt>Atrasadas</dt>
+                <dd id="portal-tarefas-atrasadas">—</dd>
+              </div>
+            </dl>
+
+            <p class="portal-card__destaque" id="portal-tarefas-destaque"></p>
+
+            <footer class="portal-card__rodape">
+              <span class="portal-card__cta">Abrir quadro
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </span>
+              <span class="portal-card__selo" id="portal-tarefas-selo">—</span>
             </footer>
           </article>
         </div>
@@ -682,6 +731,26 @@
         </section>
       </div><!-- /modulo-estrutura -->
 
+      <div id="modulo-tarefas" hidden>
+        <div class="page-header">
+          <div class="page-header__titles">
+            <span class="page-header__eyebrow">Tarefas</span>
+            <h2 class="page-title">Quadro de tarefas</h2>
+            <p class="page-subtitle" id="tarefas-subtitulo"></p>
+          </div>
+          <div class="page-header__acoes">
+            <button id="btn-nova-tarefa" class="btn btn--primary" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Nova tarefa</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="quadro-vazio" id="tarefas-vazio" hidden></p>
+
+        <div class="quadro" id="tarefas-quadro" aria-live="polite"></div>
+      </div><!-- /modulo-tarefas -->
+
       <div class="content-signature">
         <img src="img/tcm-lockup.png" alt="Tribunal de Contas dos Municípios do Estado da Bahia" />
         <img src="img/tcm-55.png" alt="55 anos de serviços prestados à sociedade" />
@@ -983,10 +1052,117 @@
     </div>
   </div>
 
+  <div id="tarefa-form-backdrop" class="panel-backdrop" hidden></div>
+  <div id="tarefa-form" class="proj-modal" role="dialog" aria-modal="true" aria-labelledby="tarefa-form-titulo" hidden>
+    <div class="proj-modal__header">
+      <h2 id="tarefa-form-titulo">Nova tarefa</h2>
+      <button id="btn-fechar-tarefa-form" class="icon-btn" type="button" aria-label="Fechar formulário de tarefa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <form id="tarefa-form-campos" class="proj-modal__body" novalidate>
+      <label class="campo">
+        <span class="campo__rotulo">Tarefa <span class="campo__obrigatorio">*</span></span>
+        <input id="tarefa-titulo" class="input" type="text" maxlength="140" required placeholder="Ex.: Instruir o aditivo do Contrato 65/2022" />
+      </label>
+
+      <label class="campo">
+        <span class="campo__rotulo">O que precisa ser feito</span>
+        <textarea id="tarefa-descricao" class="input input--area" rows="3" maxlength="600" placeholder="Detalhe o suficiente para outra pessoa assumir"></textarea>
+      </label>
+
+      <div class="campo-linha">
+        <label class="campo">
+          <span class="campo__rotulo">Categoria</span>
+          <select id="tarefa-categoria" class="input"></select>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Unidade da DTI</span>
+          <select id="tarefa-unidade" class="input">
+            <option value="">Sem etiqueta</option>
+            <option value="DDES">DDES — Divisão de Desenvolvimento de Sistemas</option>
+            <option value="DINT">DINT — Divisão de Infraestrutura Tecnológica</option>
+            <option value="DBAD">DBAD — Divisão de Banco de Dados</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="campo-linha">
+        <label class="campo">
+          <span class="campo__rotulo">Responsável</span>
+          <input id="tarefa-responsavel" class="input" type="text" maxlength="80" list="tarefa-responsaveis" placeholder="Quem executa a tarefa" />
+          <datalist id="tarefa-responsaveis"></datalist>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Prazo</span>
+          <input id="tarefa-prazo" class="input" type="date" />
+        </label>
+      </div>
+
+      <div class="campo-linha">
+        <label class="campo">
+          <span class="campo__rotulo">Status</span>
+          <select id="tarefa-status" class="input"></select>
+        </label>
+        <label class="campo">
+          <span class="campo__rotulo">Prioridade</span>
+          <select id="tarefa-prioridade" class="input">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="campo">
+        <span class="campo__rotulo">Nota do lançamento</span>
+        <textarea id="tarefa-nota" class="input input--area" rows="2" maxlength="400" placeholder="Registrada como primeiro item do histórico"></textarea>
+      </label>
+
+      <p id="tarefa-form-erro" class="form-error" role="alert" hidden></p>
+    </form>
+
+    <div class="proj-modal__footer">
+      <button id="btn-excluir-tarefa" class="btn btn--ghost btn--perigo" type="button" hidden>Excluir tarefa</button>
+      <button id="btn-cancelar-tarefa" class="btn btn--ghost" type="button">Cancelar</button>
+      <button id="btn-salvar-tarefa" class="btn btn--primary" type="button">Salvar tarefa</button>
+    </div>
+  </div>
+
+  <div id="tarefa-painel-backdrop" class="panel-backdrop" hidden></div>
+  <aside id="tarefa-painel" class="detail-panel detail-panel--largo" aria-hidden="true" aria-label="Detalhe da tarefa">
+    <div class="detail-panel__header">
+      <h2 id="tarefa-painel-titulo">Tarefa</h2>
+      <button id="btn-fechar-tarefa-painel" class="icon-btn" type="button" aria-label="Fechar painel da tarefa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="detail-panel__body" id="tarefa-painel-corpo"></div>
+
+    <div class="proj-acoes">
+      <span class="filters__label" id="label-tarefa-mover">Mover para</span>
+      <div class="chip-group" id="tarefa-mover-chips" role="group" aria-labelledby="label-tarefa-mover"></div>
+    </div>
+
+    <form id="tarefa-status-form" class="proj-status-form" novalidate>
+      <span class="filters__label">Lançar andamento</span>
+      <label class="campo">
+        <span class="campo__rotulo">O que mudou</span>
+        <textarea id="tarefa-status-nota" class="input input--area" rows="2" maxlength="400" placeholder="Ex.: aditivo instruído, aguardando parecer jurídico"></textarea>
+      </label>
+      <div class="proj-status-form__acoes">
+        <button id="btn-editar-tarefa" class="btn btn--ghost" type="button">Editar tarefa</button>
+        <button id="btn-lancar-tarefa" class="btn btn--primary" type="button">Lançar no histórico</button>
+      </div>
+    </form>
+  </aside>
+
   <script src="dados/contratos.js"></script>
   <script src="dados/projetos.js"></script>
   <script src="dados/ramais.js"></script>
   <script src="dados/estrutura.js"></script>
+  <script src="dados/tarefas.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script type="module" src="script.js"></script>

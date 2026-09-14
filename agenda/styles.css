@@ -3258,3 +3258,214 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 /* No papel nada abre: a chamada de ação e a seta não têm o que fazer. */
 .fluxo--export .fluxo-no__chamada,
 .fluxo--export .fluxo-no__seta { display: none; }
+
+/* ==========================================================================
+   MÓDULO TAREFAS — quadro por status
+
+   Colunas lado a lado, uma por status, com os cartões que se movem entre
+   elas. As colunas rolam na horizontal quando não cabem, e cada uma rola na
+   vertical quando a pilha cresce: o cabeçalho da coluna fica visível enquanto
+   se percorre a lista, que é o que um quadro precisa para continuar legível
+   com trinta tarefas dentro.
+   ========================================================================== */
+
+.quadro {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(268px, 1fr);
+  gap: 14px;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.quadro-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 190px;
+  padding: 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+/* Coluna sob o cartão arrastado: o realce diz onde ele vai cair. */
+.quadro-coluna.is-alvo {
+  border-color: var(--color-secondary);
+  background: var(--color-secondary-tint);
+}
+
+.quadro-coluna__topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quadro-coluna__titulo {
+  margin: 0;
+  font: 700 0.92rem/1.2 var(--font-sans, "IBM Plex Sans", sans-serif);
+  color: var(--color-heading);
+}
+.quadro-coluna__conta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-border-soft);
+  color: var(--color-text-secondary);
+  font: 700 0.72rem/1 var(--font-mono, "IBM Plex Mono", monospace);
+}
+.quadro-coluna__alerta {
+  margin-left: auto;
+  font: 700 0.68rem/1.3 var(--font-sans, "IBM Plex Sans", sans-serif);
+  color: var(--color-error-strong);
+}
+.quadro-coluna__ajuda {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--color-text-tertiary);
+  text-wrap: pretty;
+}
+.quadro-coluna__pilha { display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
+.quadro-coluna__vazia {
+  margin: 0;
+  padding: 14px 4px;
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--color-text-tertiary);
+}
+
+.quadro-vazio {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  font-size: 0.86rem;
+  color: var(--color-text-secondary);
+}
+
+/* --- Cartão de tarefa ---------------------------------------------------- */
+
+.tarefa-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--cat-presencial);
+  border-radius: 8px;
+  box-shadow: var(--sombra-leve);
+}
+/* Tarefa com prazo vencido: a borda vermelha é o que faz a coluna ser lida de
+   cima para baixo com a ordem certa de urgência. */
+.tarefa-card--atrasada { border-left-color: var(--color-error); }
+.tarefa-card.is-arrastando { opacity: 0.45; }
+.tarefa-card:hover { border-color: var(--color-secondary); }
+
+.tarefa-card__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding: 10px 34px 10px 11px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.tarefa-card__corpo:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
+
+.tarefa-card__etiquetas { display: flex; flex-wrap: wrap; gap: 5px; }
+.tarefa-card__titulo {
+  font: 600 0.84rem/1.35 var(--font-sans, "IBM Plex Sans", sans-serif);
+  color: var(--color-text-primary);
+  text-wrap: pretty;
+}
+.tarefa-card__responsavel,
+.tarefa-card__prazo,
+.tarefa-card__nota {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+}
+.tarefa-card__responsavel svg { flex: 0 0 auto; color: var(--color-text-tertiary); }
+.tarefa-card__responsavel--vago { color: var(--color-warning); }
+.tarefa-card__prazo { font-weight: 600; }
+.tarefa-card__prazo--alerta { color: var(--color-error-strong); }
+.tarefa-card__nota { color: var(--color-text-tertiary); font-size: 0.7rem; }
+
+/* Setas de coluna anterior e seguinte: é como se move a tarefa pelo teclado e
+   no celular, onde arrastar não funciona. */
+.tarefa-card__mover {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 6px 7px;
+  margin-top: -2px;
+}
+.icon-btn--mini { width: 26px; height: 26px; border-radius: 6px; }
+.icon-btn--mini:disabled { opacity: 0.3; cursor: default; }
+
+/* --- Etiqueta de categoria ----------------------------------------------- */
+
+.tarefa-categoria,
+.tarefa-prioridade {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: 700 0.62rem/1.45 var(--font-sans, "IBM Plex Sans", sans-serif);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tarefa-categoria--navy { color: var(--cat-presencial); background: var(--cat-presencial-bg); }
+.tarefa-categoria--azul { color: var(--cat-online); background: var(--cat-online-bg); }
+.tarefa-categoria--verde { color: var(--cat-escola); background: var(--cat-escola-bg); }
+.tarefa-categoria--ambar { color: var(--cat-viagem); background: var(--cat-viagem-bg); }
+.tarefa-categoria--roxo { color: var(--color-recorrente-texto); background: var(--color-recorrente-tint); }
+.tarefa-categoria--vermelho { color: var(--color-error-strong); background: var(--color-error-tint); }
+.tarefa-categoria--neutra { color: var(--color-text-secondary); background: var(--color-border-soft); }
+.tarefa-prioridade--alta { color: var(--color-error-strong); background: var(--color-error-tint); }
+
+/* Ponto de cor no chip de filtro: a mesma família da etiqueta, para que o
+   filtro e o cartão se reconheçam. */
+.chip__ponto {
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.tarefa-ponto--navy { color: var(--cat-presencial); }
+.tarefa-ponto--azul { color: var(--cat-online); }
+.tarefa-ponto--verde { color: var(--cat-escola); }
+.tarefa-ponto--ambar { color: var(--cat-viagem); }
+.tarefa-ponto--roxo { color: var(--color-recorrente-texto); }
+.tarefa-ponto--vermelho { color: var(--color-error-strong); }
+.tarefa-ponto--neutra { color: var(--color-text-tertiary); }
+.chip__conta {
+  margin-left: 6px;
+  font: 700 0.68rem/1 var(--font-mono, "IBM Plex Mono", monospace);
+  opacity: 0.75;
+}
+
+/* No celular as colunas passam a ocupar a largura da tela e se empilham: uma
+   coluna de 268px em 390px de tela deixaria o quadro rolando nos dois eixos,
+   e ninguém arrasta cartão com o dedo em duas direções. */
+@media (max-width: 860px) {
+  .quadro {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+  }
+  .tarefa-card__corpo { padding-right: 11px; }
+}

@@ -102,6 +102,11 @@ de alerta só acende quando existe alguma. O destaque nomeia as unidades que a
 minuta cria, e o selo traz o total de pessoas no organograma (59, hoje) com a
 ressalva de que a proposta está em discussão.
 
+**Cartão de Tarefas:** quantas estão a fazer, quantas em andamento e quantas
+atrasadas — a cela de alerta só acende quando existe atraso. O destaque nomeia a
+próxima tarefa com prazo e quem responde por ela, e o selo conta o que está em
+aberto.
+
 Os números do portal ignoram os filtros em vigor nas telas internas: a página
 inicial resume a base, não o recorte que ficou selecionado em outro módulo.
 
@@ -112,8 +117,8 @@ fazer, em vez de ficarem inertes.
 
 **Links diretos:** `?modulo=agenda`, `?modulo=plano` (ou `?modulo=projetos`),
 `?modulo=ramais` (ou `?modulo=ramal`), `?modulo=estrutura` (ou
-`?modulo=organograma`) e `?modulo=portal` abrem o sistema direto
-em um módulo. No módulo Estrutura DTI, `?visao=sugerida` (ou `?visao=proposta`)
+`?modulo=organograma`), `?modulo=tarefas` (ou `?modulo=quadro`, `?modulo=kanban`)
+e `?modulo=portal` abrem o sistema direto em um módulo. No módulo Estrutura DTI, `?visao=sugerida` (ou `?visao=proposta`)
 abre direto na minuta, e `?visao=atual` na estrutura vigente — que é o padrão.
 Um intervalo explícito de
 datas na URL (`?data=`, `?de=`/`?ate=`) continua caindo na agenda — é o formato
@@ -121,7 +126,7 @@ dos links do envio diário, e abrir o portal ali esconderia o que foi pedido.
 
 ## Módulos
 
-O sistema tem quatro módulos, alcançados pelo portal ou pela navegação da
+O sistema tem cinco módulos, alcançados pelo portal ou pela navegação da
 barra lateral.
 
 ### Agenda
@@ -497,6 +502,62 @@ premissas da minuta e a lista do que ela muda. Nada disso é exibido hoje: fica
 como registro, e o cabeçalho do arquivo diz exatamente quais campos a tela lê,
 para que quem editar a estrutura não procure na interface um campo que ela
 ignora.
+
+### Tarefas
+
+Quadro de tarefas por status, no formato de colunas: **A fazer → Em andamento →
+Em revisão → Concluída**. Cada tarefa entra com **categoria, unidade da DTI,
+responsável, prazo e prioridade**, e o cartão mostra na própria coluna o que
+basta para decidir se ela precisa de atenção agora.
+
+**As colunas e as categorias vêm de `dados/tarefas.js`**, porque são
+vocabulário institucional e iguais para todo mundo; as tarefas são digitadas na
+tela e ficam no armazenamento do navegador, como os projetos do Plano 100 dias.
+A ordem do arquivo é a ordem do quadro, e o `id` de cada coluna é o que fica
+gravado em cada tarefa — renomear o rótulo não mexe no que está salvo. A última
+coluna é a de **encerramento**: é ela que diz ao quadro o que não conta mais
+como pendência, e é dela que saem as contagens de "em aberto".
+
+**Sete categorias**, cada uma com a família de cor que a etiqueta usa em tela —
+Sistemas, Infraestrutura, Banco de dados, Atendimento, Contratos e
+fornecedores, Governança e segurança, Gestão e pessoal. As cores vêm dos tokens
+que o resto do sistema já usa, de modo que a etiqueta acompanha o tema claro e o
+escuro sem cor nova em lugar nenhum. Acrescentar categoria é acrescentar uma
+linha no arquivo de dados. A **unidade da DTI** é a mesma etiqueta do Plano 100
+dias (`DDES`, `DINT`, `DBAD`), para que a mesma pergunta — "de quem é isto?" —
+se responda igual nos dois módulos.
+
+**Mover a tarefa tem três caminhos, e os três chamam o mesmo código.** Arrastar
+o cartão para a coluna (com a coluna de destino realçada enquanto o cartão está
+no ar), as **setas de coluna anterior e seguinte** no pé de cada cartão, e os
+**botões de destino** no painel da tarefa. Arrastar não funciona com teclado e
+funciona mal no celular; as setas resolvem os dois casos, e por isso não são um
+extra — são o caminho principal em metade dos usos.
+
+**Dentro da coluna, a ordem é a da cobrança:** atrasada primeiro, depois por
+prioridade, depois pelo prazo mais próximo, e o resto pela ordem de lançamento.
+Tarefa com prazo vencido ganha **borda vermelha** e o prazo em vermelho no
+cartão ("venceu há 3 dias"), e o cabeçalho da coluna diz quantas estão
+atrasadas. Concluída não recebe marca de atraso: o prazo dela já passou a ser
+histórico.
+
+**Histórico por tarefa.** Cada movimento entre colunas entra no histórico com
+data, hora e a coluna de destino, e o painel tem um campo para lançar o que
+mudou sem mexer no status. A nota do último lançamento aparece no cartão — mas
+só depois do primeiro andamento, porque a nota de lançamento repetida em todo
+cartão diria apenas o que a coluna já diz.
+
+**Filtro por categoria** na barra lateral, com a contagem de cada uma e a opção
+de mostrar todas; e a busca do módulo alcança título, descrição, responsável,
+categoria e unidade. As duas se combinam, e o vazio explica qual das duas
+deixou o quadro sem nada.
+
+**A carteira inicial vem da Diretoria.** As primeiras tarefas foram informadas
+em 14/09/2026 e entram por semente, aplicada uma vez por navegador e mesclada
+por id: mover de coluna, editar ou apagar uma tarefa semeada não é desfeito no
+carregamento seguinte. O **título é a ação** e a **descrição guarda o texto como
+a Diretoria o escreveu** — reescrever a demanda sem deixar o original em algum
+lugar transformaria a interpretação de quem lançou em registro.
 
 ## Stack
 
