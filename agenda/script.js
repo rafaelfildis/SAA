@@ -5568,19 +5568,50 @@ function pessoasDoPapel(u, papel) {
   return pessoasDaUnidade(u).filter((p) => (p.papel || "equipe") === papel);
 }
 
-function noDoFluxo({ classe, selo, titulo, linhas, destacado, unidade, aberta, chamada }) {
+// Camada visual da caixa pela natureza declarada da unidade. O "nova" é
+// modificador, e não classe própria: uma Diretoria nova continua a ser
+// Diretoria, e perder a cor da camada só para ganhar a de "nova" apagaria a
+// hierarquia justamente onde ela mudou.
+function classeDaUnidade(u) {
+  const natureza = normalizarTexto(u.natureza || "");
+  if (natureza.startsWith("superintendencia")) return "diretoria";
+  if (natureza.startsWith("diretoria")) return "diretoria-filha";
+  if (natureza.startsWith("secao")) return "secao";
+  return "unidade";
+}
+
+function noDoFluxo({
+  classe,
+  selo,
+  titulo,
+  subtitulo,
+  responsavel,
+  vago,
+  linhas,
+  destacado,
+  nova,
+  unidade,
+  aberta,
+  chamada,
+}) {
   const corpo = `
       ${selo ? `<span class="fluxo-no__selo">${escapeHtml(selo)}</span>` : ""}
       <span class="fluxo-no__titulo">${escapeHtml(titulo)}</span>
+      ${subtitulo ? `<span class="fluxo-no__subtitulo">${escapeHtml(subtitulo)}</span>` : ""}
+      ${
+        responsavel
+          ? `<span class="fluxo-no__responsavel${vago ? " fluxo-no__responsavel--vago" : ""}">${escapeHtml(responsavel)}</span>`
+          : ""
+      }
       ${(linhas || [])
         .filter(Boolean)
         .map((l) => `<span class="fluxo-no__linha">${escapeHtml(l)}</span>`)
         .join("")}
       ${chamada ? `<span class="fluxo-no__chamada">${escapeHtml(chamada)}</span>` : ""}`;
 
-  const classes = `fluxo-no fluxo-no--${classe}${destacado ? " is-destacado" : ""}${
-    aberta ? " is-aberta" : ""
-  }`;
+  const classes = `fluxo-no fluxo-no--${classe}${nova ? " fluxo-no--nova" : ""}${
+    destacado ? " is-destacado" : ""
+  }${aberta ? " is-aberta" : ""}`;
 
   // Só unidade abre equipe. Caixa de pessoa não é botão: um controle que não
   // faz nada ao ser clicado é pior do que um texto que nunca prometeu nada. No
@@ -5626,13 +5657,15 @@ function noDePessoa(pessoa, classe, busca) {
     classe,
     selo: nivelDoCargo(pessoa),
     titulo: pessoa.nome,
-    // Gerência sem seção nomeada não tem escopo declarado, e a caixa diz isso
-    // em vez de repetir "Gerente de Tecnologia da Informação" sob o selo que
-    // já traz DAS-3.
-    linhas: [pessoa.escopo || (classe === "gerencia" ? "escopo a definir" : pessoa.nivel || "")],
+    linhas: [pessoa.escopo || pessoa.nivel || ""],
     destacado: Boolean(busca) && pessoaBate(pessoa, busca),
   });
 }
+
+// A visão em montagem fica acessível às funções da árvore: só ela diz se uma
+// chefia vaga é dado a confirmar (estrutura vigente) ou designação a fazer
+// (minuta).
+let visaoEmMontagem = null;
 
 function filhosDoFluxo(u, busca, paraPapel) {
   const titular = titularDaUnidade(u);
@@ -5649,16 +5682,23 @@ function filhosDoFluxo(u, busca, paraPapel) {
         pessoasDaUnidade(su).some((p) => pessoaBate(p, busca)));
     const aberta = !paraPapel && state.estruturaUnidadeAberta === su.sigla;
     const no = noDoFluxo({
-      classe: "secao",
-      selo: su.natureza || "",
+      classe: classeDaUnidade(su),
+      selo: classeDaUnidade(su) === "secao" ? "" : su.natureza || "",
       titulo: paraPapel ? su.sigla : `${su.sigla} — ${su.nome}`,
+      subtitulo: paraPapel ? su.nome : "",
+      responsavel: titular
+        ? titular.nome
+        : minutaEmTela(visaoEmMontagem) && su.estado === "nova"
+        ? "chefia a designar"
+        : "chefia a confirmar",
+      vago: !titular,
       linhas: [
-        paraPapel ? su.nome : "",
-        titular ? titular.nome : "chefia a confirmar",
-        titular ? papelResumido(titular, "Gerência") : "",
+        titular ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia") : "",
         su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
+        resumoDeQuadro(su),
       ],
       destacado,
+      nova: su.estado === "nova",
       unidade: paraPapel ? "" : su.sigla,
       aberta,
       chamada: paraPapel ? "" : chamadaDeEquipe(su, aberta),
@@ -5674,6 +5714,7 @@ function filhosDoFluxo(u, busca, paraPapel) {
 // exportado é o mesmo que está em tela, e não um segundo desenho para
 // divergir do primeiro na próxima mudança.
 function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
+  visaoEmMontagem = visao;
   const topo = visao.topo;
   const diretor = titularDaUnidade(topo);
   const topoAberto = !paraPapel && state.estruturaUnidadeAberta === topo.sigla;
@@ -5682,10 +5723,10 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
     classe: "diretoria",
     selo: topo.natureza || "",
     titulo: paraPapel ? topo.sigla : `${topo.sigla} — ${topo.nome}`,
-    linhas: [
-      paraPapel ? topo.nome : "",
-      diretor ? `${diretor.nome}${diretor.cargo ? ` · ${diretor.cargo}` : ""}` : "chefia a confirmar",
-    ],
+    subtitulo: paraPapel ? topo.nome : "",
+    responsavel: diretor ? diretor.nome : "chefia a confirmar",
+    vago: !diretor,
+    linhas: [diretor && diretor.cargo ? diretor.cargo : ""],
     destacado:
       !paraPapel &&
       Boolean(busca) &&
@@ -5705,16 +5746,22 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
         Boolean(busca) &&
         (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
       const no = noDoFluxo({
-        classe: u.estado === "nova" ? "unidade-nova" : "unidade",
-        selo: u.natureza || "",
+        classe: classeDaUnidade(u),
+        selo: classeDaUnidade(u) === "secao" ? "" : u.natureza || "",
         titulo: paraPapel ? u.sigla : `${u.sigla} — ${u.nome}`,
+        subtitulo: paraPapel ? u.nome : "",
+        responsavel: titular
+          ? titular.nome
+          : minutaEmTela(visao)
+          ? "chefia a designar"
+          : "chefia a confirmar",
+        vago: !titular,
         linhas: [
-          paraPapel ? u.nome : "",
-          titular ? titular.nome : minutaEmTela(visao) ? "chefia a designar" : "chefia a confirmar",
           titular ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia") : "",
           resumoDeQuadro(u),
         ],
         destacado,
+        nova: u.estado === "nova",
         unidade: paraPapel ? "" : u.sigla,
         aberta,
         chamada: paraPapel ? "" : chamadaDeEquipe(u, aberta),
@@ -6045,8 +6092,11 @@ function construirExtratoEstrutura(visao) {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;text-align:right">
         <span style="font:700 13px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">ESTRUTURA DTI</span>
-        <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Diretoria de Tecnologia da Informação</span>
-        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">SAA · Sistema de Agenda Automatizada</span>
+        <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(
+          // A linha acompanha a unidade do topo: na minuta o topo é uma
+          // Superintendência, e o cabeçalho não pode anunciar uma Diretoria.
+          visao.topo.nome
+        )}</span>
       </div>
     </div>
 
@@ -6089,10 +6139,10 @@ function construirExtratoEstrutura(visao) {
 
     <div style="margin-top:auto;padding-top:14px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
       <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:620px;text-wrap:pretty">
-        Documento gerado pelo SAA a partir da relação de lotação e da alocação da equipe técnica da DTI. Os campos que as relações não declaram constam do arquivo de dados do módulo como pendências a confirmar.
+        Documento gerado a partir da relação de lotação e da alocação da equipe técnica da DTI. Os campos que as relações não declaram constam do arquivo de dados do módulo como pendências a confirmar.
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
-        TCM-BA · SAA<br>${escapeHtml(formatarDataLonga(new Date()))}
+        TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
       </div>
     </div>
   `;
