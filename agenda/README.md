@@ -254,10 +254,17 @@ o desenho.
 **Esqueleto fixo.** Na estrutura atual, de cima para baixo: **Diretor → chefes
 de divisão (DAS-4) → Gerentes de TI (DAS-3)**, com a **Seção de Atendimento ao
 Usuário** dentro da Divisão de Infraestrutura Tecnológica, porque é onde ela
-está e quem a chefia é um gerente. Os três DAS-3 da Divisão de Desenvolvimento
-de Sistemas vêm em **uma caixa só, "Gerentes de TI"**, com os três nomes: três
-caixas idênticas lado a lado ocupavam a largura de uma camada inteira para
-dizer a mesma coisa três vezes.
+está e quem a chefia é um gerente.
+
+**Gerência sem escopo declarado vem agrupada; com escopo, ganha caixa
+própria.** Na estrutura atual os três DAS-3 da Divisão de Desenvolvimento de
+Sistemas vêm em **uma caixa só, "Gerentes de TI"**, com os três nomes: a
+relação de lotação não diz o escopo de nenhuma das três, e três caixas
+idênticas lado a lado ocupavam a largura de uma camada inteira para dizer a
+mesma coisa três vezes. Quando cada gerência conduz uma frente nomeada — o que
+a minuta propõe —, cada uma passa a ter a sua caixa, com o nome de quem
+responde no título e a frente na linha de apoio. Quem decide é o campo `funcao`
+da pessoa no arquivo de dados, não uma opção de tela.
 
 **Cada camada tem a sua cor**, e a cor vem da natureza declarada da unidade, não
 da posição em que ela é desenhada — com Superintendência, Diretoria, Coordenação
@@ -284,9 +291,11 @@ da Informação**, e abaixo dela ficam **duas Diretorias**:
   a camada renomeada para **Coordenação**: **Coordenação de Sistemas (COSIS)**,
   ex-DDES, **Coordenação de Infraestrutura (COINFRA)**, ex-DINT, e
   **Coordenação de Suporte Técnico (COSTEC)**, ex-SEATU, as três no mesmo
-  nível. Sob a Coordenação de Sistemas ficam dois Núcleos: o **Núcleo de Banco
-  de Dados**, ex-DBAD, com a chefia e o quadro de hoje, e o **Núcleo de UX/UI**,
-  novo;
+  nível. Sob a Coordenação de Sistemas ficam três Núcleos: o **Núcleo de
+  Desenvolvimento de Sistemas**, que reúne as três gerências (DAS-3) de hoje
+  com a frente de cada uma declarada — liderança técnica, sustentação e
+  modernização —, o **Núcleo de Banco de Dados**, ex-DBAD, com a chefia e o
+  quadro de hoje, e o **Núcleo de UX/UI**, novo;
 - **Diretoria de Projetos de TIC**, nova, com a **Coordenação de Processos de
   TIC** e a **Coordenação de Governança Digital e Segurança da Informação**.
 
@@ -303,8 +312,14 @@ governança de TI, exercida pela Diretoria junto com a direção da área, e
 segurança da informação, exercida pela Infraestrutura, que opera o ambiente que
 deveria avaliar.
 
+A equipe técnica segue ligada à Coordenação de Sistemas, e não distribuída
+entre as três frentes: nem a relação de lotação nem a alocação dizem a qual
+delas cada técnico responde, e inventar a distribuição seria transformar uma
+pendência do levantamento em dado.
+
 **O que a minuta não pressupõe.** A chefia das duas Diretorias, das Coordenações
-novas e dos Núcleos fica a designar, e a Diretoria de Projetos de TIC, as suas
+novas e dos Núcleos fica a designar — no Núcleo de Desenvolvimento de Sistemas
+a liderança técnica declarada pode acumulá-la, e isso é decisão da Diretoria —, e a Diretoria de Projetos de TIC, as suas
 duas Coordenações e o Núcleo de UX/UI nascem sem quadro declarado: compô-los
 exige remanejamento ou provimento, e o cargo comissionado correspondente a
 Coordenação e a Núcleo depende do ato de criação — os três são atos do Tribunal.
@@ -365,6 +380,15 @@ função, em modo de papel: sem botão, sem chamada de ação e sem caixa aberta
 a **equipe de cada unidade** listada com cargo, matrícula, vínculo ou perfil de
 senioridade. A folha sai branca mesmo com o app no tema escuro, porque os
 tokens de cor são redefinidos dentro dela em vez de a árvore ser redesenhada.
+
+**Quando a árvore não cabe na largura da folha, ela é reduzida em bloco** — a
+minuta, com cinco camadas, passa dos 1027px úteis da A4 paisagem. Estreitar as
+caixas até caberem quebraria o nome da unidade em quatro linhas e deixaria o
+desenho mais alto que a página; reduzir a escala mantém a proporção do que está
+em tela, que é o que se faz ao levar um organograma grande para o papel. A
+medida é a extensão real das caixas, e não `scrollWidth`: a árvore é um flex
+centralizado, e o que transborda à esquerda não entra nessa conta — foi assim
+que a primeira caixa apareceu cortada na primeira tentativa.
 
 No papel, a sigla é o título da caixa e o nome da unidade desce para a linha
 seguinte: a mesma informação, na ordem que o espaço permite. O cabeçalho

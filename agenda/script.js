@@ -5410,6 +5410,10 @@ function distribuicaoDeSenioridade(pessoas) {
 // cabeçalho é a gerência. Sem nenhum dos dois, a tela declara a pendência.
 function titularDaUnidade(u) {
   const pessoas = pessoasDaUnidade(u);
+  // Unidade da minuta pode ter quadro e ainda não ter titular: é o caso do
+  // Núcleo cujas frentes têm líder declarado, mas cuja chefia depende de ato.
+  // Sem a marca, a primeira gerência seria promovida a chefe pelo desenho.
+  if (u.titularADesignar) return null;
   return pessoas.find((p) => p.papel === "chefia") || pessoas.find((p) => p.papel === "gerencia") || null;
 }
 
@@ -5484,6 +5488,7 @@ function linhaDePessoa(pessoa, destacada) {
       <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
       <span class="org-pessoa__detalhe">
         ${cargo}
+        ${pessoa.funcao ? `<span class="org-pessoa__funcao">${escapeHtml(pessoa.funcao)}</span>` : ""}
         ${meta.length ? `<span class="org-pessoa__meta">${escapeHtml(meta.join(" · "))}</span>` : ""}
       </span>
     </li>`;
@@ -5678,12 +5683,16 @@ function noDeGrupoDeGerencias(pessoas, busca) {
   });
 }
 
-function noDePessoa(pessoa, classe, busca) {
+// Gerência com escopo declarado ganha caixa própria: o nome de quem responde
+// é o título, em azul como nas demais caixas, e a frente que ela conduz vem
+// na linha de apoio — é texto longo, e ali ele quebra por palavra em vez de
+// estourar a caixa quando o desenho é reduzido para caber na folha.
+function noDeFrente(pessoa, busca) {
   return noDoFluxo({
-    classe,
+    classe: "gerencia",
     selo: nivelDoCargo(pessoa),
     titulo: pessoa.nome,
-    linhas: [pessoa.escopo || pessoa.nivel || ""],
+    linhas: [pessoa.funcao],
     destacado: Boolean(busca) && pessoaBate(pessoa, busca),
   });
 }
@@ -5696,7 +5705,15 @@ let visaoEmMontagem = null;
 function filhosDoFluxo(u, busca, paraPapel) {
   const titular = titularDaUnidade(u);
   const gerentes = pessoasDoPapel(u, "gerencia").filter((p) => p !== titular);
-  const gerencias = gerentes.length ? [`<li>${noDeGrupoDeGerencias(gerentes, busca)}</li>`] : [];
+  // Três caixas idênticas lado a lado dizem a mesma coisa três vezes: quando o
+  // escopo não está declarado, as gerências vêm em uma caixa só. Quando cada
+  // uma conduz uma frente nomeada, a caixa própria passa a informar algo.
+  const comEscopo = gerentes.filter((p) => p.funcao);
+  const gerencias = !gerentes.length
+    ? []
+    : comEscopo.length === gerentes.length
+    ? gerentes.map((p) => `<li>${noDeFrente(p, busca)}</li>`)
+    : [`<li>${noDeGrupoDeGerencias(gerentes, busca)}</li>`];
 
   const secoes = subunidadesDe(u).map((su) => {
     const titular = titularDaUnidade(su);
@@ -6037,7 +6054,7 @@ function linhaPessoaExport(pessoa) {
   const direita =
     pessoa.papel === "tecnica"
       ? [pessoa.nivel, pessoa.funcao].filter(Boolean).join(" · ")
-      : [pessoa.cargo, pessoa.matricula ? `mat. ${pessoa.matricula}` : "", pessoa.vinculo]
+      : [pessoa.cargo, pessoa.funcao, pessoa.matricula ? `mat. ${pessoa.matricula}` : "", pessoa.vinculo]
           .filter(Boolean)
           .join(" · ");
   return `
@@ -6151,8 +6168,10 @@ function construirExtratoEstrutura(visao) {
       }
     </div>
 
-    <div class="fluxograma fluxo--export" style="align-self:center;margin-bottom:26px">
-      ${montarFluxograma(visao, { paraPapel: true })}
+    <div class="fluxo-palco" style="align-self:stretch;margin-bottom:26px">
+      <div class="fluxograma fluxo--export" style="display:block">
+        ${montarFluxograma(visao, { paraPapel: true })}
+      </div>
     </div>
 
     <div style="display:flex;flex-direction:column;flex:1">
@@ -6171,7 +6190,49 @@ function construirExtratoEstrutura(visao) {
       </div>
     </div>
   `;
+  ajustarFluxogramaAoPapel(paper);
   return paper;
+}
+
+// Largura útil da folha: 1123px de A4 paisagem menos as duas margens de 48px.
+const LARGURA_UTIL_PAPEL = 1123 - 96;
+
+// A árvore tem de caber na largura da folha, e com cinco camadas ela passa.
+// Estreitar as caixas até caberem quebraria o nome da unidade em quatro linhas
+// e tornaria o desenho mais alto do que a página; o organograma é reduzido em
+// bloco, que é o que se faz ao levar um desenho grande para o papel: a
+// proporção fica igual à da tela e o que muda é a escala.
+function ajustarFluxogramaAoPapel(paper) {
+  const palco = paper.querySelector(".fluxo-palco");
+  const arvore = palco && palco.firstElementChild;
+  const sandbox = document.getElementById("export-sandbox");
+  if (!arvore || !sandbox) return;
+
+  // Medir exige estar no documento. A folha entra no mesmo lugar onde a
+  // rasterização acontece e sai de novo se não estava lá antes.
+  const jaInserida = paper.parentNode === sandbox;
+  if (!jaInserida) sandbox.appendChild(paper);
+  // A árvore é um flex centralizado: quando o conteúdo passa da largura, ele
+  // sai pelos dois lados, e `scrollWidth` não conta o que transborda à
+  // esquerda. Medir a extensão real das caixas evita cortar a primeira.
+  const caixas = Array.from(arvore.querySelectorAll(".fluxo-no"));
+  const bordas = caixas.map((c) => c.getBoundingClientRect());
+  const largura = bordas.length
+    ? Math.max(...bordas.map((r) => r.right)) - Math.min(...bordas.map((r) => r.left))
+    : arvore.scrollWidth;
+  // Dois pontos de folga para o arredondamento não comer a borda da caixa.
+  const cabe = LARGURA_UTIL_PAPEL - 2;
+  const escala = largura > cabe ? cabe / largura : 1;
+  if (escala < 1) {
+    const altura = arvore.scrollHeight;
+    arvore.style.transform = `scale(${escala})`;
+    arvore.style.transformOrigin = "top center";
+    // O transform não muda o espaço que o elemento ocupa: sem corrigir a
+    // altura, sobraria na folha uma faixa vazia do tamanho do que foi
+    // reduzido, e a lista de equipe desceria uma página.
+    palco.style.height = `${Math.ceil(altura * escala)}px`;
+  }
+  if (!jaInserida) sandbox.removeChild(paper);
 }
 
 async function exportarEstrutura(tipo) {
