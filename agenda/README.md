@@ -99,8 +99,8 @@ e vira ruído.
 **Cartão da Estrutura DTI:** unidades abaixo da Diretoria hoje, unidades
 previstas na minuta e quantas funções de TI seguem sem unidade própria — a cela
 de alerta só acende quando existe alguma. O destaque nomeia as unidades que a
-minuta cria, e o selo traz o quadro de pessoal com a ressalva de que a proposta
-está em discussão.
+minuta cria, e o selo traz o total de pessoas no organograma com a ressalva de
+que a proposta está em discussão.
 
 Os números do portal ignoram os filtros em vigor nas telas internas: a página
 inicial resume a base, não o recorte que ficou selecionado em outro módulo.
@@ -250,49 +250,63 @@ navegador — desenho de estrutura se decide em ato do Tribunal, não no
 
 **A comparação fica em tela nas duas visões**, não só na proposta: unidades no
 organograma (4 → 6), funções de TI com unidade própria (4 de 7 → 7 de 7) e
-pessoas lotadas (16 → 16, o mesmo quadro). A coluna da visão exibida fica
-acesa, para que a comparação diga qual dos dois lados é o que está desenhado
-abaixo.
+pessoas no organograma (43 → 43, o mesmo quadro). A coluna da visão exibida
+fica acesa, para que a comparação diga qual dos dois lados é o que está
+desenhado abaixo.
 
-**Estrutura atual.** É a relação de lotação da DTI lida como organograma: 16
-pessoas com matrícula, vínculo e cargo como constam da relação, em três
-divisões sob a Diretoria — Desenvolvimento de Sistemas, Infraestrutura
-Tecnológica e Banco de Dados — e a **Seção de Atendimento ao Usuário
-subordinada à Infraestrutura**. A seção é desenhada dentro do cartão da
+**Duas relações, não somadas às cegas.** A estrutura atual reúne a **relação de
+lotação** — 16 pessoas com matrícula, vínculo e cargo — e a **equipe técnica**
+— 27 pessoas alocadas por unidade com perfil de senioridade (Júnior, Pleno,
+Sênior, Master, Estagiário), sem matrícula nem vínculo declarados. Cada unidade
+mostra as duas contagens separadas, e o módulo registra que os perfis são os de
+contrato de serviços especializados, a confirmar: um número só apagaria a
+diferença entre quadro próprio e equipe alocada, que é justamente o que uma
+discussão de estrutura precisa ver.
+
+**Hierarquia.** Três divisões sob a Diretoria — Desenvolvimento de Sistemas,
+Infraestrutura Tecnológica e Banco de Dados — e a **Seção de Atendimento ao
+Usuário subordinada à Infraestrutura**. A seção é desenhada dentro do cartão da
 Divisão, e não ao lado dos cartões de divisão: com a seção como par de uma
 divisão, o organograma apresentaria como igual o que é subordinado.
 
-Cada cartão segue a hierarquia da própria Diretoria — chefia (DAS-4), gerências
-(DAS-3) e equipe —, e o rótulo de cada bloco diz o nível, para que a lista não
-pareça um amontoado de nomes em ordem alfabética. A chefia aparece no cabeçalho
-do cartão, não repetida na lista abaixo.
+Dentro de cada cartão vale a regra da própria Diretoria — chefia (DAS-4),
+gerências (DAS-3), relação de lotação e equipe técnica —, e o rótulo de cada
+bloco diz o nível. A chefia aparece no cabeçalho, não repetida na lista abaixo.
 
-**O que a relação não declara fica escrito na tela**, em cor de aviso, em vez de
-ser preenchido por conta própria: o escopo de cada uma das três gerências
-lotadas na DDES, o cargo do Diretor, o quadro de atendimento da Seção (a
-relação registra apenas a gerência) e o quadro técnico da Infraestrutura — os
-nomes que atendem infraestrutura na lista de ramais não aparecem na relação de
-lotação. Registra também que a chefia da Divisão de Banco de Dados é exercida
-por analista de sistemas efetivo, sem o cargo comissionado de DAS-4 que
-titulariza as outras duas divisões. Preencher o campo correspondente no arquivo
-de dados é o suficiente para a tela passar a exibi-lo.
+**A equipe técnica vem recolhida** quando passa de seis nomes, com a contagem e
+a **distribuição por perfil** sempre à vista ("1 master · 12 sêniores · 3
+plenos · 7 juniores · 3 estagiários"). A informação de estrutura é a
+distribuição; os nomes ficam a um clique. A busca abre o bloco, para que o
+resultado não se esconda atrás de um resumo.
 
-**Ramal não entra neste módulo de propósito.** A relação de lotação não traz
-ramal, e cruzar nome de servidor com a lista de ramais pelo primeiro nome
-produziria número errado ao lado de pessoa certa. Quem procura número usa o
-**Ramal DTI**; este módulo responde quem é quem e onde está lotado.
+**O que as relações não declaram fica escrito na tela**, em cor de aviso, em vez
+de ser preenchido por conta própria: o escopo de cada uma das três gerências
+lotadas na DDES, o cargo do Diretor, o quadro de atendimento da Seção e o
+quadro técnico da Infraestrutura — que a alocação de técnicos não contempla, e
+cujos nomes na lista de ramais não constam de nenhuma das duas relações.
+Registra também que a chefia da Divisão de Banco de Dados é exercida por
+analista de sistemas efetivo, sem o cargo comissionado de DAS-4 que titulariza
+as outras duas divisões. Preencher o campo correspondente no arquivo de dados é
+o suficiente para a tela passar a exibi-lo.
 
-**O diagnóstico vem escrito**, na "Leitura da estrutura atual": segurança da
-informação sem unidade responsável (o papel recai sobre quem opera o ambiente),
-governança de TI sem unidade própria apesar de um contrato de mais de R$ 9
-milhões por ano, informação gerencial sem dono declarado, três gerências
-lotadas na divisão sem seção nomeada, uma chefia de divisão sem o cargo
-comissionado que as outras têm e um atendimento sem quadro próprio.
+**Ramal não entra neste módulo de propósito.** As relações não trazem ramal, e
+cruzar nome com a lista de ramais pelo primeiro nome produziria número errado ao
+lado de pessoa certa. Quem procura número usa o **Ramal DTI**; este módulo
+responde quem é quem e onde está lotado.
+
+**O diagnóstico vem escrito**, na "Leitura da estrutura atual": o
+desenvolvimento concentra 37 das 43 pessoas e 26 dos 27 técnicos; segurança da
+informação não tem unidade responsável e recai sobre quem opera o ambiente;
+governança de TI não tem unidade própria apesar de um contrato de mais de R$ 9
+milhões por ano; informação gerencial não tem dono declarado; infraestrutura e
+banco de dados não receberam técnicos na alocação; e a porta de entrada da
+operação registra apenas a gerência, sem quadro próprio de atendimento.
 
 **Estrutura sugerida.** É **minuta de trabalho**, e a tela diz isso em todo
 lugar onde ela aparece — faixa âmbar na introdução, selo no cartão do portal e
 a ressalva de que criação, extinção e denominação de unidade, assim como
-designação de chefia, dependem de ato próprio do Tribunal.
+designação de chefia e remanejamento de equipe, dependem de ato próprio do
+Tribunal.
 
 Seis unidades, sem extinguir nenhuma das existentes: **DDES** e **DINT**
 permanecem como são, com a **Seção de Atendimento ao Usuário** onde ela está e
@@ -302,21 +316,24 @@ para painéis e indicadores; e duas unidades novas assumem o que hoje é acúmul
 — **Assessoria de Governança e Gestão de TI** e **Núcleo de Segurança da
 Informação**.
 
-**Sem criação de cargo.** A minuta é desenhada sobre as mesmas 16 pessoas — daí
-a linha "pessoas lotadas: 16 → 16" na comparação. A composição nominal das duas
-unidades novas e o escopo de cada uma das três gerências da DDES ficam a
-definir pela Diretoria: a proposta traz o desenho e a distribuição de
-atribuições, não a lotação das pessoas.
+**Sem criação de cargo.** A minuta é desenhada sobre as mesmas 43 pessoas — daí
+a linha "pessoas no organograma: 43 → 43" na comparação. A composição nominal
+das duas unidades novas, o escopo de cada uma das três gerências da DDES e o
+dimensionamento do quadro técnico da infraestrutura e dos dados ficam a definir
+pela Diretoria: a proposta traz o desenho e a distribuição de atribuições, não
+a lotação das pessoas.
 
 **O que muda** vem em lista própria abaixo do organograma, com o tipo de cada
 mudança (unidade nova, renomeação, processo, governança) e o motivo. Uma
 proposta que não diz o que muda em relação ao que existe não é avaliável.
 
 **Busca pelo campo do topo**, por unidade, sigla, pessoa, matrícula, cargo,
-vínculo ou atribuição: procurar "segurança" traz o núcleo que responde por ela,
-e não só a unidade cujo nome contém a palavra; procurar "217406" traz a pessoa.
+perfil de senioridade, vínculo ou atribuição: procurar "segurança" traz o
+núcleo que responde por ela, e não só a unidade cujo nome contém a palavra;
+procurar "217406" traz a pessoa; procurar "Sênior IV" traz os dois perfis.
 Quando a unidade bate pelo próprio texto, o quadro inteiro fica; quando só uma
-pessoa bate, a unidade aparece com aquela pessoa.
+pessoa bate, a unidade aparece com aquela pessoa — e uma divisão entra como
+contexto quando quem bate está na seção subordinada.
 
 ## Stack
 

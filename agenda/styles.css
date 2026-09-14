@@ -2918,6 +2918,24 @@ html, body { overflow-x: hidden; }
   color: #fff;
 }
 
+/* O quadro da Diretoria fica sobre o painel navy: os tokens de texto do tema
+   claro não têm contraste ali e por isso são redefinidos, não reaproveitados. */
+.org-topo .org-unidade__quadro-resumo { color: rgba(255, 255, 255, 0.72); margin-top: 10px; }
+.org-topo .org-unidade__quadro { border-top-color: rgba(255, 255, 255, 0.16); }
+.org-topo .org-papel__rotulo { color: rgba(255, 255, 255, 0.72); }
+.org-topo .org-papel__resumo {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.org-topo .org-papel__resumo:hover { border-color: rgba(255, 255, 255, 0.4); }
+.org-topo .org-papel__faixas { color: rgba(255, 255, 255, 0.72); }
+.org-topo .org-pessoa { border-bottom-color: rgba(255, 255, 255, 0.1); }
+.org-topo .org-pessoa__nome { color: rgba(255, 255, 255, 0.92); }
+.org-topo .org-pessoa__cargo,
+.org-topo .org-pessoa__meta { color: rgba(255, 255, 255, 0.7); }
+.org-topo .org-pessoa__nivel { color: #fff; }
+.org-topo .org-unidade__lotacao { color: rgba(255, 255, 255, 0.78); }
+
 /* A linha que liga a Diretoria às unidades. É decoração com função: sem ela
    as unidades parecem uma lista de cartões, não um nível hierárquico. */
 .org-conector {
@@ -3111,6 +3129,55 @@ html, body { overflow-x: hidden; }
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
+/* Equipe técnica recolhida: o cabeçalho é clicável e mostra sempre a
+   contagem e a distribuição por perfil. A informação de estrutura fica à
+   vista; a lista de nomes, a um clique. */
+.org-papel--recolhivel > summary { cursor: pointer; list-style: none; }
+.org-papel--recolhivel > summary::-webkit-details-marker { display: none; }
+.org-papel__resumo {
+  display: flex;
+  align-items: baseline;
+  gap: 4px 10px;
+  flex-wrap: wrap;
+  padding: 7px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--raio-pequeno);
+  background: var(--color-background);
+}
+.org-papel__resumo:hover { border-color: var(--color-secondary); }
+.org-papel--recolhivel > summary:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+  border-radius: var(--raio-pequeno);
+}
+.org-papel--recolhivel .org-papel__rotulo { margin-bottom: 0; }
+/* A seta gira quando o bloco abre: sem ela o cabeçalho não se anuncia como
+   algo que se pode abrir. */
+.org-papel__resumo::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  color: var(--color-text-tertiary);
+  transition: transform 0.15s ease;
+  align-self: center;
+}
+.org-papel--recolhivel[open] .org-papel__resumo::before { transform: rotate(90deg); }
+.org-papel__faixas {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+.org-papel--recolhivel .org-pessoas { margin-top: 4px; }
+.org-pessoa--tecnica .org-pessoa__nome { font-weight: 400; }
+.org-pessoa__nivel {
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
 .org-pessoas { list-style: none; margin: 0; padding: 0; }
 .org-pessoa {
   display: grid;

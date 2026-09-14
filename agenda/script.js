@@ -5319,7 +5319,24 @@ const SELO_MUDANCA = {
 // amontoado de nomes em ordem alfabética.
 const PAPEIS_UNIDADE = [
   { id: "gerencia", rotulo: "Gerências (DAS-3)" },
-  { id: "equipe", rotulo: "Equipe" },
+  { id: "equipe", rotulo: "Relação de lotação" },
+  // Recolhida por padrão: com 26 nomes em uma divisão, a lista aberta faria o
+  // organograma virar uma listagem de pessoal. O que o cabeçalho mostra
+  // sempre é a distribuição por perfil, que é a informação de estrutura; os
+  // nomes ficam a um clique. A busca abre o bloco, para que o resultado não
+  // se esconda atrás de um resumo.
+  { id: "tecnica", rotulo: "Equipe técnica", recolhivel: true },
+];
+
+// Faixas de senioridade da equipe técnica, do topo para a base. A distribuição
+// por faixa é leitura de estrutura: uma divisão com doze sêniores e três
+// estagiários não é a mesma coisa que o inverso.
+const FAIXAS_SENIORIDADE = [
+  { chave: "master", singular: "master", plural: "masters" },
+  { chave: "senior", singular: "sênior", plural: "sêniores" },
+  { chave: "pleno", singular: "pleno", plural: "plenos" },
+  { chave: "junior", singular: "júnior", plural: "juniores" },
+  { chave: "estagiario", singular: "estagiário", plural: "estagiários" },
 ];
 
 function dadosDeEstrutura() {
@@ -5361,11 +5378,26 @@ function pessoasDaVisao(visao) {
   );
 }
 
+function todasAsPessoas(visao) {
+  return [visao.topo, ...unidadesDaVisao(visao)].flatMap(pessoasDaUnidade);
+}
+
 function contarVinculo(visao, vinculo) {
-  return [visao.topo, ...unidadesDaVisao(visao)].reduce(
-    (a, u) => a + pessoasDaUnidade(u).filter((p) => p.vinculo === vinculo).length,
-    0
-  );
+  return todasAsPessoas(visao).filter((p) => p.vinculo === vinculo).length;
+}
+
+function contarTecnicos(visao) {
+  return todasAsPessoas(visao).filter((p) => p.papel === "tecnica").length;
+}
+
+// Distribuição por faixa de senioridade, na ordem do topo para a base.
+function distribuicaoDeSenioridade(pessoas) {
+  return FAIXAS_SENIORIDADE.map((f) => {
+    const n = pessoas.filter((p) => normalizarTexto(p.nivel).startsWith(f.chave)).length;
+    return n ? plural(n, f.singular, f.plural) : "";
+  })
+    .filter(Boolean)
+    .join(" · ");
 }
 
 // Quem responde pela unidade. Uma seção é chefiada por gerente, e por isso o
@@ -5392,6 +5424,7 @@ function pessoaBate(pessoa, busca) {
   return (
     normalizarTexto(pessoa.nome).includes(busca) ||
     normalizarTexto(pessoa.cargo).includes(busca) ||
+    normalizarTexto(pessoa.nivel).includes(busca) ||
     normalizarTexto(pessoa.vinculo).includes(busca) ||
     String(pessoa.matricula || "").includes(busca)
   );
@@ -5443,6 +5476,18 @@ function funcoesSemUnidade(visao) {
 // pessoas em uma divisão, uma linha por atributo faria o cartão crescer sem
 // acrescentar informação.
 function linhaDePessoa(pessoa) {
+  // Quem vem da equipe técnica tem perfil de senioridade e não tem matrícula
+  // nem vínculo declarados. Exibir "cargo não consta" para essas pessoas
+  // transformaria a diferença entre as duas relações em erro de preenchimento.
+  if (pessoa.papel === "tecnica") {
+    return `
+      <li class="org-pessoa org-pessoa--tecnica">
+        <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
+        <span class="org-pessoa__detalhe">
+          <span class="org-pessoa__nivel">${escapeHtml(pessoa.nivel || "perfil não declarado")}</span>
+        </span>
+      </li>`;
+  }
   const meta = [
     pessoa.matricula ? `matrícula ${pessoa.matricula}` : "",
     pessoa.vinculo || "",
@@ -5468,10 +5513,12 @@ function resumoDeQuadro(u) {
   if (!pessoas.length) return "";
   const efetivos = pessoas.filter((p) => p.vinculo === "Efetivo").length;
   const comissionados = pessoas.filter((p) => p.vinculo === "Comissionado").length;
+  const tecnicos = pessoas.filter((p) => p.papel === "tecnica").length;
   const partes = [];
   if (efetivos) partes.push(plural(efetivos, "efetivo", "efetivos"));
   if (comissionados) partes.push(plural(comissionados, "comissionado", "comissionados"));
-  return `${plural(pessoas.length, "pessoa", "pessoas")}${partes.length ? ` · ${partes.join(" e ")}` : ""}`;
+  if (tecnicos) partes.push(plural(tecnicos, "técnico", "técnicos"));
+  return `${plural(pessoas.length, "pessoa", "pessoas")}${partes.length ? ` · ${partes.join(", ")}` : ""}`;
 }
 
 function blocoDeQuadro(u, titular) {
@@ -5484,17 +5531,32 @@ function blocoDeQuadro(u, titular) {
   const lotacao = u.lotacao ? `<p class="org-unidade__lotacao">${escapeHtml(u.lotacao)}</p>` : "";
   if (!grupos.length) return lotacao;
 
+  const buscando = Boolean((state.filtroEstrutura || "").trim());
+  const LIMITE_PARA_RECOLHER = 6;
+
   return `
     ${lotacao}
     <div class="org-unidade__quadro">
       ${grupos
-        .map(
-          (g) => `
+        .map((g) => {
+          const lista = `<ul class="org-pessoas">${g.pessoas.map(linhaDePessoa).join("")}</ul>`;
+          if (!g.recolhivel || g.pessoas.length <= LIMITE_PARA_RECOLHER) {
+            return `
         <div class="org-papel">
           <span class="org-papel__rotulo">${escapeHtml(g.rotulo)} · ${g.pessoas.length}</span>
-          <ul class="org-pessoas">${g.pessoas.map(linhaDePessoa).join("")}</ul>
-        </div>`
-        )
+          ${lista}
+        </div>`;
+          }
+          const faixas = distribuicaoDeSenioridade(g.pessoas);
+          return `
+        <details class="org-papel org-papel--recolhivel"${buscando ? " open" : ""}>
+          <summary class="org-papel__resumo">
+            <span class="org-papel__rotulo">${escapeHtml(g.rotulo)} · ${g.pessoas.length}</span>
+            ${faixas ? `<span class="org-papel__faixas">${escapeHtml(faixas)}</span>` : ""}
+          </summary>
+          ${lista}
+        </details>`;
+        })
         .join("")}
     </div>`;
 }
@@ -5623,6 +5685,12 @@ function cartaoDoTopo(topo, funcoesPorId, minuta) {
           ? `<p class="org-topo__acumulo">Exerce por acúmulo: ${escapeHtml(acumuladas.join(", "))}.</p>`
           : ""
       }
+      ${
+        resumoDeQuadro(topo)
+          ? `<p class="org-unidade__quadro-resumo">${escapeHtml(resumoDeQuadro(topo))}</p>`
+          : ""
+      }
+      ${blocoDeQuadro(topo, titular)}
     </article>`;
 }
 
@@ -5646,7 +5714,7 @@ function renderizarComparativoEstrutura(d, chaveAtiva) {
       para: `${total - funcoesSemUnidade(sugerida)} de ${total}`,
     },
     {
-      rotulo: "Pessoas lotadas",
+      rotulo: "Pessoas no organograma",
       de: String(pessoasDaVisao(atual)),
       para: String(pessoasDaVisao(sugerida)),
       nota: "mesmo quadro",
@@ -5765,11 +5833,14 @@ function renderizarEstrutura() {
 
   const efetivos = contarVinculo(visao, "Efetivo");
   const comissionados = contarVinculo(visao, "Comissionado");
+  const tecnicos = contarTecnicos(visao);
+  const naRelacao = pessoasDaVisao(visao) - tecnicos;
 
   document.getElementById("estrutura-titulo").textContent = visao.rotulo;
   document.getElementById("estrutura-subtitulo").textContent =
     `${visao.chamada} · ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} no organograma · ` +
-    `${plural(pessoasDaVisao(visao), "pessoa lotada", "pessoas lotadas")} (${efetivos} efetivos, ${comissionados} comissionados)`;
+    `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
+    `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`;
   document.getElementById("estrutura-resumo").textContent = visao.resumo;
   document.getElementById("estrutura-procedencia").textContent = visao.procedencia;
 
@@ -5868,7 +5939,7 @@ function renderizarPortalEstrutura() {
   // pessoal cabe melhor aqui do que a ressalva cortada pela metade.
   definir(
     "portal-estrutura-selo",
-    `${plural(pessoasDaVisao(d.atual), "pessoa lotada", "pessoas lotadas")} · minuta em discussão`
+    `${plural(pessoasDaVisao(d.atual), "pessoa", "pessoas")} no organograma · minuta em discussão`
   );
 }
 
