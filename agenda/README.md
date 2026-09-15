@@ -117,7 +117,8 @@ fazer, em vez de ficarem inertes.
 
 **Links diretos:** `?modulo=agenda`, `?modulo=plano` (ou `?modulo=projetos`),
 `?modulo=ramais` (ou `?modulo=ramal`), `?modulo=estrutura` (ou
-`?modulo=organograma`), `?modulo=tarefas` (ou `?modulo=quadro`, `?modulo=kanban`)
+`?modulo=organograma`), `?modulo=tarefas` (ou `?modulo=quadro`, `?modulo=kanban`),
+`?modulo=equipes` (ou `?modulo=equipe`, `?modulo=alocacao`, `?modulo=celulas`)
 e `?modulo=portal` abrem o sistema direto em um módulo. No módulo Estrutura DTI, `?visao=sugerida` (ou `?visao=proposta`)
 abre direto na minuta, e `?visao=atual` na estrutura vigente — que é o padrão.
 Um intervalo explícito de
@@ -126,7 +127,7 @@ dos links do envio diário, e abrir o portal ali esconderia o que foi pedido.
 
 ## Módulos
 
-O sistema tem cinco módulos, alcançados pelo portal ou pela navegação da
+O sistema tem seis módulos, alcançados pelo portal ou pela navegação da
 barra lateral.
 
 ### Agenda
@@ -585,6 +586,45 @@ a Diretoria o escreveu** — reescrever a demanda sem deixar o original em algum
 lugar transformaria a interpretação de quem lançou em registro. A descrição
 **preserva as quebras de linha**: uma estratégia com curto, médio e longo prazo
 chega estruturada, e virar parágrafo corrido apagaria justamente a estrutura.
+
+### Equipe e projetos
+
+Alocação da equipe de desenvolvimento por **célula de projeto**, uma caixa por
+célula. Lista de consulta que vem com o sistema (`dados/equipes.js`), igual para
+todo mundo e sem nada a gravar por navegador. A primeira unidade carregada é a
+**DDES — Divisão de Desenvolvimento de Sistemas**, com 34 pessoas em 8 células,
+na relação de setembro de 2026.
+
+**A tela responde a uma pergunta: onde está a gente.** Por isso ela abre pelo
+panorama — quatro números da Divisão e as barras de pessoas por célula, em ordem
+decrescente — e só depois abre as caixas. As caixas seguem a mesma ordem: um
+quadro de alocação que começa pela célula de uma pessoa esconde onde o esforço
+está concentrado.
+
+**Cada caixa traz a célula inteira:** os sistemas que ela atende, o líder em
+primeiro lugar e destacado, e cada pessoa com a função principal, o perfil de
+senioridade (ou o cargo, para quem é efetivo, comissionado ou cedido) e o
+vínculo. Os estagiários aparecem na célula em que atuam, separados por um
+divisor e fora da contagem do quadro — é como a relação de origem os trata.
+
+**O vínculo é a única coisa desenhada em cor**, porque é a única em que a
+proporção decide antes do número: uma célula inteira de terceirizados é risco de
+contrato, e isso precisa saltar aos olhos antes de ser lido. A barra de
+composição no topo de cada caixa vem com os números escritos ao lado, então quem
+não distingue as cores lê a mesma informação. Os quatro tons foram validados
+para daltonismo e contraste contra a superfície dos dois temas.
+
+**Célula de uma pessoa fica marcada** com uma faixa no canto esquerdo: é a
+equipe inteira de um sistema dependendo de uma agenda só. A tela aponta; a
+decisão é do gestor.
+
+**Busca pelo campo do topo**, por pessoa, célula, sistema, função ou vínculo:
+procurar "sicco" traz as células do SICCO inteiras, "QA" traz só quem testa, e
+as barras do panorama acompanham o filtro — filtrado por QA, elas passam a
+mostrar onde os QA estão.
+
+A chefia da Divisão fica fora das células, em faixa própria: ela responde pela
+DDES inteira, e virar mais uma caixa diria que existe um projeto chamado DDES.
 
 ## Stack
 

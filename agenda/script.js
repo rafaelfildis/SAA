@@ -89,6 +89,8 @@ state.projetos = [];
 state.projetoAberto = null;
 // Busca do módulo Ramais, separada da busca da agenda e da do plano.
 state.filtroRamais = "";
+// Busca do módulo Equipe e projetos, também própria.
+state.filtroEquipes = "";
 // Módulo Estrutura DTI: qual das duas visões está em tela, e a busca própria
 // do módulo. A visão abre na estrutura atual — a vigente é o ponto de
 // partida, e a minuta se lê em comparação com ela, não no lugar dela.
@@ -3474,6 +3476,11 @@ function inicializarInterface() {
       renderizarQuadro();
       return;
     }
+    if (state.modulo === "equipes") {
+      state.filtroEquipes = ev.target.value;
+      renderizarEquipes();
+      return;
+    }
     state.filtros.busca = ev.target.value;
     renderizarConteudo();
   });
@@ -3804,6 +3811,8 @@ function aplicarFiltrosDaURL() {
       ? "estrutura"
       : pedido === "tarefa" || pedido === "quadro" || pedido === "kanban"
       ? "tarefas"
+      : pedido === "equipe" || pedido === "alocacao" || pedido === "celulas"
+      ? "equipes"
       : pedido;
 
   // "?visao=" escolhe a estrutura exibida no módulo Estrutura DTI. Aceita
@@ -6768,6 +6777,7 @@ function renderizarPortal() {
   renderizarPortalRamais();
   renderizarPortalEstrutura();
   renderizarPortalTarefas();
+  renderizarPortalEquipes();
   atualizarBadgeProjetos();
   atualizarBadgeTarefas();
 }
@@ -7587,10 +7597,319 @@ function inicializarModuloTarefas() {
 }
 
 /* --------------------------------------------------------------------------
+   Equipe e projetos
+   --------------------------------------------------------------------------
+   A pergunta que a tela responde é uma só: onde está a gente. Por isso ela
+   abre pelo panorama — quantas pessoas cada célula tem, em barras ordenadas —
+   e só depois abre as caixas, uma por célula, com quem está nela.
+
+   As caixas vêm ordenadas pelo tamanho da equipe, não pela ordem da planilha:
+   um quadro de alocação que começa pela célula de uma pessoa esconde onde o
+   esforço está concentrado. A busca do topo filtra por pessoa, célula,
+   sistema, função e vínculo.
+
+   O vínculo é a única coisa desenhada em cor, porque é a única em que a
+   proporção importa mais do que o número: uma célula inteira de terceirizados
+   é um risco de contrato, e isso se vê antes de se ler. As cores foram
+   validadas para daltonismo e contraste nos dois temas, e toda faixa colorida
+   traz o número escrito ao lado — cor nenhuma carrega informação sozinha.
+   -------------------------------------------------------------------------- */
+
+// Ordem fixa dos vínculos. Fixa mesmo: a cor acompanha o vínculo, nunca a
+// posição no ranking, senão filtrar a lista repinta as faixas que sobraram.
+const VINCULOS_ORDEM = ["Terceirizado", "Efetivo", "Comissionado", "Cedido"];
+
+function dadosDeEquipes() {
+  const d = window.SAA_EQUIPES;
+  return d && Array.isArray(d.celulas) ? d : null;
+}
+
+function pessoasDaCelula(celula) {
+  return celula.pessoas || [];
+}
+
+function totalDePessoas(celulas) {
+  return celulas.reduce((a, c) => a + pessoasDaCelula(c).length, 0);
+}
+
+function totalDeEstagiarios(celulas) {
+  return celulas.reduce((a, c) => a + (c.estagiarios || []).length, 0);
+}
+
+// Conta por vínculo preservando a ordem fixa e descartando o que ficou zerado:
+// uma legenda com "0 cedidos" ocupa espaço para não dizer nada.
+function composicaoPorVinculo(pessoas) {
+  return VINCULOS_ORDEM.map((v) => ({
+    vinculo: v,
+    total: pessoas.filter((p) => p.vinculo === v).length,
+  })).filter((c) => c.total);
+}
+
+// Célula com uma pessoa só não é detalhe de layout: é a equipe inteira de um
+// sistema dependendo de uma agenda. A tela marca, o gestor decide.
+function celulaEhPontoUnico(celula) {
+  return pessoasDaCelula(celula).length === 1;
+}
+
+function celulasFiltradas() {
+  const d = dadosDeEquipes();
+  if (!d) return [];
+  const busca = normalizarTexto(state.filtroEquipes || "").trim();
+  const porTamanho = (a, b) =>
+    pessoasDaCelula(b).length - pessoasDaCelula(a).length || a.nome.localeCompare(b.nome, "pt-BR");
+  if (!busca) return [...d.celulas].sort(porTamanho);
+
+  const bate = (txt) => normalizarTexto(txt || "").includes(busca);
+  return d.celulas
+    .map((celula) => {
+      // Bater no nome da célula ou em um sistema atendido traz a caixa inteira:
+      // quem procura "sicco" quer a equipe do SICCO, não uma pessoa solta.
+      if (bate(celula.nome) || (celula.sistemas || []).some(bate)) return celula;
+      const filtra = (p) =>
+        bate(p.nome) || bate(p.funcao) || bate(p.perfil) || bate(p.vinculo) || bate(p.orgao);
+      return {
+        ...celula,
+        pessoas: pessoasDaCelula(celula).filter(filtra),
+        estagiarios: (celula.estagiarios || []).filter(filtra),
+      };
+    })
+    .filter((c) => pessoasDaCelula(c).length || (c.estagiarios || []).length)
+    .sort(porTamanho);
+}
+
+/* Panorama — barras ordenadas de alocação.
+   Uma medida só (quantas pessoas), então uma cor só e o número escrito na
+   ponta de cada barra: não há série para uma legenda distinguir, e nada fica
+   escondido atrás do mouse. */
+function barrasDeAlocacao(celulas) {
+  const maior = celulas.reduce((m, c) => Math.max(m, pessoasDaCelula(c).length), 0) || 1;
+  return celulas
+    .map((celula) => {
+      const total = pessoasDaCelula(celula).length;
+      const estagiarios = (celula.estagiarios || []).length;
+      return `
+      <li class="aloc-linha">
+        <span class="aloc-rotulo">${escapeHtml(celula.nome)}</span>
+        <span class="aloc-trilho">
+          <span class="aloc-barra" style="width:${Math.max((total / maior) * 100, 4)}%"></span>
+        </span>
+        <span class="aloc-valor">${total}${
+          estagiarios ? `<span class="aloc-extra">+${estagiarios}</span>` : ""
+        }</span>
+      </li>`;
+    })
+    .join("");
+}
+
+// Barra de composição da caixa: faixas proporcionais por vínculo, com 2px de
+// respiro entre elas para que duas cores vizinhas nunca encostem.
+function barraDeVinculo(pessoas) {
+  const composicao = composicaoPorVinculo(pessoas);
+  const total = pessoas.length || 1;
+  const faixas = composicao
+    .map(
+      (c) => `<span class="comp-faixa comp-faixa--${normalizarTexto(c.vinculo)}"
+                    style="width:${(c.total / total) * 100}%"
+                    title="${escapeAttr(`${plural(c.total, c.vinculo.toLowerCase(), c.vinculo.toLowerCase() + "s")}`)}"></span>`
+    )
+    .join("");
+  const rotulos = composicao
+    .map(
+      (c) => `<span class="comp-rotulo">
+                <span class="comp-ponto comp-ponto--${normalizarTexto(c.vinculo)}" aria-hidden="true"></span>
+                ${c.total} ${escapeHtml(c.vinculo.toLowerCase())}${c.total > 1 ? "s" : ""}
+              </span>`
+    )
+    .join("");
+  return `
+      <div class="comp-barra" role="img"
+           aria-label="${escapeAttr(composicao.map((c) => `${c.total} ${c.vinculo}`).join(", "))}">${faixas}</div>
+      <div class="comp-rotulos">${rotulos}</div>`;
+}
+
+function linhaDePessoaDaCelula(pessoa, estagiario) {
+  const tags = [pessoa.perfil, pessoa.orgao ? `${pessoa.vinculo} · ${pessoa.orgao}` : pessoa.vinculo]
+    .filter(Boolean)
+    .map((t) => `<span class="pessoa-tag">${escapeHtml(t)}</span>`)
+    .join("");
+  return `
+      <li class="pessoa${pessoa.lider ? " pessoa--lider" : ""}${estagiario ? " pessoa--estagiario" : ""}">
+        <span class="pessoa-nome">${escapeHtml(pessoa.nome)}${
+          pessoa.lider ? `<span class="pessoa-selo">Líder</span>` : ""
+        }</span>
+        ${pessoa.funcao ? `<span class="pessoa-funcao">${escapeHtml(pessoa.funcao)}</span>` : ""}
+        <span class="pessoa-tags">${tags}</span>
+      </li>`;
+}
+
+function caixaDeCelula(celula) {
+  const pessoas = pessoasDaCelula(celula);
+  const estagiarios = celula.estagiarios || [];
+  const sistemas = celula.sistemas || [];
+
+  // A lista de sistemas só aparece quando diz algo novo: repetir o nome da
+  // célula logo abaixo do título é ruído.
+  const outrosSistemas = sistemas.filter((s) => normalizarTexto(s) !== normalizarTexto(celula.nome));
+
+  return `
+    <section class="celula${celulaEhPontoUnico(celula) ? " celula--unica" : ""}">
+      <header class="celula__cabecalho">
+        <div class="celula__titulos">
+          <h3 class="celula__nome">${escapeHtml(celula.nome)}</h3>
+          ${
+            outrosSistemas.length
+              ? `<p class="celula__sistemas">${outrosSistemas
+                  .map((s) => `<span class="celula__sistema">${escapeHtml(s)}</span>`)
+                  .join("")}</p>`
+              : ""
+          }
+        </div>
+        <span class="celula__contagem">
+          ${plural(pessoas.length, "pessoa", "pessoas")}${
+            estagiarios.length ? ` <span class="celula__extra">+${estagiarios.length} estag.</span>` : ""
+          }
+        </span>
+      </header>
+
+      ${pessoas.length ? barraDeVinculo(pessoas) : ""}
+
+      <ul class="celula__equipe">
+        ${pessoas.map((p) => linhaDePessoaDaCelula(p, false)).join("")}
+        ${
+          estagiarios.length
+            ? `<li class="celula__divisor">Estagiários</li>` +
+              estagiarios.map((p) => linhaDePessoaDaCelula(p, true)).join("")
+            : ""
+        }
+      </ul>
+    </section>`;
+}
+
+function renderizarEquipes() {
+  const d = dadosDeEquipes();
+  const alvo = document.getElementById("equipes-celulas");
+  if (!alvo) return;
+
+  if (!d) {
+    alvo.innerHTML = `<p class="ramais-indisponivel">A relação de equipes não pôde ser carregada.</p>`;
+    return;
+  }
+
+  const noQuadro = totalDePessoas(d.celulas) + 1; // + a chefia da Divisão
+  const estagiarios = totalDeEstagiarios(d.celulas);
+  const todas = d.celulas.flatMap(pessoasDaCelula);
+  const terceirizados = todas.filter((p) => p.vinculo === "Terceirizado").length;
+  const devs = todas.filter((p) => p.funcao === "Desenvolvedor").length;
+
+  document.getElementById("equipes-subtitulo").textContent =
+    `${d.unidade.sigla} — ${d.unidade.nome} · ${noQuadro} pessoas em ${d.celulas.length} células · ${d.referencia}`;
+
+  // Números do panorama. São quatro porque são os quatro que mudam decisão:
+  // tamanho do quadro, em quantas frentes ele está dividido, quanto dele
+  // programa e quanto depende do contrato de terceirização.
+  const indicadores = [
+    { valor: noQuadro, rotulo: "pessoas no quadro", nota: `${estagiarios} estagiários à parte` },
+    { valor: d.celulas.length, rotulo: "células de projeto", nota: `${d.celulas.reduce((a, c) => a + (c.sistemas || []).length, 0)} sistemas atendidos` },
+    { valor: devs, rotulo: "desenvolvedores", nota: "função principal declarada" },
+    {
+      valor: `${Math.round((terceirizados / todas.length) * 100)}%`,
+      rotulo: "terceirizados",
+      nota: `${terceirizados} de ${todas.length} nas células`,
+    },
+  ];
+  document.getElementById("equipes-indicadores").innerHTML = indicadores
+    .map(
+      (i) => `
+      <div class="indicador">
+        <span class="indicador__valor">${escapeHtml(String(i.valor))}</span>
+        <span class="indicador__rotulo">${escapeHtml(i.rotulo)}</span>
+        <span class="indicador__nota">${escapeHtml(i.nota)}</span>
+      </div>`
+    )
+    .join("");
+
+  // Chefia: responde pela Divisão inteira e por isso fica fora das células.
+  document.getElementById("equipes-chefia").innerHTML = `
+      <span class="chefia__rotulo">Chefia da Divisão</span>
+      <span class="chefia__nome">${escapeHtml(d.chefia.nome)}</span>
+      <span class="chefia__cargo">${escapeHtml(d.chefia.perfil)}</span>
+      <p class="chefia__funcao">${escapeHtml(d.chefia.funcao)}</p>`;
+
+  const celulas = celulasFiltradas();
+  const visiveis = totalDePessoas(celulas) + totalDeEstagiarios(celulas);
+  const total = totalDePessoas(d.celulas) + estagiarios;
+
+  document.getElementById("equipes-resumo").textContent =
+    plural(visiveis, "pessoa alocada", "pessoas alocadas");
+
+  const termo = (state.filtroEquipes || "").trim();
+  const aviso = document.getElementById("equipes-vazio");
+  aviso.hidden = !termo;
+  if (termo) {
+    document.getElementById("equipes-vazio-texto").textContent = visiveis
+      ? `${visiveis} de ${total} pessoas, filtradas por "${termo}".`
+      : `Ninguém corresponde a "${termo}".`;
+  }
+
+  // O panorama acompanha o filtro: filtrado por "QA", as barras passam a
+  // mostrar onde estão os QA, que é a pergunta que o filtro fez.
+  const panorama = document.getElementById("equipes-alocacao");
+  panorama.innerHTML = barrasDeAlocacao(celulas);
+  document.getElementById("equipes-panorama").hidden = !celulas.length;
+
+  alvo.innerHTML = celulas.map(caixaDeCelula).join("");
+}
+
+function renderizarPortalEquipes() {
+  const d = dadosDeEquipes();
+  const definir = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  };
+  if (!d) {
+    definir("portal-equipes-pessoas", "—");
+    definir("portal-equipes-celulas", "—");
+    definir("portal-equipes-terceirizados", "—");
+    definir("portal-equipes-destaque", "A relação de equipes não pôde ser carregada.");
+    definir("portal-equipes-selo", "Indisponível");
+    return;
+  }
+  const todas = d.celulas.flatMap(pessoasDaCelula);
+  const terceirizados = todas.filter((p) => p.vinculo === "Terceirizado").length;
+  definir("portal-equipes-pessoas", String(totalDePessoas(d.celulas) + 1));
+  definir("portal-equipes-celulas", String(d.celulas.length));
+  definir("portal-equipes-terceirizados", `${Math.round((terceirizados / todas.length) * 100)}%`);
+
+  const maior = [...d.celulas].sort((a, b) => pessoasDaCelula(b).length - pessoasDaCelula(a).length)[0];
+  const destaque = document.getElementById("portal-equipes-destaque");
+  if (destaque && maior) {
+    destaque.textContent = `Maior célula: ${maior.nome}, com ${plural(pessoasDaCelula(maior).length, "pessoa", "pessoas")}.`;
+    destaque.classList.add("portal-card__destaque--forte");
+  }
+  const unicas = d.celulas.filter(celulaEhPontoUnico).length;
+  definir(
+    "portal-equipes-selo",
+    unicas ? `${plural(unicas, "célula", "células")} com uma pessoa` : `${d.unidade.sigla} — Sistemas`
+  );
+}
+
+function inicializarModuloEquipes() {
+  const limpar = document.getElementById("btn-limpar-busca-equipes");
+  if (limpar) {
+    limpar.addEventListener("click", () => {
+      state.filtroEquipes = "";
+      const busca = document.getElementById("busca");
+      if (busca) busca.value = "";
+      renderizarEquipes();
+    });
+  }
+}
+
+/* --------------------------------------------------------------------------
    Troca de módulo
    -------------------------------------------------------------------------- */
 
-const MODULOS = ["portal", "agenda", "projetos", "ramais", "estrutura", "tarefas"];
+const MODULOS = ["portal", "agenda", "projetos", "ramais", "estrutura", "tarefas", "equipes"];
 
 const ROTULO_MODULO = {
   portal: "Portal",
@@ -7599,6 +7918,7 @@ const ROTULO_MODULO = {
   ramais: "Ramais",
   estrutura: "Estrutura DTI",
   tarefas: "Tarefas",
+  equipes: "Equipe e projetos",
 };
 
 // A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
@@ -7610,6 +7930,7 @@ const SUBTITULO_MODULO = {
   ramais: "TCM-BA — lista telefônica: prédio sede, prédio anexo e inspetorias regionais",
   estrutura: "TCM-BA — organograma da DTI: estrutura atual e estrutura sugerida",
   tarefas: "TCM-BA — quadro de tarefas da DTI por status, categoria e responsável",
+  equipes: "TCM-BA — alocação da equipe da DDES por célula de projeto",
 };
 
 function trocarModulo(modulo) {
@@ -7622,6 +7943,7 @@ function trocarModulo(modulo) {
   document.getElementById("modulo-ramais").hidden = atual !== "ramais";
   document.getElementById("modulo-estrutura").hidden = atual !== "estrutura";
   document.getElementById("modulo-tarefas").hidden = atual !== "tarefas";
+  document.getElementById("modulo-equipes").hidden = atual !== "equipes";
   document.getElementById("filtros-agenda").hidden = atual !== "agenda";
   document.getElementById("filtros-projetos").hidden = atual !== "projetos";
   const filtrosTarefas = document.getElementById("filtros-tarefas");
@@ -7642,6 +7964,8 @@ function trocarModulo(modulo) {
         ? "Buscar por unidade, pessoa ou atribuição…"
         : atual === "tarefas"
         ? "Buscar por tarefa, responsável ou categoria…"
+        : atual === "equipes"
+        ? "Buscar por pessoa, célula, sistema ou função…"
         : "Buscar por título, descrição ou local…";
     // Cada módulo tem a sua busca. Carregar o texto de um para o outro daria
     // uma lista filtrada por um termo que não está mais escrito em lugar
@@ -7651,6 +7975,7 @@ function trocarModulo(modulo) {
       : atual === "ramais" ? state.filtroRamais || ""
       : atual === "estrutura" ? state.filtroEstrutura || ""
       : atual === "tarefas" ? state.filtroTarefas || ""
+      : atual === "equipes" ? state.filtroEquipes || ""
       : state.filtros.busca || "";
   }
   document.getElementById("btn-abrir-export").hidden = atual !== "agenda";
@@ -7692,6 +8017,7 @@ function trocarModulo(modulo) {
   if (atual === "ramais") renderizarRamais();
   if (atual === "estrutura") renderizarEstrutura();
   if (atual === "tarefas") renderizarQuadro();
+  if (atual === "equipes") renderizarEquipes();
   if (atual === "portal") renderizarPortal();
 }
 
@@ -7872,6 +8198,7 @@ function iniciar() {
   inicializarInterface();
   inicializarModuloProjetos();
   inicializarModuloRamais();
+  inicializarModuloEquipes();
   inicializarModuloEstrutura();
   inicializarModuloTarefas();
   inicializarPortal();

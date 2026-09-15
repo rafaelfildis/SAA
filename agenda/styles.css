@@ -2745,7 +2745,7 @@ html, body { overflow-x: hidden; }
 /* O ramal geral da equipe é o primeiro a procurar; fica marcado para não se
    perder no meio dos nomes. */
 .ramal-item--geral { background: var(--color-secondary-tint); }
-.ramal-item--geral .ramal-nome { font-weight: 600; color: var(--color-primary); }
+.ramal-item--geral .ramal-nome { font-weight: 600; color: var(--color-secondary); }
 
 .ramal-nome { font-size: 0.9rem; color: var(--color-text-primary); min-width: 0; }
 .ramal-numeros { display: flex; gap: 6px; flex-shrink: 0; }
@@ -3532,4 +3532,293 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
     grid-auto-columns: auto;
   }
   .tarefa-card__corpo { padding-right: 11px; }
+}
+
+/* ==========================================================================
+   EQUIPE E PROJETOS — alocação por célula
+
+   A tela responde "onde está a gente": primeiro os números da Divisão, depois
+   as barras por célula e só então as caixas com as pessoas.
+
+   O vínculo é a única dimensão desenhada em cor, porque é a única em que a
+   proporção decide antes do número — uma célula inteira de terceirizados é
+   risco de contrato, e isso tem de saltar aos olhos. Os quatro tons foram
+   validados para daltonismo e contraste contra a superfície dos dois temas, e
+   cada faixa colorida vem com o número escrito ao lado: quem não distingue as
+   cores lê a mesma informação.
+   ========================================================================== */
+
+:root {
+  --vinc-terceirizado: #2C63B0;
+  --vinc-efetivo: #0F7B5F;
+  --vinc-comissionado: #A65A05;
+  --vinc-cedido: #5B3FB0;
+}
+
+/* Tema escuro: os passos são escolhidos contra a superfície escura, não
+   clareados a partir dos claros — inverter um tom validado no claro devolve
+   um tom que não passa no escuro. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --vinc-terceirizado: #5391D8;
+    --vinc-efetivo: #2FA684;
+    --vinc-comissionado: #C07C22;
+    --vinc-cedido: #9277D6;
+  }
+}
+:root[data-theme="dark"] {
+  --vinc-terceirizado: #5391D8;
+  --vinc-efetivo: #2FA684;
+  --vinc-comissionado: #C07C22;
+  --vinc-cedido: #9277D6;
+}
+
+/* Panorama em números. */
+.equipes-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+}
+.indicador__valor {
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-heading);
+}
+.indicador__rotulo {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.indicador__nota { font-size: 0.74rem; color: var(--color-text-tertiary); }
+
+/* Chefia: responde pela Divisão inteira, então não vira caixa de projeto. */
+.equipes-chefia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 13px 18px;
+  margin-bottom: 16px;
+  background: var(--color-secondary-tint);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.chefia__rotulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.chefia__nome { font-size: 0.98rem; font-weight: 700; color: var(--color-secondary); }
+.chefia__cargo { font-size: 0.84rem; color: var(--color-text-secondary); }
+.chefia__funcao {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+/* Barras de alocação. Uma medida só — quantas pessoas —, então uma cor só e o
+   número na ponta: não há série para uma legenda distinguir, e nada do que
+   importa fica atrás do ponteiro do mouse. */
+.equipes-panorama {
+  padding: 16px 18px 14px;
+  margin-bottom: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+}
+.equipes-panorama__titulo {
+  margin: 0 0 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-heading);
+}
+.aloc-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.aloc-linha {
+  display: grid;
+  grid-template-columns: minmax(96px, 148px) 1fr 44px;
+  align-items: center;
+  gap: 12px;
+}
+.aloc-rotulo {
+  font-size: 0.84rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aloc-trilho {
+  height: 10px;
+  background: var(--color-border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.aloc-barra {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 0 4px 4px 0;
+}
+.aloc-valor {
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  text-align: right;
+}
+.aloc-extra { margin-left: 2px; font-size: 0.7rem; font-weight: 600; color: var(--color-text-tertiary); }
+
+/* Caixas por célula: fluem em colunas para que alturas diferentes se encaixem
+   em vez de alinharem pela mais alta e deixarem meia tela em branco. */
+.equipes-celulas { columns: 340px 3; column-gap: 16px; }
+.celula {
+  margin-bottom: 16px;
+  break-inside: avoid;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+  overflow: hidden;
+}
+/* Uma pessoa só na célula é a equipe inteira de um sistema em uma agenda. */
+.celula--unica { border-left: 3px solid var(--color-warning); }
+
+.celula__cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 18px 11px;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+.celula__titulos { min-width: 0; }
+.celula__nome {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+.celula__sistemas { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; }
+.celula__sistema {
+  padding: 1px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+}
+.celula__contagem {
+  flex-shrink: 0;
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.celula__extra { color: var(--color-text-tertiary); font-weight: 500; }
+
+/* Composição por vínculo: faixas proporcionais com 2px de superfície entre
+   elas, para que duas cores vizinhas nunca encostem e se confundam. */
+.comp-barra {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  margin: 12px 18px 0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.comp-faixa { display: block; height: 100%; }
+.comp-faixa--terceirizado { background: var(--vinc-terceirizado); }
+.comp-faixa--efetivo { background: var(--vinc-efetivo); }
+.comp-faixa--comissionado { background: var(--vinc-comissionado); }
+.comp-faixa--cedido { background: var(--vinc-cedido); }
+
+.comp-rotulos { display: flex; flex-wrap: wrap; gap: 3px 12px; margin: 7px 18px 0; }
+.comp-rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+}
+.comp-ponto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.comp-ponto--terceirizado { background: var(--vinc-terceirizado); }
+.comp-ponto--efetivo { background: var(--vinc-efetivo); }
+.comp-ponto--comissionado { background: var(--vinc-comissionado); }
+.comp-ponto--cedido { background: var(--vinc-cedido); }
+
+/* Pessoas. */
+.celula__equipe { list-style: none; margin: 12px 0 0; padding: 0; }
+.pessoa {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 18px;
+  border-top: 1px solid var(--color-border-soft);
+}
+.pessoa--lider { background: var(--color-secondary-tint); border-top-color: transparent; }
+.pessoa--estagiario .pessoa-nome { color: var(--color-text-secondary); }
+.pessoa-nome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.pessoa--lider .pessoa-nome { color: var(--color-secondary); }
+.pessoa-selo {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-secondary);
+  color: #FFFFFF;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.pessoa-funcao { font-size: 0.78rem; line-height: 1.45; color: var(--color-text-secondary); text-wrap: pretty; }
+.pessoa-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.pessoa-tag {
+  padding: 1px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+  font-size: 0.68rem;
+  color: var(--color-text-tertiary);
+}
+.celula__divisor {
+  padding: 8px 18px 4px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 860px) {
+  .equipes-celulas { columns: 1; }
+  .aloc-linha { grid-template-columns: minmax(80px, 116px) 1fr 40px; gap: 9px; }
 }

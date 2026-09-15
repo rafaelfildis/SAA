@@ -91,6 +91,10 @@
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="5" rx="1.2"></rect><rect x="2" y="17" width="6" height="5" rx="1.2"></rect><rect x="16" y="17" width="6" height="5" rx="1.2"></rect><path d="M12 7v5"></path><path d="M5 17v-2.5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1V17"></path></svg>
           <span class="sidebar__nav-label">Estrutura DTI</span>
         </button>
+        <button class="sidebar__nav-item" data-modulo="equipes" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="3.5"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.3a4 4 0 0 1 0 7.4"></path></svg>
+          <span class="sidebar__nav-label">Equipe e projetos</span>
+        </button>
         <button class="sidebar__nav-item" data-modulo="tarefas" type="button">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"></rect><rect x="10" y="4" width="5" height="11" rx="1.5"></rect><rect x="17" y="4" width="4" height="7" rx="1.5"></rect></svg>
           <span class="sidebar__nav-label">Tarefas</span>
@@ -386,6 +390,41 @@
             </footer>
           </article>
 
+          <article class="portal-card portal-card--equipes" data-ir="equipes" role="button" tabindex="0" aria-label="Abrir o módulo Equipe e projetos">
+            <header class="portal-card__topo">
+              <span class="portal-card__icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="3.5"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.3a4 4 0 0 1 0 7.4"></path></svg>
+              </span>
+              <div>
+                <h4 class="portal-card__titulo">Equipe e projetos</h4>
+                <p class="portal-card__descricao">Alocação da equipe da DDES por célula de projeto: quantas pessoas em cada frente, quem lidera e quanto do quadro vem do contrato de terceirização.</p>
+              </div>
+            </header>
+
+            <dl class="portal-card__metricas">
+              <div class="portal-metrica">
+                <dt>Pessoas</dt>
+                <dd id="portal-equipes-pessoas">—</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Células</dt>
+                <dd id="portal-equipes-celulas">—</dd>
+              </div>
+              <div class="portal-metrica">
+                <dt>Terceirizados</dt>
+                <dd id="portal-equipes-terceirizados">—</dd>
+              </div>
+            </dl>
+
+            <p class="portal-card__destaque" id="portal-equipes-destaque"></p>
+
+            <footer class="portal-card__rodape">
+              <span class="portal-card__cta">Abrir equipes
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </span>
+              <span class="portal-card__selo" id="portal-equipes-selo">—</span>
+            </footer>
+          </article>
           <article class="portal-card portal-card--tarefas" data-ir="tarefas" role="button" tabindex="0" aria-label="Abrir o módulo Tarefas">
             <header class="portal-card__topo">
               <span class="portal-card__icone" aria-hidden="true">
@@ -682,6 +721,35 @@
 
         <div class="ramais-blocos" id="ramais-blocos" aria-live="polite"></div>
       </div><!-- /modulo-ramais -->
+
+      <div id="modulo-equipes" hidden>
+        <div class="page-header">
+          <div class="page-header__titles">
+            <span class="page-header__eyebrow">Equipe e projetos</span>
+            <h2 class="page-title">Alocação da equipe por célula</h2>
+            <p class="page-subtitle" id="equipes-subtitulo"></p>
+          </div>
+        </div>
+
+        <section class="equipes-indicadores" id="equipes-indicadores" aria-label="Panorama da divisão"></section>
+
+        <section class="equipes-chefia" id="equipes-chefia"></section>
+
+        <section class="equipes-panorama" id="equipes-panorama" aria-labelledby="equipes-panorama-titulo">
+          <h3 class="equipes-panorama__titulo" id="equipes-panorama-titulo">Pessoas por célula</h3>
+          <ol class="aloc-lista" id="equipes-alocacao"></ol>
+        </section>
+
+        <section class="content-toolbar">
+          <div class="filters__summary" id="equipes-resumo">0 pessoas</div>
+          <p class="proj-ocultos" id="equipes-vazio" hidden>
+            <span id="equipes-vazio-texto"></span>
+            <button class="link-button" id="btn-limpar-busca-equipes" type="button">Limpar busca</button>
+          </p>
+        </section>
+
+        <div class="equipes-celulas" id="equipes-celulas" aria-live="polite"></div>
+      </div><!-- /modulo-equipes -->
 
       <div id="modulo-estrutura" hidden>
         <div class="page-header">
@@ -1162,6 +1230,7 @@
   <script src="dados/projetos.js"></script>
   <script src="dados/ramais.js"></script>
   <script src="dados/estrutura.js"></script>
+  <script src="dados/equipes.js"></script>
   <script src="dados/tarefas.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
