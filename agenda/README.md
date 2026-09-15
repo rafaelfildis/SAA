@@ -254,30 +254,55 @@ no dispositivo.
 Toda leitura e gravação passa por `lerProjetos()` / `gravarProjetos()`: trocar
 o destino depois é mexer nessas duas funções, não na tela.
 
-### Ramal DTI
+### Ramais
 
-Ramais da Diretoria de Tecnologia da Informação, por equipe. Lista de consulta
-que vem com o sistema (`dados/ramais.js`), igual para todo mundo e sem nada a
-gravar por navegador.
+Lista telefônica do TCM-BA inteira, setor por setor: **213 ramais em 65
+setores**, transcritos da lista oficial do Tribunal. Lista de consulta que vem
+com o sistema (`dados/ramais.js`), igual para todo mundo e sem nada a gravar por
+navegador.
+
+**Uma caixa por setor, em três blocos.** A lista oficial cobre três lugares que
+não se discam do mesmo jeito, e a tela os separa em faixas, cada uma com as
+caixas dos seus setores na ordem do documento:
+
+| Bloco | Setores | Ramais | Como se disca |
+| --- | --- | --- | --- |
+| Prédio Sede | 35 | 138 | Ramal de cinco dígitos; de fora, `71 3115-` e os quatro últimos |
+| Prédio Anexo (DNOCS) | 13 | 46 | Ramal interno do prédio; a lista oficial não publica o número externo |
+| Inspetorias Regionais | 17 | 29 | O número da lista já é o telefone público da inspetoria, com DDD |
+
+Conferir a tela contra o documento oficial é ler de cima a baixo — a ordem é a
+mesma. A única exceção é a caixa da DTI, onde os dois pontos de entrada da
+operação vêm antes dos nomes, pelo mesmo motivo do bloco do topo da tela.
 
 **A regra de entrada vem antes da lista.** O bloco do topo traz a porta de
-entrada da operação — Infra e Suporte, ramal 4631 — com o aviso de que chamado,
-incidente e solicitação de rotina passam por ali. Uma lista de telefones que
-começa pelos nomes convida a ligar direto para a pessoa, que é justamente o que
-a norma pede para não fazer na rotina.
+entrada da operação da TI — Infra e Suporte, ramal 54631 — com o aviso de que
+chamado, incidente e solicitação de rotina passam por ali. Uma lista de
+telefones que começa pelos nomes convida a ligar direto para a pessoa, que é
+justamente o que a norma pede para não fazer na rotina.
 
-**Todo ramal disca.** Cada número é um link `tel:` com DDD e prefixo completos
-(`+55 71 3115-XXXX`), então no celular um toque liga. Na tela fica só o ramal de
-quatro dígitos, que é o que se usa internamente — repetir o prefixo vinte e duas
-vezes esconderia o número que interessa.
+**Quase todo ramal disca.** Cada número é um link `tel:` com DDD e prefixo
+completos, então no celular um toque liga: o ramal 54535 do sede vira
+`+55 71 3115-4535`, e o telefone de uma inspetoria vai como está na lista. A
+exceção é o prédio anexo: sem número externo publicado, o ramal aparece em
+moldura tracejada e sem link — deduzir um prefixo faria o toque ligar para o
+lugar errado, que é pior do que não ligar.
 
-**Busca pelo campo do topo**, por nome, por ramal ou por equipe: procurar
-"infra" traz o grupo inteiro, "5667" traz a pessoa. Cada módulo guarda a sua
-própria busca, então trocar de tela não carrega o termo de um para o outro.
+**Busca pelo campo do topo**, por nome, por ramal, por setor ou por prédio:
+procurar "gecoc" traz a caixa inteira, "anexo" traz o prédio todo, "5667" traz a
+pessoa e "36252417" acha o telefone que a lista escreve como `(75) 3625-2417`.
+Cada módulo guarda a sua própria busca, então trocar de tela não carrega o termo
+de um para o outro.
 
-O ramal geral de cada equipe fica destacado na lista, e os dois números que se
-procura sem querer procurar — Sessão do Plenário (4665) e Sistema e-TCM (5670)
-— ficam como atalhos logo abaixo da porta de entrada.
+A linha de apoio ou de recepção de cada setor fica destacada na caixa — é por
+onde se começa quando não se procura ninguém em particular —, e os dois números
+que se procura sem querer procurar, Sessão do Plenário (54665) e Sistema e-TCM
+(55670), ficam como atalhos logo abaixo da porta de entrada.
+
+Quatro ramais da DTI vêm da lista de atendimento da própria Diretoria e não
+constam da lista oficial: ficam marcados com o selo **interno**, para que a
+diferença entre o documento e o uso do dia a dia seja visível em vez de
+silenciosa.
 
 ### Estrutura DTI
 

@@ -85,7 +85,7 @@
         </button>
         <button class="sidebar__nav-item" data-modulo="ramais" type="button">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.07 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-          <span class="sidebar__nav-label">Ramal DTI</span>
+          <span class="sidebar__nav-label">Ramais</span>
         </button>
         <button class="sidebar__nav-item" data-modulo="estrutura" type="button">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="5" rx="1.2"></rect><rect x="2" y="17" width="6" height="5" rx="1.2"></rect><rect x="16" y="17" width="6" height="5" rx="1.2"></rect><path d="M12 7v5"></path><path d="M5 17v-2.5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1V17"></path></svg>
@@ -315,14 +315,14 @@
               <span class="portal-card__selo" id="portal-proj-selo">—</span>
             </footer>
           </article>
-          <article class="portal-card portal-card--ramais" data-ir="ramais" role="button" tabindex="0" aria-label="Abrir o módulo Ramal DTI">
+          <article class="portal-card portal-card--ramais" data-ir="ramais" role="button" tabindex="0" aria-label="Abrir o módulo Ramais">
             <header class="portal-card__topo">
               <span class="portal-card__icone" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.07 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
               </span>
               <div>
-                <h4 class="portal-card__titulo">Ramal DTI</h4>
-                <p class="portal-card__descricao">Ramais da Diretoria de Tecnologia da Informação, por equipe, com a porta de entrada da operação em destaque.</p>
+                <h4 class="portal-card__titulo">Ramais</h4>
+                <p class="portal-card__descricao">Lista telefônica do TCM-BA por setor — prédio sede, prédio anexo e inspetorias regionais —, com a porta de entrada da TI em destaque.</p>
               </div>
             </header>
 
@@ -332,8 +332,8 @@
                 <dd id="portal-ramais-porta">—</dd>
               </div>
               <div class="portal-metrica">
-                <dt>Equipes</dt>
-                <dd id="portal-ramais-grupos">—</dd>
+                <dt>Setores</dt>
+                <dd id="portal-ramais-setores">—</dd>
               </div>
               <div class="portal-metrica">
                 <dt>Ramais</dt>
@@ -655,8 +655,8 @@
       <div id="modulo-ramais" hidden>
         <div class="page-header">
           <div class="page-header__titles">
-            <span class="page-header__eyebrow">Ramal DTI</span>
-            <h2 class="page-title">Ramais da DTI</h2>
+            <span class="page-header__eyebrow">Ramais</span>
+            <h2 class="page-title">Lista telefônica do TCM-BA</h2>
             <p class="page-subtitle" id="ramais-subtitulo"></p>
           </div>
         </div>
@@ -680,7 +680,7 @@
           </p>
         </section>
 
-        <div class="ramais-grupos" id="ramais-grupos" aria-live="polite"></div>
+        <div class="ramais-blocos" id="ramais-blocos" aria-live="polite"></div>
       </div><!-- /modulo-ramais -->
 
       <div id="modulo-estrutura" hidden>

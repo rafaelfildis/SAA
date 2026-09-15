@@ -40,7 +40,7 @@
 //
 // Ramal não entra aqui de propósito. As relações não trazem ramal, e cruzar
 // nome com a lista de ramais pelo primeiro nome produziria número errado ao
-// lado de pessoa certa. Quem procura número usa o módulo Ramal DTI.
+// lado de pessoa certa. Quem procura número usa o módulo Ramais.
 //
 // A ESTRUTURA SUGERIDA é minuta de trabalho, e a tela diz isso em todo lugar
 // onde ela aparece. Ela desenha ESTRUTURA, e não pessoas: nenhuma unidade dela
@@ -316,7 +316,7 @@
       resumo:
         "Três divisões sob a Diretoria e uma seção subordinada à Infraestrutura, com 43 pessoas: 16 na relação de lotação e 27 na equipe técnica alocada por perfil. As quatro unidades cobrem desenvolvimento, infraestrutura, banco de dados e atendimento — quatro das sete funções de TI. Governança, segurança da informação e informação gerencial não têm unidade própria: são exercidas por acúmulo ou não têm dono declarado.",
       procedencia:
-        "Montada a partir de duas relações da DTI: a de lotação (matrícula, vínculo e cargo) e a da equipe técnica alocada por unidade (perfil de senioridade, sem vínculo declarado). O que as relações não declaram aparece como “a confirmar”, não preenchido por conta própria. Ramais ficam no módulo Ramal DTI.",
+        "Montada a partir de duas relações da DTI: a de lotação (matrícula, vínculo e cargo) e a da equipe técnica alocada por unidade (perfil de senioridade, sem vínculo declarado). O que as relações não declaram aparece como “a confirmar”, não preenchido por conta própria. Ramais ficam no módulo Ramais.",
       notasTitulo: "Leitura da estrutura atual",
       notas: [
         "O desenvolvimento concentra 37 das 59 pessoas do organograma, e 26 dos 43 postos alocados. A estrutura está desenhada para produzir sistema; as demais funções de TI se sustentam com o que sobra.",

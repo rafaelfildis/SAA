@@ -87,7 +87,7 @@ const HORIZONTE_TODAS = 0;
 state.modulo = "portal"; // portal | agenda | projetos | ramais | estrutura
 state.projetos = [];
 state.projetoAberto = null;
-// Busca do módulo Ramal DTI, separada da busca da agenda e da do plano.
+// Busca do módulo Ramais, separada da busca da agenda e da do plano.
 state.filtroRamais = "";
 // Módulo Estrutura DTI: qual das duas visões está em tela, e a busca própria
 // do módulo. A visão abre na estrutura atual — a vigente é o ponto de
@@ -5217,82 +5217,170 @@ function importarProjetos(arquivo) {
 }
 
 /* --------------------------------------------------------------------------
-   Ramal DTI
+   Ramais
    --------------------------------------------------------------------------
    Lista de consulta: vem com o sistema, igual para todo mundo, sem nada a
    gravar. O que a tela precisa fazer bem é achar um ramal depressa — daí a
    busca ligada ao campo do topo — e não deixar a regra de entrada escondida
    atrás da lista, que é o erro que uma lista de telefones costuma cometer.
+
+   A lista telefônica do Tribunal tem três blocos que não se discam do mesmo
+   jeito: o prédio sede, o prédio anexo (DNOCS) e as inspetorias regionais.
+   Cada bloco traz os seus setores em caixas, na ordem do documento oficial, e
+   diz no cabeçalho como se chega aos números dali.
    -------------------------------------------------------------------------- */
 
 function dadosDeRamais() {
   const d = window.SAA_RAMAIS;
-  return d && Array.isArray(d.grupos) ? d : null;
+  return d && Array.isArray(d.blocos) ? d : null;
 }
 
-// Número discável completo. O ramal de quatro dígitos é o que se usa por
-// dentro; de fora, ou do celular, só serve com DDD e prefixo.
-function telefoneCompleto(ramal) {
+function blocoDeRamaisPorId(id) {
   const d = dadosDeRamais();
-  if (!d) return "";
-  return `+55${d.ddd}3115${ramal}`;
+  return d ? d.blocos.find((b) => b.id === id) || null : null;
 }
 
-function numeroLegivel(ramal) {
+// Número discável completo, sem espaços, que é o que o `tel:` aceita sem
+// surpresa no celular. A regra é a do bloco:
+//
+//   sede      o ramal de cinco dígitos perde o primeiro e ganha o prefixo da
+//             central — 54535 vira +55 71 3115-4535.
+//   telefone  o que a lista traz já é o telefone da inspetoria; sem DDD na
+//             lista, é Salvador.
+//   interno   o prédio anexo não tem número externo publicado. Deduzir um
+//             prefixo faria o toque ligar para o lugar errado, então aqui não
+//             se oferece discagem — o ramal fica à vista, só não vira link.
+function telefoneCompleto(bloco, numero) {
+  if (!bloco) return "";
   const d = dadosDeRamais();
-  return d ? `${d.prefixo}${ramal}` : ramal;
+  const ddd = (d && d.ddd) || "71";
+  const digitos = String(numero).replace(/\D/g, "");
+  if (bloco.discagem === "sede") return `+55${ddd}3115${digitos.slice(1)}`;
+  if (bloco.discagem === "telefone") {
+    return digitos.length > 8 ? `+55${digitos}` : `+55${ddd}${digitos}`;
+  }
+  return "";
+}
+
+// Como o número se lê por extenso: no sede vale mostrar o número de fora, que
+// é o que se disca do celular; nos outros blocos a lista já traz a forma final.
+function numeroLegivel(bloco, numero) {
+  const d = dadosDeRamais();
+  if (!bloco || bloco.discagem !== "sede") return String(numero);
+  return `${(d && d.prefixo) || "71 3115-"}${String(numero).slice(1)}`;
 }
 
 function ramaisDoItem(item) {
   return Array.isArray(item.ramais) ? item.ramais : [item.ramal];
 }
 
-function totalDeRamais(grupos) {
-  return grupos.reduce((a, g) => a + g.itens.reduce((b, i) => b + ramaisDoItem(i).length, 0), 0);
+function contarRamais(setores) {
+  return setores.reduce((a, s) => a + s.itens.reduce((b, i) => b + ramaisDoItem(i).length, 0), 0);
 }
 
-// Filtra por nome, por ramal e pelo nome da equipe — procurar "infra" deve
-// trazer o grupo inteiro, e procurar "5667" deve trazer a pessoa.
-function gruposFiltrados() {
+function totalDeRamais(blocos) {
+  return blocos.reduce((a, b) => a + contarRamais(b.setores), 0);
+}
+
+function totalDeSetores(blocos) {
+  return blocos.reduce((a, b) => a + b.setores.length, 0);
+}
+
+// Filtra por nome, por número, pelo setor e pelo prédio: procurar "gecoc" traz
+// a caixa inteira, "anexo" traz o prédio todo e "5667" traz a pessoa. O número
+// é comparado também sem pontuação, senão "36252417" não acharia o telefone
+// que a lista escreve como "(75) 3625-2417".
+function blocosFiltrados() {
   const d = dadosDeRamais();
   if (!d) return [];
   const busca = normalizarTexto(state.filtroRamais || "").trim();
-  if (!busca) return d.grupos;
+  if (!busca) return d.blocos;
+  const digitos = busca.replace(/\D/g, "");
 
-  return d.grupos
-    .map((g) => {
-      const grupoBate = normalizarTexto(g.nome).includes(busca);
-      const itens = grupoBate
-        ? g.itens
-        : g.itens.filter((i) =>
-            normalizarTexto(i.nome).includes(busca) || ramaisDoItem(i).some((r) => r.includes(busca))
+  const bateNumero = (item) =>
+    ramaisDoItem(item).some((r) => {
+      const so = String(r).replace(/\D/g, "");
+      return String(r).includes(busca) || (digitos && so.includes(digitos));
+    });
+
+  return d.blocos
+    .map((bloco) => {
+      if (normalizarTexto(bloco.nome).includes(busca)) return bloco;
+      const setores = bloco.setores
+        .map((setor) => {
+          if (normalizarTexto(setor.nome).includes(busca)) return setor;
+          const itens = setor.itens.filter(
+            (i) => normalizarTexto(i.nome).includes(busca) || bateNumero(i)
           );
-      return { ...g, itens };
+          return { ...setor, itens };
+        })
+        .filter((setor) => setor.itens.length);
+      return { ...bloco, setores };
     })
-    .filter((g) => g.itens.length);
+    .filter((bloco) => bloco.setores.length);
 }
 
-function cartaoDeRamal(item) {
-  const ramais = ramaisDoItem(item);
-  const botoes = ramais
-    .map(
-      (r) => `
-        <a class="ramal-numero" href="tel:${escapeAttr(telefoneCompleto(r))}"
-           title="${escapeAttr(`Ligar para ${numeroLegivel(r)}`)}">
-          <span class="ramal-numero__digitos">${escapeHtml(r)}</span>
-        </a>`
-    )
+function cartaoDeRamal(bloco, item) {
+  const numeros = ramaisDoItem(item)
+    .map((r) => {
+      const digitos = `<span class="ramal-numero__digitos">${escapeHtml(r)}</span>`;
+      const tel = telefoneCompleto(bloco, r);
+      if (!tel) {
+        return `
+        <span class="ramal-numero ramal-numero--interno"
+              title="Ramal interno — a lista oficial não publica o número externo deste prédio">
+          ${digitos}
+        </span>`;
+      }
+      return `
+        <a class="ramal-numero" href="tel:${escapeAttr(tel)}"
+           title="${escapeAttr(`Ligar para ${numeroLegivel(bloco, r)}`)}">
+          ${digitos}
+        </a>`;
+    })
     .join("");
+  // O ramal que a DTI usa e a lista oficial não traz fica marcado: a diferença
+  // entre o documento e o uso do dia a dia tem de ser visível, não silenciosa.
+  const marca = item.interno
+    ? ` <span class="ramal-marca" title="Não consta na lista oficial; vem da lista de atendimento da DTI">interno</span>`
+    : "";
   return `
     <li class="ramal-item${item.geral ? " ramal-item--geral" : ""}">
-      <span class="ramal-nome">${escapeHtml(item.nome)}</span>
-      <span class="ramal-numeros">${botoes}</span>
+      <span class="ramal-nome">${escapeHtml(item.nome)}${marca}</span>
+      <span class="ramal-numeros">${numeros}</span>
     </li>`;
+}
+
+function caixaDeSetor(bloco, setor) {
+  return `
+      <section class="ramal-grupo">
+        <div class="ramal-grupo__cabecalho">
+          <h4 class="ramal-grupo__titulo">${escapeHtml(setor.nome)}</h4>
+          <span class="ramal-grupo__contagem">${contarRamais([setor])}</span>
+        </div>
+        <ul class="ramal-lista">${setor.itens.map((i) => cartaoDeRamal(bloco, i)).join("")}</ul>
+      </section>`;
+}
+
+function blocoDeRamais(bloco) {
+  const ramais = contarRamais(bloco.setores);
+  const setores = bloco.setores.length;
+  return `
+    <section class="ramais-bloco">
+      <div class="ramais-bloco__cabecalho">
+        <h3 class="ramais-bloco__titulo">${escapeHtml(bloco.nome)}</h3>
+        <span class="ramais-bloco__contagem">
+          ${ramais} ${ramais === 1 ? "ramal" : "ramais"} · ${setores} ${setores === 1 ? "setor" : "setores"}
+        </span>
+      </div>
+      ${bloco.nota ? `<p class="ramais-bloco__nota">${escapeHtml(bloco.nota)}</p>` : ""}
+      <div class="ramais-grupos">${bloco.setores.map((s) => caixaDeSetor(bloco, s)).join("")}</div>
+    </section>`;
 }
 
 function renderizarRamais() {
   const d = dadosDeRamais();
-  const alvo = document.getElementById("ramais-grupos");
+  const alvo = document.getElementById("ramais-blocos");
   if (!alvo) return;
 
   if (!d) {
@@ -5300,33 +5388,36 @@ function renderizarRamais() {
     return;
   }
 
-  // Porta de entrada
+  // A porta de entrada e os atalhos são da operação da DTI, no prédio sede.
+  const sede = blocoDeRamaisPorId("sede");
+
   document.getElementById("porta-rotulo").textContent = d.portaDeEntrada.rotulo;
   document.getElementById("porta-titulo").textContent = d.portaDeEntrada.titulo;
   document.getElementById("porta-nota").textContent = d.portaDeEntrada.nota;
   const numero = document.getElementById("porta-numero");
-  numero.textContent = numeroLegivel(d.portaDeEntrada.ramal);
-  numero.href = `tel:${telefoneCompleto(d.portaDeEntrada.ramal)}`;
+  numero.textContent = d.portaDeEntrada.ramal;
+  numero.href = `tel:${telefoneCompleto(sede, d.portaDeEntrada.ramal)}`;
+  numero.title = `Ligar para ${numeroLegivel(sede, d.portaDeEntrada.ramal)}`;
 
-  // Atalhos
   document.getElementById("ramais-atalhos").innerHTML = d.atalhos
     .map(
       (a) => `
-      <a class="ramal-atalho" href="tel:${escapeAttr(telefoneCompleto(a.ramal))}">
+      <a class="ramal-atalho" href="tel:${escapeAttr(telefoneCompleto(sede, a.ramal))}"
+         title="${escapeAttr(`Ligar para ${numeroLegivel(sede, a.ramal)}`)}">
         <span class="ramal-atalho__rotulo">${escapeHtml(a.rotulo)}</span>
         <span class="ramal-atalho__ramal">${escapeHtml(a.ramal)}</span>
       </a>`
     )
     .join("");
 
-  const grupos = gruposFiltrados();
-  const visiveis = totalDeRamais(grupos);
-  const total = totalDeRamais(d.grupos);
+  const blocos = blocosFiltrados();
+  const visiveis = totalDeRamais(blocos);
+  const total = totalDeRamais(d.blocos);
 
   document.getElementById("ramais-resumo").textContent =
     `${visiveis} ${visiveis === 1 ? "ramal" : "ramais"}`;
   document.getElementById("ramais-subtitulo").textContent =
-    `${total} ramais em ${d.grupos.length} equipes · todos com o prefixo ${d.prefixo}`;
+    `${total} ramais em ${totalDeSetores(d.blocos)} setores · ${d.blocos.map((b) => b.nome).join(" · ")}`;
 
   // O aviso aparece sempre que há busca em vigor, não só quando ela falha:
   // quem filtrou e achou também precisa de um caminho de volta à lista
@@ -5340,18 +5431,7 @@ function renderizarRamais() {
       : `Nenhum ramal corresponde a "${termo}".`;
   }
 
-  alvo.innerHTML = grupos
-    .map(
-      (g) => `
-      <section class="ramal-grupo">
-        <div class="ramal-grupo__cabecalho">
-          <h3 class="ramal-grupo__titulo">${escapeHtml(g.nome)}</h3>
-          <span class="ramal-grupo__contagem">${totalDeRamais([g])}</span>
-        </div>
-        <ul class="ramal-lista">${g.itens.map(cartaoDeRamal).join("")}</ul>
-      </section>`
-    )
-    .join("");
+  alvo.innerHTML = blocos.map(blocoDeRamais).join("");
 }
 
 function renderizarPortalRamais() {
@@ -5362,19 +5442,19 @@ function renderizarPortalRamais() {
   };
   if (!d) {
     definir("portal-ramais-porta", "—");
-    definir("portal-ramais-grupos", "—");
+    definir("portal-ramais-setores", "—");
     definir("portal-ramais-total", "—");
     definir("portal-ramais-destaque", "A lista de ramais não pôde ser carregada.");
     definir("portal-ramais-selo", "Indisponível");
     return;
   }
   definir("portal-ramais-porta", d.portaDeEntrada.ramal);
-  definir("portal-ramais-grupos", String(d.grupos.length));
-  definir("portal-ramais-total", String(totalDeRamais(d.grupos)));
+  definir("portal-ramais-setores", String(totalDeSetores(d.blocos)));
+  definir("portal-ramais-total", String(totalDeRamais(d.blocos)));
 
   const destaque = document.getElementById("portal-ramais-destaque");
   if (destaque) {
-    destaque.textContent = `Rotina entra pelo ${numeroLegivel(d.portaDeEntrada.ramal)} — ${d.portaDeEntrada.titulo}.`;
+    destaque.textContent = `Rotina da TI entra pelo ramal ${d.portaDeEntrada.ramal} — ${d.portaDeEntrada.titulo}.`;
     destaque.classList.add("portal-card__destaque--forte");
   }
   // Rótulos curtos: com três cartões lado a lado, "Sessão do Plenário" e
@@ -7516,7 +7596,7 @@ const ROTULO_MODULO = {
   portal: "Portal",
   agenda: "Agenda",
   projetos: "Plano 100 dias",
-  ramais: "Ramal DTI",
+  ramais: "Ramais",
   estrutura: "Estrutura DTI",
   tarefas: "Tarefas",
 };
@@ -7524,10 +7604,10 @@ const ROTULO_MODULO = {
 // A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
 // do Google Agenda" descreve a agenda, não o plano de entregas.
 const SUBTITULO_MODULO = {
-  portal: "TCM-BA — Agenda, Plano 100 dias, Ramal DTI, Estrutura DTI e Tarefas",
+  portal: "TCM-BA — Agenda, Plano 100 dias, Ramais, Estrutura DTI e Tarefas",
   agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
   projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
-  ramais: "TCM-BA — ramais da Diretoria de Tecnologia da Informação",
+  ramais: "TCM-BA — lista telefônica: prédio sede, prédio anexo e inspetorias regionais",
   estrutura: "TCM-BA — organograma da DTI: estrutura atual e estrutura sugerida",
   tarefas: "TCM-BA — quadro de tarefas da DTI por status, categoria e responsável",
 };
@@ -7557,7 +7637,7 @@ function trocarModulo(modulo) {
       atual === "projetos"
         ? "Buscar por projeto, responsável ou área…"
         : atual === "ramais"
-        ? "Buscar por nome, equipe ou ramal…"
+        ? "Buscar por nome, setor, prédio ou ramal…"
         : atual === "estrutura"
         ? "Buscar por unidade, pessoa ou atribuição…"
         : atual === "tarefas"

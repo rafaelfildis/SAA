@@ -2657,11 +2657,49 @@ html, body { overflow-x: hidden; }
   color: var(--color-secondary);
 }
 
+/* Prédio: a lista oficial vem em três blocos que não se discam do mesmo jeito,
+   e a faixa diz de qual se trata antes das caixas de setor. Sem ela, um ramal
+   de cinco dígitos e um telefone com DDD apareceriam lado a lado sem explicação. */
+.ramais-blocos { display: flex; flex-direction: column; gap: 26px; }
+
+.ramais-bloco__cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--color-border);
+}
+.ramais-bloco__titulo {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+.ramais-bloco__contagem {
+  flex-shrink: 0;
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.76rem;
+  color: var(--color-text-tertiary);
+}
+.ramais-bloco__nota {
+  margin: 8px 0 0;
+  max-width: 76ch;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+.ramais-bloco__nota + .ramais-grupos { margin-top: 14px; }
+.ramais-bloco__cabecalho + .ramais-grupos { margin-top: 14px; }
+
 .ramais-grupos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
-  gap: 16px;
-  align-items: start;
+  columns: 330px 3;
+  column-gap: 16px;
+}
+.ramais-grupos .ramal-grupo {
+  margin-bottom: 16px;
+  break-inside: avoid;
 }
 
 .ramal-grupo {
@@ -2712,6 +2750,23 @@ html, body { overflow-x: hidden; }
 .ramal-nome { font-size: 0.9rem; color: var(--color-text-primary); min-width: 0; }
 .ramal-numeros { display: flex; gap: 6px; flex-shrink: 0; }
 
+/* "interno": o ramal vem da lista de atendimento da DTI e não da lista
+   oficial. É uma ressalva, não um destaque — daí o tom discreto. */
+.ramal-marca {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  vertical-align: 1px;
+}
+
 .ramal-numero {
   display: inline-flex;
   align-items: center;
@@ -2723,6 +2778,10 @@ html, body { overflow-x: hidden; }
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .ramal-numero:hover { border-color: var(--color-secondary); background: var(--color-secondary-tint); }
+/* Prédio anexo: sem número externo publicado não há o que discar, e o ramal
+   não pode parecer um link que liga. Fica à vista, em tom de dado. */
+.ramal-numero--interno { background: var(--color-surface-alt); border-style: dashed; cursor: default; }
+.ramal-numero--interno .ramal-numero__digitos { color: var(--color-text-strong); }
 .ramal-numero:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
 .ramal-numero__digitos {
   font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
@@ -2744,7 +2803,7 @@ html, body { overflow-x: hidden; }
 @media (max-width: 860px) {
   .porta-entrada { padding: 16px 18px; }
   .porta-entrada__numero { font-size: 1.5rem; }
-  .ramais-grupos { grid-template-columns: 1fr; }
+  .ramais-grupos { columns: 1; }
   .ramal-item { padding: 11px 16px; }
 }
 
