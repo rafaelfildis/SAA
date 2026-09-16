@@ -618,6 +618,24 @@ para daltonismo e contraste contra a superfície dos dois temas.
 equipe inteira de um sistema dependendo de uma agenda só. A tela aponta; a
 decisão é do gestor.
 
+**Filtro por projeto**, em chips acima das caixas. É por ele que se imprime a
+equipe de um projeto só: escolha **FAROL**, exporte, escolha **Novo SICCO**,
+exporte. Os chips são cumulativos — dá para selecionar dois ou três projetos —,
+e **Todos os projetos** limpa a seleção.
+
+Com **um único projeto em tela**, a folha exportada muda de forma: o título passa
+a ser *Equipe do projeto FAROL*, o panorama comparativo sai (uma barra sozinha
+não compara nada), a equipe ocupa a largura da página em duas colunas e o
+arquivo leva o nome do projeto — `equipe-projetos-ddes-farol-tcm-ba-AAAA-MM-DD`.
+Quem exporta oito equipes seguidas precisa distinguir os arquivos na pasta.
+
+Os quatro números do topo **acompanham o filtro**: com o FAROL escolhido, eles
+falam do FAROL. A tela e a folha exportada usam a mesma função para calculá-los,
+de propósito — com dois cálculos separados, filtrar um projeto mostraria 7
+pessoas na tela e 34 no documento, e o documento é o que vai para a reunião. O
+subtítulo, esse, não acompanha: ele é o cabeçalho da unidade e diz de qual
+Divisão a tela trata.
+
 **Busca pelo campo do topo**, por pessoa, célula, sistema, função ou vínculo:
 procurar "sicco" traz as células do SICCO inteiras, "QA" traz só quem testa, e
 as barras do panorama acompanham o filtro — filtrado por QA, elas passam a

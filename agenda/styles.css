@@ -3822,3 +3822,27 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   .equipes-celulas { columns: 1; }
   .aloc-linha { grid-template-columns: minmax(80px, 116px) 1fr 40px; gap: 9px; }
 }
+
+/* Filtro por projeto: é por ele que se imprime a equipe de um projeto só, e
+   por isso ele fica acima das caixas, na largura inteira — não escondido na
+   barra lateral, onde quem vai exportar não olha. */
+.equipes-filtro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+}
+.equipes-filtro__rotulo {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}

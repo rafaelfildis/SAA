@@ -91,6 +91,8 @@ state.projetoAberto = null;
 state.filtroRamais = "";
 // Busca do módulo Equipe e projetos, também própria.
 state.filtroEquipes = "";
+// Projetos escolhidos no filtro de chips do mesmo módulo. Vazio = todos.
+state.filtroProjetos = new Set();
 // Módulo Estrutura DTI: qual das duas visões está em tela, e a busca própria
 // do módulo. A visão abre na estrutura atual — a vigente é o ponto de
 // partida, e a minuta se lê em comparação com ela, não no lugar dela.
@@ -7643,10 +7645,19 @@ function celulasFiltradas() {
   const busca = normalizarTexto(state.filtroEquipes || "").trim();
   const porTamanho = (a, b) =>
     pessoasDaCelula(b).length - pessoasDaCelula(a).length || a.nome.localeCompare(b.nome, "pt-BR");
-  if (!busca) return [...d.celulas].sort(porTamanho);
+
+  // O chip escolhe de quais células se fala; a busca procura dentro do que
+  // sobrou. Na ordem inversa, procurar um nome traria de volta a célula que o
+  // chip acabou de tirar da tela.
+  const escolhidos = state.filtroProjetos;
+  const base = escolhidos && escolhidos.size
+    ? d.celulas.filter((c) => escolhidos.has(c.nome))
+    : d.celulas;
+
+  if (!busca) return [...base].sort(porTamanho);
 
   const bate = (txt) => normalizarTexto(txt || "").includes(busca);
-  return d.celulas
+  return base
     .map((celula) => {
       // Bater no nome da célula ou em um sistema atendido traz a caixa inteira:
       // quem procura "sicco" quer a equipe do SICCO, não uma pessoa solta.
@@ -7773,6 +7784,66 @@ function caixaDeCelula(celula) {
     </section>`;
 }
 
+// Os quatro números do panorama, calculados sobre o recorte que está em tela.
+// A tela e a folha exportada chamam esta mesma função de propósito: com dois
+// cálculos separados, filtrar um projeto mostraria 7 pessoas na tela e 34 no
+// documento — e o documento é o que vai para a reunião.
+function indicadoresDaSelecao(celulas) {
+  const pessoas = celulas.flatMap(pessoasDaCelula);
+  const estagiarios = totalDeEstagiarios(celulas);
+  const terceirizados = pessoas.filter((p) => p.vinculo === "Terceirizado").length;
+  const devs = pessoas.filter((p) => p.funcao === "Desenvolvedor").length;
+  const sistemas = celulas.reduce((a, c) => a + (c.sistemas || []).length, 0);
+  const individual = celulas.length === 1 ? celulas[0] : null;
+
+  return [
+    {
+      valor: pessoas.length,
+      rotulo: individual ? "pessoas na equipe" : "pessoas nas células",
+      nota: `${plural(estagiarios, "estagiário", "estagiários")} à parte`,
+    },
+    individual
+      ? {
+          valor: sistemas,
+          rotulo: sistemas === 1 ? "sistema atendido" : "sistemas atendidos",
+          nota: (individual.sistemas || []).join(" · "),
+        }
+      : { valor: celulas.length, rotulo: "células de projeto", nota: `${sistemas} sistemas atendidos` },
+    { valor: devs, rotulo: "desenvolvedores", nota: "função principal declarada" },
+    {
+      valor: pessoas.length ? `${Math.round((terceirizados / pessoas.length) * 100)}%` : "—",
+      rotulo: "terceirizados",
+      nota: `${terceirizados} de ${pessoas.length} ${individual ? "na equipe" : "nas células"}`,
+    },
+  ];
+}
+
+function renderizarChipsDeProjeto() {
+  const alvo = document.getElementById("equipes-projetos-chips");
+  const d = dadosDeEquipes();
+  if (!alvo || !d) return;
+
+  const nenhum = !state.filtroProjetos.size;
+  const ordenadas = [...d.celulas].sort(
+    (a, b) => pessoasDaCelula(b).length - pessoasDaCelula(a).length || a.nome.localeCompare(b.nome, "pt-BR")
+  );
+
+  alvo.innerHTML = [
+    `<button class="chip${nenhum ? " is-active" : ""}" type="button" data-projeto=""
+             aria-pressed="${nenhum ? "true" : "false"}">Todos os projetos<span class="chip__conta">${
+      d.celulas.length
+    }</span></button>`,
+    ...ordenadas.map((c) => {
+      const ativo = state.filtroProjetos.has(c.nome);
+      return `
+      <button class="chip${ativo ? " is-active" : ""}" type="button" data-projeto="${escapeAttr(c.nome)}"
+              aria-pressed="${ativo ? "true" : "false"}">${escapeHtml(c.nome)}<span class="chip__conta">${
+        pessoasDaCelula(c).length
+      }</span></button>`;
+    }),
+  ].join("");
+}
+
 function renderizarEquipes() {
   const d = dadosDeEquipes();
   const alvo = document.getElementById("equipes-celulas");
@@ -7785,27 +7856,20 @@ function renderizarEquipes() {
 
   const noQuadro = totalDePessoas(d.celulas) + 1; // + a chefia da Divisão
   const estagiarios = totalDeEstagiarios(d.celulas);
-  const todas = d.celulas.flatMap(pessoasDaCelula);
-  const terceirizados = todas.filter((p) => p.vinculo === "Terceirizado").length;
-  const devs = todas.filter((p) => p.funcao === "Desenvolvedor").length;
 
+  // O subtítulo é o cabeçalho da unidade e não acompanha o filtro: ele diz de
+  // qual Divisão a tela trata, e isso não muda ao escolher um projeto.
   document.getElementById("equipes-subtitulo").textContent =
-    `${d.unidade.sigla} — ${d.unidade.nome} · ${noQuadro} pessoas em ${d.celulas.length} células · ${d.referencia}`;
+    `${d.unidade.sigla} — ${d.unidade.nome} · ${plural(noQuadro, "pessoa", "pessoas")} · ` +
+    `${plural(d.celulas.length, "célula", "células")} · ${d.referencia}`;
+
+  const celulas = celulasFiltradas();
 
   // Números do panorama. São quatro porque são os quatro que mudam decisão:
   // tamanho do quadro, em quantas frentes ele está dividido, quanto dele
-  // programa e quanto depende do contrato de terceirização.
-  const indicadores = [
-    { valor: noQuadro, rotulo: "pessoas no quadro", nota: `${estagiarios} estagiários à parte` },
-    { valor: d.celulas.length, rotulo: "células de projeto", nota: `${d.celulas.reduce((a, c) => a + (c.sistemas || []).length, 0)} sistemas atendidos` },
-    { valor: devs, rotulo: "desenvolvedores", nota: "função principal declarada" },
-    {
-      valor: `${Math.round((terceirizados / todas.length) * 100)}%`,
-      rotulo: "terceirizados",
-      nota: `${terceirizados} de ${todas.length} nas células`,
-    },
-  ];
-  document.getElementById("equipes-indicadores").innerHTML = indicadores
+  // programa e quanto depende do contrato de terceirização. Acompanham o
+  // filtro: com um projeto escolhido, falam daquele projeto.
+  document.getElementById("equipes-indicadores").innerHTML = indicadoresDaSelecao(celulas)
     .map(
       (i) => `
       <div class="indicador">
@@ -7823,7 +7887,6 @@ function renderizarEquipes() {
       <span class="chefia__cargo">${escapeHtml(d.chefia.perfil)}</span>
       <p class="chefia__funcao">${escapeHtml(d.chefia.funcao)}</p>`;
 
-  const celulas = celulasFiltradas();
   const visiveis = totalDePessoas(celulas) + totalDeEstagiarios(celulas);
   const total = totalDePessoas(d.celulas) + estagiarios;
 
@@ -7831,19 +7894,28 @@ function renderizarEquipes() {
     plural(visiveis, "pessoa alocada", "pessoas alocadas");
 
   const termo = (state.filtroEquipes || "").trim();
+  const projetos = state.filtroProjetos.size;
   const aviso = document.getElementById("equipes-vazio");
-  aviso.hidden = !termo;
-  if (termo) {
+  aviso.hidden = !termo && !projetos;
+  if (termo || projetos) {
+    const recorte = [
+      projetos ? plural(projetos, "projeto", "projetos") : "",
+      termo ? `busca por "${termo}"` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
     document.getElementById("equipes-vazio-texto").textContent = visiveis
-      ? `${visiveis} de ${total} pessoas, filtradas por "${termo}".`
-      : `Ninguém corresponde a "${termo}".`;
+      ? `${visiveis} de ${total} pessoas — ${recorte}.`
+      : `Ninguém corresponde ao recorte — ${recorte}.`;
   }
 
   // O panorama acompanha o filtro: filtrado por "QA", as barras passam a
   // mostrar onde estão os QA, que é a pergunta que o filtro fez.
+  renderizarChipsDeProjeto();
+
   const panorama = document.getElementById("equipes-alocacao");
   panorama.innerHTML = barrasDeAlocacao(celulas);
-  document.getElementById("equipes-panorama").hidden = !celulas.length;
+  document.getElementById("equipes-panorama").hidden = celulas.length < 2;
 
   alvo.innerHTML = celulas.map(caixaDeCelula).join("");
 }
@@ -7950,7 +8022,7 @@ function linhaPessoaDaCelulaExport(pessoa, estagiario) {
     </div>`;
 }
 
-function caixaDeCelulaExport(celula) {
+function caixaDeCelulaExport(celula, larguraCheia) {
   const pessoas = pessoasDaCelula(celula);
   const estagiarios = celula.estagiarios || [];
   const outros = (celula.sistemas || []).filter(
@@ -8000,8 +8072,22 @@ function caixaDeCelulaExport(celula) {
       <div style="padding:7px 10px 8px">
         <div style="display:flex;height:5px;border-radius:999px;overflow:hidden;margin-bottom:5px">${faixas}</div>
         <div style="display:flex;flex-wrap:wrap;gap:2px 10px;margin-bottom:5px">${rotulos}</div>
-        ${pessoas.map((p) => linhaPessoaDaCelulaExport(p, false)).join("")}
-        ${estagiarios.map((p) => linhaPessoaDaCelulaExport(p, true)).join("")}
+        ${
+          larguraCheia
+            ? (() => {
+                const todos = [
+                  ...pessoas.map((x) => linhaPessoaDaCelulaExport(x, false)),
+                  ...estagiarios.map((x) => linhaPessoaDaCelulaExport(x, true)),
+                ];
+                const metade = Math.ceil(todos.length / 2);
+                return `<div style="display:flex;gap:24px;align-items:flex-start">
+                  <div style="flex:1 1 0;min-width:0">${todos.slice(0, metade).join("")}</div>
+                  <div style="flex:1 1 0;min-width:0">${todos.slice(metade).join("")}</div>
+                </div>`;
+              })()
+            : pessoas.map((x) => linhaPessoaDaCelulaExport(x, false)).join("") +
+              estagiarios.map((x) => linhaPessoaDaCelulaExport(x, true)).join("")
+        }
       </div>
     </div>`;
 }
@@ -8017,9 +8103,17 @@ function construirExtratoEquipes() {
   const termo = (state.filtroEquipes || "").trim();
   const pessoas = celulas.flatMap(pessoasDaCelula);
   const estagiarios = celulas.reduce((a, c) => a + (c.estagiarios || []).length, 0);
-  const terceirizados = pessoas.filter((p) => p.vinculo === "Terceirizado").length;
-  const devs = pessoas.filter((p) => p.funcao === "Desenvolvedor").length;
   const maior = celulas.reduce((m, c) => Math.max(m, pessoasDaCelula(c).length), 0) || 1;
+  const individual = celulas.length === 1 ? celulas[0] : null;
+
+  // O carimbo só existe quando a folha é um pedaço do quadro sem dizer que é.
+  // Num documento de um projeto só, o título já diz de quem ele fala.
+  const selecaoParcial = state.filtroProjetos.size && state.filtroProjetos.size < d.celulas.length;
+  const carimbo = termo
+    ? { titulo: "RECORTE FILTRADO", texto: `busca por "${termo}"` }
+    : selecaoParcial && !individual
+    ? { titulo: "SELEÇÃO DE PROJETOS", texto: celulas.map((c) => c.nome).join(" · ") }
+    : null;
 
   const indicador = (valor, rotulo, nota) => `
     <div style="flex:1 1 0;border:1px solid ${EXP.borda};border-radius:7px;padding:8px 11px">
@@ -8080,34 +8174,37 @@ function construirExtratoEquipes() {
 
     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-bottom:14px">
       <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
-        <span style="font:700 21px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.01em">Alocação da equipe por célula</span>
+        <span style="font:700 21px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.01em">${escapeHtml(
+          individual ? `Equipe do projeto ${individual.nome}` : "Alocação da equipe por célula"
+        )}</span>
         <span style="font:400 10.5px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(
-          `${plural(pessoas.length, "pessoa", "pessoas")} em ${plural(celulas.length, "célula", "células")}` +
-            (estagiarios ? `, mais ${plural(estagiarios, "estagiário", "estagiários")}` : "") +
+          (individual
+            ? `${plural(pessoas.length, "pessoa", "pessoas")}` +
+              (estagiarios ? `, mais ${plural(estagiarios, "estagiário", "estagiários")}` : "") +
+              ` · ${(individual.sistemas || []).join(" · ")}`
+            : `${plural(pessoas.length, "pessoa", "pessoas")} em ${plural(celulas.length, "célula", "células")}` +
+              (estagiarios ? `, mais ${plural(estagiarios, "estagiário", "estagiários")}` : "")) +
             ` · ${d.referencia}`
         )}</span>
       </div>
       ${
-        termo
-          ? `<div style="flex:0 0 auto;border:1px solid ${EXP.borda};background:${EXP.painel};border-radius:6px;padding:6px 11px;text-align:right">
-               <div style="font:700 8px/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${EXP.vermelhoTexto}">RECORTE FILTRADO</div>
-               <div style="font:400 9.5px/1.4 'IBM Plex Sans',sans-serif;color:${EXP.texto2};margin-top:3px">busca por "${escapeHtml(
-                 termo
-               )}"</div>
+        carimbo
+          ? `<div style="flex:0 0 auto;max-width:300px;border:1px solid ${EXP.borda};background:${EXP.painel};border-radius:6px;padding:6px 11px;text-align:right">
+               <div style="font:700 8px/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${
+                 EXP.vermelhoTexto
+               }">${escapeHtml(carimbo.titulo)}</div>
+               <div style="font:400 9.5px/1.4 'IBM Plex Sans',sans-serif;color:${
+                 EXP.texto2
+               };margin-top:3px">${escapeHtml(carimbo.texto)}</div>
              </div>`
           : ""
       }
     </div>
 
     <div style="display:flex;gap:10px;margin-bottom:12px">
-      ${indicador(pessoas.length, "pessoas nas células", `${estagiarios} estagiários à parte`)}
-      ${indicador(celulas.length, "células de projeto", `${celulas.reduce((a, c) => a + (c.sistemas || []).length, 0)} sistemas atendidos`)}
-      ${indicador(devs, "desenvolvedores", "função principal declarada")}
-      ${indicador(
-        pessoas.length ? `${Math.round((terceirizados / pessoas.length) * 100)}%` : "—",
-        "terceirizados",
-        `${terceirizados} de ${pessoas.length} nas células`
-      )}
+      ${indicadoresDaSelecao(celulas)
+        .map((i) => indicador(i.valor, i.rotulo, i.nota))
+        .join("")}
     </div>
 
     <div style="display:flex;align-items:baseline;gap:10px;border:1px solid ${EXP.borda};background:${
@@ -8122,6 +8219,7 @@ function construirExtratoEquipes() {
       )}</span>
     </div>
 
+    ${individual ? "" : `
     <div style="border:1px solid ${EXP.borda};border-radius:7px;padding:9px 12px 10px;margin-bottom:14px">
       <div style="font:600 8.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${
         EXP.texto2
@@ -8131,13 +8229,17 @@ function construirExtratoEquipes() {
           .map((col) => `<div style="flex:1 1 0;min-width:0">${col.map(barra).join("")}</div>`)
           .join("")}
       </div>
-    </div>
+    </div>`}
 
-    <div style="display:flex;gap:16px;align-items:flex-start">
+    ${
+      individual
+        ? caixaDeCelulaExport(individual, true)
+        : `<div style="display:flex;gap:16px;align-items:flex-start">
       ${distribuirEmColunas(celulas, 3)
-        .map((col) => `<div style="flex:1 1 0;min-width:0">${col.map(caixaDeCelulaExport).join("")}</div>`)
+        .map((col) => `<div style="flex:1 1 0;min-width:0">${col.map((c) => caixaDeCelulaExport(c, false)).join("")}</div>`)
         .join("")}
-    </div>
+    </div>`
+    }
 
     <div style="margin-top:auto;padding-top:12px;border-top:1px solid ${
       EXP.borda
@@ -8145,7 +8247,8 @@ function construirExtratoEquipes() {
       <div style="font:400 9.5px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:660px;text-wrap:pretty">
         ${escapeHtml(
           `Documento gerado a partir da relação "${d.fonte}", da própria Divisão. A célula é o agrupamento declarado na relação; ` +
-            `o líder é quem nela consta como responsável pelo projeto. Caixa com faixa vermelha é célula de uma pessoa só.`
+            `o líder é quem nela consta como responsável pelo projeto.` +
+            (celulas.some(celulaEhPontoUnico) ? " Caixa com faixa vermelha é célula de uma pessoa só." : "")
         )}
       </div>
       <div style="font:400 9.5px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
@@ -8205,8 +8308,13 @@ async function exportarEquipes(tipo) {
   const canvas = await renderizarCanvasElemento(paper, 2);
 
   const d = dadosDeEquipes();
-  const carimbo = new Date().toISOString().slice(0, 10);
-  const nomeBase = `equipe-projetos-${normalizarTexto(d.unidade.sigla)}-tcm-ba-${carimbo}`;
+  const data = new Date().toISOString().slice(0, 10);
+  const emTela = celulasFiltradas();
+  const projeto =
+    emTela.length === 1
+      ? `-${normalizarTexto(emTela[0].nome).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`
+      : "";
+  const nomeBase = `equipe-projetos-${normalizarTexto(d.unidade.sigla)}${projeto}-tcm-ba-${data}`;
 
   if (tipo === "jpeg") {
     const link = document.createElement("a");
@@ -8244,11 +8352,15 @@ function abrirDialogoExportEquipes() {
   const pessoas = celulas.flatMap(pessoasDaCelula).length;
   const termo = (state.filtroEquipes || "").trim();
 
-  document.getElementById("equipes-export-mensagem").textContent =
-    `${plural(pessoas, "pessoa", "pessoas")} em ${plural(celulas.length, "célula", "células")}` +
-    (termo ? `, no recorte filtrado por "${termo}"` : "") +
-    `. O documento sai em A4 paisagem, com o panorama de alocação e a equipe de cada célula.` +
-    (termo ? " A folha sai carimbada como recorte filtrado." : "");
+  const individual = celulas.length === 1 ? celulas[0] : null;
+  document.getElementById("equipes-export-mensagem").textContent = individual
+    ? `Equipe do projeto ${individual.nome}: ${plural(pessoas, "pessoa", "pessoas")}. ` +
+      `O documento sai em A4 paisagem, com a equipe em duas colunas na largura da folha.` +
+      (termo ? ` A folha sai carimbada como recorte filtrado por "${termo}".` : "")
+    : `${plural(pessoas, "pessoa", "pessoas")} em ${plural(celulas.length, "célula", "células")}` +
+      (termo ? `, no recorte filtrado por "${termo}"` : "") +
+      `. O documento sai em A4 paisagem, com o panorama de alocação e a equipe de cada célula.` +
+      (termo || state.filtroProjetos.size ? " A folha sai carimbada com o recorte." : "");
 
   elementoComFocoAntesDoExportEquipes = document.activeElement;
   document.getElementById("equipes-export-backdrop").hidden = false;
@@ -8283,8 +8395,23 @@ function inicializarModuloEquipes() {
   if (limpar) {
     limpar.addEventListener("click", () => {
       state.filtroEquipes = "";
+      state.filtroProjetos.clear();
       const busca = document.getElementById("busca");
       if (busca) busca.value = "";
+      renderizarEquipes();
+    });
+  }
+
+  const chips = document.getElementById("equipes-projetos-chips");
+  if (chips) {
+    chips.addEventListener("click", (ev) => {
+      const chip = ev.target.closest("[data-projeto]");
+      if (!chip) return;
+      const nome = chip.dataset.projeto;
+      // "Todos" limpa a seleção; um projeto entra e sai dela a cada clique.
+      if (!nome) state.filtroProjetos.clear();
+      else if (state.filtroProjetos.has(nome)) state.filtroProjetos.delete(nome);
+      else state.filtroProjetos.add(nome);
       renderizarEquipes();
     });
   }
