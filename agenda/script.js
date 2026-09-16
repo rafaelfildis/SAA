@@ -2349,19 +2349,15 @@ function confirmarAcao(mensagem, titulo) {
 
 const TEMA_STORAGE_KEY = "saaTcm.tema";
 
-function sistemaPrefereTemaEscuro() {
-  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-// tema: "dark" | "light" | null (null = segue a preferência do sistema).
+// tema: "dark" | "light" | null. O padrão publicado é o CLARO, e não a
+// preferência do sistema operacional: a aparência institucional do painel não
+// pode mudar conforme a configuração da máquina de quem abre. O escuro
+// continua disponível no botão da topbar, para quem escolher.
 function aplicarTema(tema) {
-  if (tema === "dark" || tema === "light") {
-    document.documentElement.setAttribute("data-theme", tema);
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
+  const efetivo = tema === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", efetivo);
 
-  const efetivoEscuro = tema ? tema === "dark" : sistemaPrefereTemaEscuro();
+  const efetivoEscuro = efetivo === "dark";
 
   const btn = document.getElementById("btn-tema");
   if (btn) btn.setAttribute("aria-pressed", String(efetivoEscuro));
@@ -2371,9 +2367,7 @@ function aplicarTema(tema) {
 }
 
 function alternarTema() {
-  const efetivoEscuro = document.documentElement.getAttribute("data-theme")
-    ? document.documentElement.getAttribute("data-theme") === "dark"
-    : sistemaPrefereTemaEscuro();
+  const efetivoEscuro = document.documentElement.getAttribute("data-theme") === "dark";
   const novoTema = efetivoEscuro ? "light" : "dark";
 
   aplicarTema(novoTema);
@@ -2392,20 +2386,6 @@ function inicializarTema() {
     /* ignora */
   }
   aplicarTema(salvo);
-
-  // Sem preferência salva, acompanha mudanças ao vivo na preferência do
-  // sistema (ex.: o SO alterna para modo escuro ao anoitecer).
-  if (!salvo && window.matchMedia) {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-      let aindaSemPreferencia = true;
-      try {
-        aindaSemPreferencia = !localStorage.getItem(TEMA_STORAGE_KEY);
-      } catch (e) {
-        /* ignora */
-      }
-      if (aindaSemPreferencia) aplicarTema(null);
-    });
-  }
 }
 
 /* ==========================================================================

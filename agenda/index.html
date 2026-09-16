@@ -7,17 +7,21 @@
 <meta name="description" content="SAA — Agenda institucional do Tribunal de Contas dos Municípios do Estado da Bahia, com sincronização automática do calendário Google Agenda." />
 <meta name="theme-color" content="#0B3163" id="meta-theme-color" />
 <script>
-  // Aplica o tema salvo antes da primeira pintura, evitando o "flash" de
-  // tela clara ao carregar com o modo escuro já escolhido anteriormente.
+  // O sistema abre em tema claro, independentemente do modo do sistema
+  // operacional de quem acessa: é a aparência institucional publicada, e a
+  // mesma tela vista por duas pessoas não pode depender da configuração do
+  // computador de cada uma.
+  //
+  // Quem preferir o escuro troca no botão da topbar, e a escolha é respeitada
+  // aqui, antes da primeira pintura, para não haver "flash" de tela clara.
   (function () {
+    var tema = "light";
     try {
-      var tema = localStorage.getItem("saaTcm.tema");
-      if (tema === "dark" || tema === "light") {
-        document.documentElement.setAttribute("data-theme", tema);
-      }
+      if (localStorage.getItem("saaTcm.tema") === "dark") tema = "dark";
     } catch (e) {
       /* ignora */
     }
+    document.documentElement.setAttribute("data-theme", tema);
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
