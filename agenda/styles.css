@@ -3463,7 +3463,6 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 .tarefa-card__responsavel svg { flex: 0 0 auto; color: var(--color-text-tertiary); }
 .tarefa-card__responsavel--vago { color: var(--color-warning); }
 .tarefa-card__prazo { font-weight: 600; }
-.tarefa-card__prazo--alerta { color: var(--color-error-strong); }
 .tarefa-card__nota { color: var(--color-text-tertiary); font-size: 0.7rem; }
 
 /* Setas de coluna anterior e seguinte: é como se move a tarefa pelo teclado e
@@ -3846,3 +3845,104 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   text-transform: uppercase;
   color: var(--color-text-tertiary);
 }
+
+/* ==========================================================================
+   CONTROLE DE PRAZOS — o quadro lido pelo eixo do tempo
+
+   O quadro é organizado por etapa, e por isso não responde sozinho o que vence
+   primeiro: uma tarefa a dois dias do prazo fica na mesma coluna de outra sem
+   data nenhuma. Esta faixa lê o mesmo quadro pelo outro eixo e nomeia a mais
+   próxima do vencimento.
+
+   As cores aqui são de ESTADO, não de categoria: vermelho para vencida, âmbar
+   para o que vence dentro da janela de aviso, verde para o que está no prazo.
+   Cada uma vem com a contagem e a palavra escrita ao lado, então quem não
+   distingue as cores lê a mesma informação.
+   ========================================================================== */
+
+.prazos-controle {
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--sombra-cartao);
+}
+.prazos-controle__topo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.prazos-controle__rotulo {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.prazos-controle__estados { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+
+.prazo-estado {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 11px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+.prazo-estado__conta { font-family: var(--fonte-mono, "IBM Plex Mono", monospace); font-weight: 700; }
+.prazo-estado--vencida { border-color: var(--st-cancelado-borda); background: var(--color-error-tint); color: var(--color-error-strong); }
+.prazo-estado--vencendo { border-color: var(--cat-viagem-borda); background: var(--color-warning-tint); color: var(--color-warning); }
+.prazo-estado--no-prazo { border-color: var(--cat-escola-borda); background: var(--color-success-tint); color: var(--color-success); }
+/* Estado sem nenhuma tarefa continua na faixa, apagado: sumir com o "vencidas"
+   quando não há nenhuma tiraria justamente a confirmação de que não há. */
+.prazo-estado--zerado {
+  border-color: var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-tertiary);
+}
+
+.prazos-controle__proxima {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--color-border-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+.prazos-controle__proxima strong { color: var(--color-text-primary); }
+.prazos-controle__proxima--vencida strong { color: var(--color-error-strong); }
+.prazos-controle__proxima--vencendo strong { color: var(--color-warning); }
+.prazos-controle__data {
+  font-family: var(--fonte-mono, "IBM Plex Mono", monospace);
+  font-size: 0.74rem;
+  color: var(--color-text-tertiary);
+}
+
+/* A caixa do prazo no cartão: deixa de ser texto colorido e vira etiqueta com
+   fundo quando há o que cobrar. É o destaque que se enxerga varrendo a coluna
+   com os olhos, sem ler cada cartão. */
+.tarefa-card__prazo--vencida,
+.tarefa-card__prazo--vencendo {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 999px;
+}
+.tarefa-card__prazo--vencida {
+  border-color: var(--st-cancelado-borda);
+  background: var(--color-error-tint);
+  color: var(--color-error-strong);
+}
+.tarefa-card__prazo--vencendo {
+  border-color: var(--cat-viagem-borda);
+  background: var(--color-warning-tint);
+  color: var(--color-warning);
+}
+/* Tarefa entrando na janela de aviso: a mesma borda lateral da vencida, em
+   âmbar, para a coluna continuar sendo lida de cima para baixo por urgência. */
+.tarefa-card--vencendo { border-left-color: var(--color-warning); }

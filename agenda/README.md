@@ -553,6 +553,32 @@ linha no arquivo de dados. A **unidade da DTI** é a mesma etiqueta do Plano 100
 dias (`DDES`, `DINT`, `DBAD`), para que a mesma pergunta — "de quem é isto?" —
 se responda igual nos dois módulos.
 
+**Controle de prazos.** O quadro é organizado por etapa e, sozinho, não responde
+o que vence primeiro: uma tarefa a dois dias do prazo fica na mesma coluna de
+outra sem data nenhuma. A faixa acima do quadro lê o mesmo quadro pelo eixo do
+tempo — quantas vencidas, quantas dentro da janela de aviso, quantas no prazo —
+e nomeia a mais próxima do vencimento, com responsável e data. É dela que se
+cobra na reunião.
+
+A tarefa passa por três situações de prazo, decididas em um só lugar
+(`situacaoDePrazoTarefa`), de onde o cartão, a ordenação da coluna e a faixa
+leem. Com três cálculos separados, um cartão ficaria âmbar enquanto o contador
+o daria como no prazo.
+
+| Situação | Quando | O que aparece |
+| --- | --- | --- |
+| **Vencida** | o prazo passou e a tarefa não foi encerrada | caixa do prazo em vermelho e borda vermelha no cartão |
+| **Vencendo** | vence hoje ou dentro de **7 dias** | caixa do prazo em âmbar e borda âmbar no cartão |
+| **No prazo** | tem prazo, e ele está além da janela | sem destaque |
+
+A janela de sete dias é o ciclo de quem acompanha o quadro uma vez por semana:
+com menos, uma tarefa poderia vencer entre duas conferências sem nunca ter
+aparecido como próxima do prazo. É a constante `JANELA_PRAZO_TAREFA`.
+
+Dentro da coluna, a ordem é **vencida → vencendo → prioridade → prazo mais
+próximo**. O que está a três dias de vencer cobra mais do que uma prioridade
+alta sem data.
+
 **Mover a tarefa tem três caminhos, e os três chamam o mesmo código.** Arrastar
 o cartão para a coluna (com a coluna de destino realçada enquanto o cartão está
 no ar), as **setas de coluna anterior e seguinte** no pé de cada cartão, e os

@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-09-14.4";
+window.SAA_TAREFAS_VERSAO = "2026-09-16.1";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -153,6 +153,17 @@ window.SAA_TAREFAS = [
     "responsavel": "",
     "prazo": "",
     "prioridade": "media",
+    "status": "a-fazer"
+  },
+  {
+    "id": "tarefa-pntp-2026-selo-diamante",
+    "titulo": "Corrigir os itens do PNTP 2026 para manter o Selo Diamante",
+    "descricao": "Avaliação Final do PNTP 2026 (ATRICON), recebida em 15/09/2026 da Equipe da Garantia PNTP. Prazo até 25/09/2026 para correção de itens e critérios essenciais e obrigatórios, necessários à manutenção do Selo Diamante no presente exercício.\n\nDimensão, critérios e itens a corrigir, conforme o arquivo \"Garantia TCM PNTP 2026\" anexo ao e-mail: Receita, Despesa e Contratos (ordem cronológica de pagamentos).\n\nOrigem: e-mail de Sergio Luiz Santana Lordelo, de 15/09/2026, no exercício da atribuição designada pela Portaria TCM nº 02, de 15 de maio de 2025.",
+    "categoria": "governanca",
+    "unidade": "DDES",
+    "responsavel": "Lourival Magalhães Nascimento Neto",
+    "prazo": "2026-09-25",
+    "prioridade": "alta",
     "status": "a-fazer"
   }
 ];

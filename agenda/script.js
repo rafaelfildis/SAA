@@ -6901,8 +6901,34 @@ function rotuloPrazoTarefa(t) {
   return `em ${dias} dias`;
 }
 
+// Janela de aviso: a partir de quantos dias do vencimento a tarefa passa a ser
+// destacada. Sete dias é o ciclo de quem acompanha o quadro uma vez por semana
+// — com menos, uma tarefa poderia vencer entre duas conferências sem nunca ter
+// aparecido como próxima do prazo.
+const JANELA_PRAZO_TAREFA = 7;
+
+// Situação de prazo da tarefa. Um só lugar decide, e o cartão, a ordenação da
+// coluna e o controle de prazos leem daqui: com três cálculos separados, um
+// cartão ficaria âmbar enquanto o contador o daria como no prazo.
+//
+//   "vencida"   o prazo passou e a tarefa não foi encerrada
+//   "vencendo"  vence hoje ou dentro da janela de aviso
+//   "no-prazo"  tem prazo, e ele está além da janela
+//   ""          sem prazo, ou já encerrada — não há o que cobrar
+function situacaoDePrazoTarefa(t) {
+  if (!t || !t.prazo || tarefaEncerrada(t)) return "";
+  const dias = diasEntreChaves(hojeChave(), t.prazo);
+  if (dias < 0) return "vencida";
+  if (dias <= JANELA_PRAZO_TAREFA) return "vencendo";
+  return "no-prazo";
+}
+
 function tarefaAtrasada(t) {
-  return Boolean(t && t.prazo && !tarefaEncerrada(t) && diasEntreChaves(hojeChave(), t.prazo) < 0);
+  return situacaoDePrazoTarefa(t) === "vencida";
+}
+
+function tarefaVencendo(t) {
+  return situacaoDePrazoTarefa(t) === "vencendo";
 }
 
 function tarefaBate(t, busca) {
@@ -6927,12 +6953,16 @@ function tarefasVisiveis() {
     .sort(ordenarTarefas);
 }
 
-// Dentro da coluna: atrasada primeiro, depois por prioridade, depois pelo
-// prazo mais próximo, e o resto pela ordem de criação. Quem olha uma coluna
-// quer ver em cima o que cobra providência.
+// Dentro da coluna: vencida primeiro, vencendo logo atrás, depois por
+// prioridade, depois pelo prazo mais próximo, e o resto pela ordem de criação.
+// Quem olha uma coluna quer ver em cima o que cobra providência — e o que está
+// a três dias de vencer cobra mais do que uma prioridade alta sem data.
+const PESO_PRAZO = { vencida: 0, vencendo: 1, "no-prazo": 2, "": 3 };
+
 function ordenarTarefas(a, b) {
-  const atraso = Number(tarefaAtrasada(b)) - Number(tarefaAtrasada(a));
-  if (atraso) return atraso;
+  const prazoA = PESO_PRAZO[situacaoDePrazoTarefa(a)];
+  const prazoB = PESO_PRAZO[situacaoDePrazoTarefa(b)];
+  if (prazoA !== prazoB && (prazoA < 2 || prazoB < 2)) return prazoA - prazoB;
   const prio =
     (PRIORIDADES[a.prioridade] || PRIORIDADES.media).ordem -
     (PRIORIDADES[b.prioridade] || PRIORIDADES.media).ordem;
@@ -6965,14 +6995,20 @@ function cartaoDeTarefa(t, indiceColuna) {
   const colunas = colunasDeTarefa();
   const anterior = colunas[indiceColuna - 1];
   const seguinte = colunas[indiceColuna + 1];
-  const atrasada = tarefaAtrasada(t);
+  const situacaoPrazo = situacaoDePrazoTarefa(t);
   const prazo = rotuloPrazoTarefa(t);
   const prioridade = PRIORIDADES[t.prioridade] || PRIORIDADES.media;
   const historico = t.historico || [];
   const ultima = historico.length > 1 ? historico[0] : null;
 
   return `
-    <article class="tarefa-card${atrasada ? " tarefa-card--atrasada" : ""}" draggable="true"
+    <article class="tarefa-card${
+      situacaoPrazo === "vencida"
+        ? " tarefa-card--atrasada"
+        : situacaoPrazo === "vencendo"
+        ? " tarefa-card--vencendo"
+        : ""
+    }" draggable="true"
              data-tarefa="${escapeAttr(t.id)}" aria-label="${escapeAttr(t.titulo)}">
       <button class="tarefa-card__corpo" type="button" data-abrir="${escapeAttr(t.id)}">
         <span class="tarefa-card__etiquetas">
@@ -6992,7 +7028,9 @@ function cartaoDeTarefa(t, indiceColuna) {
         }
         ${
           prazo
-            ? `<span class="tarefa-card__prazo${atrasada ? " tarefa-card__prazo--alerta" : ""}">${escapeHtml(prazo)}</span>`
+            ? `<span class="tarefa-card__prazo${
+                situacaoPrazo ? ` tarefa-card__prazo--${situacaoPrazo}` : ""
+              }">${escapeHtml(prazo)}</span>`
             : ""
         }
         ${ultima && ultima.nota ? `<span class="tarefa-card__nota">${escapeHtml(ultima.nota.slice(0, 90))}</span>` : ""}
@@ -7054,9 +7092,55 @@ function renderizarQuadro() {
   }
 
   renderizarSubtituloTarefas();
+  renderizarControleDePrazos();
   renderizarFiltrosDeCategoria();
   ligarArrastarTarefas();
   atualizarBadgeTarefas();
+}
+
+/* Controle de prazos: o quadro é organizado por ETAPA — a fazer, em andamento,
+   em revisão —, e por isso não responde sozinho "o que vence primeiro". Uma
+   tarefa a dois dias do prazo fica na mesma coluna de outra sem data nenhuma.
+   Esta faixa lê o quadro pelo outro eixo, o do tempo, e nomeia a mais próxima:
+   é dela que se cobra na reunião de segunda. */
+function renderizarControleDePrazos() {
+  const bloco = document.getElementById("tarefas-prazos");
+  if (!bloco) return;
+
+  // O controle fala das tarefas em aberto: prazo de tarefa concluída é
+  // histórico, e contá-lo como pendência criaria cobrança sobre o que já foi
+  // entregue.
+  const abertas = (state.tarefas || []).filter((t) => !tarefaEncerrada(t));
+  const comPrazo = abertas.filter((t) => t.prazo);
+  bloco.hidden = state.modulo !== "tarefas" || !comPrazo.length;
+  if (bloco.hidden) return;
+
+  const estados = [
+    { id: "vencida", rotulo: "vencida", rotuloPlural: "vencidas" },
+    { id: "vencendo", rotulo: `vence em até ${JANELA_PRAZO_TAREFA} dias`, rotuloPlural: `vencem em até ${JANELA_PRAZO_TAREFA} dias` },
+    { id: "no-prazo", rotulo: "no prazo", rotuloPlural: "no prazo" },
+  ];
+
+  document.getElementById("tarefas-prazos-estados").innerHTML = estados
+    .map((e) => {
+      const quantas = comPrazo.filter((t) => situacaoDePrazoTarefa(t) === e.id).length;
+      return `
+      <span class="prazo-estado prazo-estado--${e.id}${quantas ? "" : " prazo-estado--zerado"}">
+        <span class="prazo-estado__conta">${quantas}</span>
+        <span class="prazo-estado__rotulo">${escapeHtml(quantas === 1 ? e.rotulo : e.rotuloPlural)}</span>
+      </span>`;
+    })
+    .join("");
+
+  // A mais próxima do vencimento, que é a pergunta que se faz primeiro.
+  const proxima = [...comPrazo].sort((a, b) => a.prazo.localeCompare(b.prazo))[0];
+  const alvo = document.getElementById("tarefas-prazos-proxima");
+  const situacao = situacaoDePrazoTarefa(proxima);
+  alvo.className = `prazos-controle__proxima prazos-controle__proxima--${situacao}`;
+  alvo.innerHTML =
+    `<strong>${escapeHtml(rotuloPrazoTarefa(proxima))}</strong> · ${escapeHtml(proxima.titulo)}` +
+    (proxima.responsavel ? ` — ${escapeHtml(proxima.responsavel)}` : " — sem responsável") +
+    ` <span class="prazos-controle__data">${escapeHtml(dataCurtaDaChave(proxima.prazo))}</span>`;
 }
 
 function renderizarSubtituloTarefas() {
@@ -7070,10 +7154,12 @@ function renderizarSubtituloTarefas() {
     sub.textContent = "O quadro começa vazio: cada tarefa entra com categoria, responsável, prazo e status.";
     return;
   }
+  const vencendo = tarefas.filter(tarefaVencendo).length;
   sub.textContent =
     `${plural(tarefas.length, "tarefa", "tarefas")} · ${abertas} em aberto e ` +
     `${tarefas.length - abertas} concluída${tarefas.length - abertas === 1 ? "" : "s"}` +
-    (atrasadas ? ` · ${plural(atrasadas, "atrasada", "atrasadas")}` : "");
+    (atrasadas ? ` · ${plural(atrasadas, "atrasada", "atrasadas")}` : "") +
+    (vencendo ? ` · ${vencendo} vencendo em até ${JANELA_PRAZO_TAREFA} dias` : "");
 }
 
 function renderizarFiltrosDeCategoria() {
