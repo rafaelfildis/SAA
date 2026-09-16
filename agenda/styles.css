@@ -3946,3 +3946,30 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 /* Tarefa entrando na janela de aviso: a mesma borda lateral da vencida, em
    âmbar, para a coluna continuar sendo lida de cima para baixo por urgência. */
 .tarefa-card--vencendo { border-left-color: var(--color-warning); }
+
+/* Prazo lançado do próprio painel: é o campo que mais muda depois que a tarefa
+   nasce, e obrigar a abrir o formulário inteiro para trocar uma data fazia com
+   que a data não fosse trocada. */
+.tarefa-prazo-acao__campos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.tarefa-prazo-acao .input--data { width: auto; min-width: 150px; }
+.btn--compacto { padding: 7px 13px; font-size: 0.8rem; }
+/* Empurrado para a borda direita da linha: coladinho no botão "Sem prazo" o
+   texto de situação parecia legenda do botão, e não estado do prazo salvo. */
+.tarefa-prazo-acao__situacao {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+.tarefa-prazo-acao__situacao--vencida { color: var(--color-error-strong); }
+.tarefa-prazo-acao__situacao--vencendo { color: var(--color-warning); }
+.tarefa-prazo-acao__situacao--no-prazo { color: var(--color-success); }
+
+/* Com três botões, a linha de ações do painel passa a caber em duas alturas no
+   painel estreito em vez de espremer os rótulos. */
+.proj-status-form__acoes { flex-wrap: wrap; }

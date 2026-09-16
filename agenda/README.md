@@ -599,6 +599,29 @@ mudou sem mexer no status. A nota do último lançamento aparece no cartão — 
 só depois do primeiro andamento, porque a nota de lançamento repetida em todo
 cartão diria apenas o que a coluna já diz.
 
+**Prazo lançado do próprio painel.** O prazo é o campo que mais muda depois que
+a tarefa nasce — prorroga, antecipa, chega quando não havia — e abrir o
+formulário inteiro para trocar uma data fazia com que a data não fosse trocada.
+O painel traz o campo com o prazo gravado, o botão **Lançar prazo**, o
+**Sem prazo** para removê-lo, e ao lado, em palavras, a mesma situação que a cor
+do cartão indica no quadro ("vence hoje", "em 4 dias", "venceu há 3 dias").
+Enter no campo também lança.
+
+**Mudar prazo é lançar**, no sentido que o módulo já dá à palavra: a alteração
+entra no histórico com a data anterior — "Prazo alterado de 20/09/2026 para
+25/09/2026", "Prazo removido (era 20/09/2026)". Prazo que muda sem deixar rastro
+é prazo que ninguém consegue cobrar depois.
+
+**A tarefa em imagem.** O botão **Baixar imagem** no painel gera um JPEG de uma
+tarefa só, pelo mesmo caminho das demais extrações do sistema — folha montada em
+HTML no tamanho real (840 px), rasterizada pelo `html2canvas`. A folha leva o
+cabeçalho institucional, as etiquetas de categoria, unidade e prioridade alta, o
+título, a descrição como foi escrita, o quadro de status, responsável,
+prioridade e unidade, a **caixa do prazo na cor da situação** e os seis últimos
+lançamentos do histórico (com a contagem do que ficou de fora). Serve para o que
+a tela não faz: mandar a tarefa por mensagem a quem não abre o painel. O arquivo
+sai como `tarefa-<título>-<data>.jpg`.
+
 **Filtro por categoria** na barra lateral, com a contagem de cada uma e a opção
 de mostrar todas; e a busca do módulo alcança título, descrição, responsável,
 categoria e unidade. As duas se combinam, e o vazio explica qual das duas

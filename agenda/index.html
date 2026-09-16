@@ -1247,6 +1247,16 @@
       <div class="chip-group" id="tarefa-mover-chips" role="group" aria-labelledby="label-tarefa-mover"></div>
     </div>
 
+    <div class="proj-acoes tarefa-prazo-acao">
+      <label class="filters__label" for="tarefa-prazo-rapido">Prazo</label>
+      <div class="tarefa-prazo-acao__campos">
+        <input id="tarefa-prazo-rapido" class="input input--data" type="date" />
+        <button id="btn-salvar-prazo-tarefa" class="btn btn--secondary btn--compacto" type="button">Lançar prazo</button>
+        <button id="btn-limpar-prazo-tarefa" class="link-button" type="button">Sem prazo</button>
+        <span class="tarefa-prazo-acao__situacao" id="tarefa-prazo-situacao"></span>
+      </div>
+    </div>
+
     <form id="tarefa-status-form" class="proj-status-form" novalidate>
       <span class="filters__label">Lançar andamento</span>
       <label class="campo">
@@ -1254,6 +1264,10 @@
         <textarea id="tarefa-status-nota" class="input input--area" rows="2" maxlength="400" placeholder="Ex.: aditivo instruído, aguardando parecer jurídico"></textarea>
       </label>
       <div class="proj-status-form__acoes">
+        <button id="btn-imagem-tarefa" class="btn btn--ghost" type="button" title="Baixar imagem" aria-label="Baixar imagem">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          <span class="btn__label">Baixar imagem</span>
+        </button>
         <button id="btn-editar-tarefa" class="btn btn--ghost" type="button">Editar tarefa</button>
         <button id="btn-lancar-tarefa" class="btn btn--primary" type="button">Lançar no histórico</button>
       </div>

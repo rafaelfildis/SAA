@@ -7349,6 +7349,256 @@ function renderizarPainelDeTarefa() {
     )
     .join("");
   document.getElementById("tarefa-status-nota").value = "";
+
+  // Campo de prazo do painel: chega preenchido com o que está gravado, e a
+  // situação ao lado repete em palavras o que a cor do cartão diz no quadro.
+  const campoPrazo = document.getElementById("tarefa-prazo-rapido");
+  if (campoPrazo) campoPrazo.value = t.prazo || "";
+  const situacao = document.getElementById("tarefa-prazo-situacao");
+  if (situacao) {
+    const estado = situacaoDePrazoTarefa(t);
+    situacao.textContent = t.prazo ? rotuloPrazoTarefa(t) : "sem prazo definido";
+    situacao.className = `tarefa-prazo-acao__situacao${
+      estado ? ` tarefa-prazo-acao__situacao--${estado}` : ""
+    }`;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Prazo lançado pelo painel, e a tarefa em imagem
+   --------------------------------------------------------------------------
+   Duas coisas que o painel da tarefa não fazia e passa a fazer.
+
+   O PRAZO deixa de exigir a volta ao formulário de edição. Ele é o campo que
+   mais muda depois que a tarefa nasce — prorroga, antecipa, chega quando não
+   havia — e obrigar a abrir o formulário inteiro para trocar uma data fazia
+   com que a data simplesmente não fosse trocada.
+
+   E mudar prazo é LANÇAR, no sentido que o módulo já dá à palavra: a alteração
+   entra no histórico junto com a data anterior. Prazo que muda sem deixar
+   rastro é prazo que ninguém consegue cobrar depois.
+
+   A IMAGEM sai da mesma tarefa, pelo mesmo caminho das demais extrações do
+   sistema: folha montada em HTML no tamanho real, rasterizada pelo
+   html2canvas e entregue como JPEG. Serve para o que a tela não faz — mandar
+   a tarefa por mensagem a quem não abre o painel.
+   -------------------------------------------------------------------------- */
+
+// Nota do lançamento de prazo. Diz o que mudou e de onde veio, porque
+// "prazo alterado" sozinho obrigaria a procurar a data antiga em outro lugar.
+function notaDeMudancaDePrazo(antes, depois) {
+  if (!antes && depois) return `Prazo definido para ${dataPlenaDaChave(depois)}.`;
+  if (antes && !depois) return `Prazo removido (era ${dataPlenaDaChave(antes)}).`;
+  return `Prazo alterado de ${dataPlenaDaChave(antes)} para ${dataPlenaDaChave(depois)}.`;
+}
+
+function salvarPrazoDaTarefa() {
+  const t = tarefaPorId(state.tarefaAberta);
+  if (!t) return;
+  const campo = document.getElementById("tarefa-prazo-rapido");
+  const novo = (campo.value || "").trim();
+  const antes = t.prazo || "";
+  if (novo === antes) return;
+
+  const agora = new Date().toISOString();
+  t.prazo = novo;
+  t.atualizadoEm = agora;
+  t.historico = [
+    { em: agora, status: t.status, nota: notaDeMudancaDePrazo(antes, novo) },
+    ...(t.historico || []),
+  ];
+  if (!gravarTarefas(state.tarefas)) return;
+  renderizarQuadro();
+  renderizarPainelDeTarefa();
+}
+
+/* ---------------------------------------------------- Tarefa em imagem */
+
+// Cores do estado de prazo na folha, espelhando o que a tela usa. A folha não
+// tem tema escuro, então vale o passo claro.
+const EXP_PRAZO = {
+  vencida: { tinta: "#B00320", fundo: "#FDECEF", borda: "#F6C4CE" },
+  vencendo: { tinta: "#A65A05", fundo: "#FDF1E3", borda: "#F0DCBE" },
+  "no-prazo": { tinta: "#0F7B5F", fundo: "#E7F4F0", borda: "#C4E3D9" },
+};
+
+function construirCartaoDeTarefa(t) {
+  const cat = categoriaPorId(t.categoria);
+  const coluna = colunaPorId(t.status);
+  const prioridade = PRIORIDADES[t.prioridade] || PRIORIDADES.media;
+  const situacao = situacaoDePrazoTarefa(t);
+  const cores = EXP_PRAZO[situacao] || { tinta: EXP.texto2, fundo: EXP.painel, borda: EXP.borda };
+  const historico = t.historico || [];
+
+  const etiqueta = (texto, tinta, fundo, borda) => `
+    <span style="display:inline-block;padding:3px 10px;border:1px solid ${borda};border-radius:999px;background:${fundo};
+                 font:600 10px/1.3 'IBM Plex Sans',sans-serif;color:${tinta}">${escapeHtml(texto)}</span>`;
+
+  const campo = (rotulo, valor) =>
+    valor
+      ? `<div style="flex:1 1 200px;min-width:0">
+           <div style="font:700 8.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${EXP.texto3};margin-bottom:4px">${escapeHtml(
+             rotulo
+           )}</div>
+           <div style="font:400 12px/1.45 'IBM Plex Sans',sans-serif;color:${EXP.tinta};text-wrap:pretty">${escapeHtml(
+             valor
+           )}</div>
+         </div>`
+      : "";
+
+  const paper = document.createElement("div");
+  paper.className = "export-paper";
+  paper.style.cssText =
+    "width:840px;background:#fff;padding:36px 40px 30px;display:flex;flex-direction:column;" +
+    "font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";box-sizing:border-box;";
+
+  paper.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
+      <div style="display:flex;align-items:center;gap:12px">
+        ${marcaImg("tcm-lockup.png", 36, "Tribunal de Contas dos Municípios do Estado da Bahia")}
+        ${marcaImg("tcm-55.png", 36, "55 anos de serviços prestados à sociedade")}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;text-align:right">
+        <span style="font:700 11.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">QUADRO DE TAREFAS</span>
+        <span style="font:400 10.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Diretoria de Tecnologia da Informação</span>
+      </div>
+    </div>
+
+    <div style="display:flex;margin:12px 0 18px">
+      <span style="width:52px;height:3px;background:${EXP.vermelho}"></span>
+      <span style="flex:1;height:3px;background:${EXP.navy}"></span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      ${cat ? etiqueta(cat.rotulo, EXP.navy, EXP.painel, EXP.borda) : ""}
+      ${
+        t.unidade && UNIDADES_DTI[t.unidade]
+          ? etiqueta(t.unidade, EXP.link, "#EAF0F9", "#CBDAEE")
+          : ""
+      }
+      ${t.prioridade === "alta" ? etiqueta("Prioridade alta", "#B00320", "#FDECEF", "#F6C4CE") : ""}
+    </div>
+
+    <div style="font:700 23px/1.25 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.01em;margin-bottom:${
+      t.descricao ? "10px" : "18px"
+    };text-wrap:pretty">${escapeHtml(t.titulo)}</div>
+
+    ${
+      t.descricao
+        ? `<div style="font:400 12.5px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto2};white-space:pre-line;margin-bottom:18px;text-wrap:pretty">${escapeHtml(
+            t.descricao
+          )}</div>`
+        : ""
+    }
+
+    <div style="display:flex;align-items:stretch;gap:14px;margin-bottom:16px">
+      <div style="flex:1 1 auto;display:flex;flex-wrap:wrap;gap:14px 18px;padding:14px 16px;border:1px solid ${
+        EXP.borda
+      };border-radius:8px">
+        ${campo("Status", coluna ? coluna.rotulo : "")}
+        ${campo("Responsável", t.responsavel || "sem responsável")}
+        ${campo("Prioridade", prioridade.rotulo)}
+        ${campo(
+          "Unidade",
+          t.unidade && UNIDADES_DTI[t.unidade] ? `${t.unidade} — ${UNIDADES_DTI[t.unidade].nome}` : "—"
+        )}
+      </div>
+      <div style="flex:0 0 190px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:14px 16px;
+                  border:1px solid ${cores.borda};background:${cores.fundo};border-radius:8px;text-align:center">
+        <div style="font:700 8.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${cores.tinta}">PRAZO</div>
+        <div style="font:700 17px/1.2 'IBM Plex Mono',monospace;color:${cores.tinta}">${escapeHtml(
+          t.prazo ? dataCurtaDaChave(t.prazo) : "—"
+        )}</div>
+        <div style="font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:${cores.tinta}">${escapeHtml(
+          t.prazo ? rotuloPrazoTarefa(t) : "sem prazo definido"
+        )}</div>
+      </div>
+    </div>
+
+    ${
+      historico.length
+        ? `<div>
+             <div style="font:700 8.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${
+               EXP.texto3
+             };padding-bottom:8px;border-bottom:1px solid ${EXP.borda};margin-bottom:10px">HISTÓRICO</div>
+             ${historico
+               .slice(0, 6)
+               .map((h) => {
+                 const col = colunaPorId(h.status);
+                 return `
+               <div style="display:flex;gap:12px;padding:5px 0;border-bottom:1px solid ${EXP.bordaSuave}">
+                 <span style="flex:0 0 130px;font:400 10px/1.5 'IBM Plex Mono',monospace;color:${
+                   EXP.texto3
+                 }">${escapeHtml(formatarCarimbo(h.em))}</span>
+                 <span style="flex:0 0 96px;font:600 10.5px/1.5 'IBM Plex Sans',sans-serif;color:${
+                   EXP.textoForte
+                 }">${escapeHtml(col ? col.rotulo : "")}</span>
+                 <span style="flex:1 1 auto;min-width:0;font:400 11px/1.5 'IBM Plex Sans',sans-serif;color:${
+                   EXP.texto2
+                 };text-wrap:pretty">${escapeHtml(h.nota || "")}</span>
+               </div>`;
+               })
+               .join("")}
+             ${
+               historico.length > 6
+                 ? `<div style="margin-top:7px;font:400 10px/1.4 'IBM Plex Sans',sans-serif;color:${EXP.texto3}">e mais ${
+                     historico.length - 6
+                   } lançamento${historico.length - 6 === 1 ? "" : "s"} no sistema.</div>`
+                 : ""
+             }
+           </div>`
+        : `<div style="font:400 11px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto3}">Nenhum lançamento no histórico.</div>`
+    }
+
+    <div style="margin-top:18px;padding-top:12px;border-top:1px solid ${
+      EXP.borda
+    };display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+      <div style="font:400 10px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:520px;text-wrap:pretty">
+        Extraído do quadro de tarefas da DTI. O andamento corrente é o do sistema no momento da extração.
+      </div>
+      <div style="font:400 10px/1.5 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
+        TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
+      </div>
+    </div>
+  `;
+  return paper;
+}
+
+async function exportarTarefaImagem(t) {
+  if (!window.html2canvas) throw new Error("Biblioteca de captura indisponível.");
+  await precarregarMarcas();
+  const paper = construirCartaoDeTarefa(t);
+  const canvas = await renderizarCanvasElemento(paper, 2);
+
+  const apelido =
+    normalizarTexto(t.titulo)
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) || "tarefa";
+  const link = document.createElement("a");
+  link.download = `tarefa-${apelido}-${new Date().toISOString().slice(0, 10)}.jpg`;
+  link.href = canvas.toDataURL("image/jpeg", 0.95);
+  link.click();
+}
+
+async function baixarImagemDaTarefa(btn) {
+  const t = tarefaPorId(state.tarefaAberta);
+  if (!t) return;
+  // O rótulo deste botão mora num <span> ao lado do ícone: trocar o texto do
+  // botão inteiro apagaria o ícone, que não voltaria ao fim da exportação.
+  const alvo = btn.querySelector(".btn__label") || btn;
+  const textoOriginal = alvo.textContent;
+  btn.disabled = true;
+  alvo.textContent = "Gerando imagem…";
+  try {
+    await exportarTarefaImagem(t);
+  } catch (erro) {
+    console.error("Erro ao gerar a imagem da tarefa:", erro);
+    window.alert("Não foi possível gerar a imagem: " + erro.message);
+  } finally {
+    btn.disabled = false;
+    alvo.textContent = textoOriginal;
+  }
 }
 
 function lancarAndamentoDeTarefa() {
@@ -7617,6 +7867,23 @@ function inicializarModuloTarefas() {
   document
     .getElementById("btn-editar-tarefa")
     .addEventListener("click", () => abrirFormTarefa(state.tarefaAberta));
+  document
+    .getElementById("btn-imagem-tarefa")
+    .addEventListener("click", (ev) => baixarImagemDaTarefa(ev.currentTarget));
+  document.getElementById("btn-salvar-prazo-tarefa").addEventListener("click", salvarPrazoDaTarefa);
+  // "Sem prazo" limpa o campo e lança a remoção, em vez de só apagar a data em
+  // tela: um campo limpo que não foi salvo parece prazo removido e não é.
+  document.getElementById("btn-limpar-prazo-tarefa").addEventListener("click", () => {
+    document.getElementById("tarefa-prazo-rapido").value = "";
+    salvarPrazoDaTarefa();
+  });
+  // Enter no campo de data lança o prazo, como o Enter do título salva a tarefa.
+  document.getElementById("tarefa-prazo-rapido").addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      salvarPrazoDaTarefa();
+    }
+  });
 
   // Enter no campo do título salva: em um formulário de uma linha só, exigir
   // o clique no botão é atrito sem motivo.
