@@ -3896,7 +3896,7 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 .prazo-estado__conta { font-family: var(--fonte-mono, "IBM Plex Mono", monospace); font-weight: 700; }
 .prazo-estado--vencida { border-color: var(--st-cancelado-borda); background: var(--color-error-tint); color: var(--color-error-strong); }
 .prazo-estado--vencendo { border-color: var(--cat-viagem-borda); background: var(--color-warning-tint); color: var(--color-warning); }
-.prazo-estado--no-prazo { border-color: var(--cat-escola-borda); background: var(--color-success-tint); color: var(--color-success); }
+.prazo-estado--no-prazo { border-color: var(--cat-presencial-borda); background: var(--color-secondary-tint); color: var(--color-secondary); }
 /* Estado sem nenhuma tarefa continua na faixa, apagado: sumir com o "vencidas"
    quando não há nenhuma tiraria justamente a confirmação de que não há. */
 .prazo-estado--zerado {
@@ -3923,15 +3923,26 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   color: var(--color-text-tertiary);
 }
 
-/* A caixa do prazo no cartão: deixa de ser texto colorido e vira etiqueta com
-   fundo quando há o que cobrar. É o destaque que se enxerga varrendo a coluna
-   com os olhos, sem ler cada cartão. */
-.tarefa-card__prazo--vencida,
-.tarefa-card__prazo--vencendo {
+/* A caixa do prazo no cartão é sempre etiqueta, nunca texto solto: o prazo é o
+   único dado do cartão que muda de sentido com o tempo, e em texto corrido ele
+   se perdia entre o responsável e a última nota. A cor diz o que fazer — azul
+   enquanto há folga, âmbar dentro da janela de aviso, vermelho vencido — e a
+   coluna passa a ser varrida com os olhos, sem ler cartão por cartão.
+
+   Tarefa encerrada não entra em nenhum dos três: o prazo dela virou histórico,
+   e uma etiqueta azul diria que ainda há algo correndo. Fica a data em texto. */
+.tarefa-card__prazo--no-prazo,
+.tarefa-card__prazo--vencendo,
+.tarefa-card__prazo--vencida {
   align-self: flex-start;
   padding: 2px 8px;
   border: 1px solid;
   border-radius: 999px;
+}
+.tarefa-card__prazo--no-prazo {
+  border-color: var(--cat-presencial-borda);
+  background: var(--color-secondary-tint);
+  color: var(--color-secondary);
 }
 .tarefa-card__prazo--vencida {
   border-color: var(--st-cancelado-borda);
@@ -3968,7 +3979,7 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 }
 .tarefa-prazo-acao__situacao--vencida { color: var(--color-error-strong); }
 .tarefa-prazo-acao__situacao--vencendo { color: var(--color-warning); }
-.tarefa-prazo-acao__situacao--no-prazo { color: var(--color-success); }
+.tarefa-prazo-acao__situacao--no-prazo { color: var(--color-secondary); }
 
 /* Com três botões, a linha de ações do painel passa a caber em duas alturas no
    painel estreito em vez de espremer os rótulos. */

@@ -7419,7 +7419,7 @@ function salvarPrazoDaTarefa() {
 const EXP_PRAZO = {
   vencida: { tinta: "#B00320", fundo: "#FDECEF", borda: "#F6C4CE" },
   vencendo: { tinta: "#A65A05", fundo: "#FDF1E3", borda: "#F0DCBE" },
-  "no-prazo": { tinta: "#0F7B5F", fundo: "#E7F4F0", borda: "#C4E3D9" },
+  "no-prazo": { tinta: "#14448A", fundo: "#EAF0F9", borda: "#CBDAEE" },
 };
 
 function construirCartaoDeTarefa(t) {

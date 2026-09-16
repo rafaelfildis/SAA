@@ -567,9 +567,18 @@ o daria como no prazo.
 
 | Situação | Quando | O que aparece |
 | --- | --- | --- |
-| **Vencida** | o prazo passou e a tarefa não foi encerrada | caixa do prazo em vermelho e borda vermelha no cartão |
-| **Vencendo** | vence hoje ou dentro de **7 dias** | caixa do prazo em âmbar e borda âmbar no cartão |
-| **No prazo** | tem prazo, e ele está além da janela | sem destaque |
+| **Vencida** | o prazo passou e a tarefa não foi encerrada | etiqueta vermelha e borda vermelha no cartão |
+| **Vencendo** | vence hoje ou dentro de **7 dias** | etiqueta âmbar e borda âmbar no cartão |
+| **No prazo** | tem prazo, e ele está além da janela | etiqueta azul |
+
+**O prazo no cartão é sempre etiqueta, nunca texto solto.** É o único dado do
+cartão que muda de sentido com o tempo, e em texto corrido ele se perdia entre
+o responsável e a última nota. A cor diz o que fazer — **azul** enquanto há
+folga, **âmbar** dentro da janela de aviso, **vermelho** vencido — e a mesma
+escala vale na faixa de controle, na situação do painel e na folha de
+extração, de modo que a cor significa o mesmo em qualquer lugar do módulo.
+Tarefa **encerrada** não recebe etiqueta: fica a data em texto, porque o prazo
+dela virou histórico e uma etiqueta azul diria que ainda há algo correndo.
 
 A janela de sete dias é o ciclo de quem acompanha o quadro uma vez por semana:
 com menos, uma tarefa poderia vencer entre duas conferências sem nunca ter
@@ -588,7 +597,7 @@ extra — são o caminho principal em metade dos usos.
 
 **Dentro da coluna, a ordem é a da cobrança:** atrasada primeiro, depois por
 prioridade, depois pelo prazo mais próximo, e o resto pela ordem de lançamento.
-Tarefa com prazo vencido ganha **borda vermelha** e o prazo em vermelho no
+Tarefa com prazo vencido ganha **borda vermelha** e a etiqueta vermelha no
 cartão ("venceu há 3 dias"), e o cabeçalho da coluna diz quantas estão
 atrasadas. Concluída não recebe marca de atraso: o prazo dela já passou a ser
 histórico.
