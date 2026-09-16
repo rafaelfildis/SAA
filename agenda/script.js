@@ -7627,8 +7627,14 @@ function composicaoPorVinculo(pessoas) {
 
 // Célula com uma pessoa só não é detalhe de layout: é a equipe inteira de um
 // sistema dependendo de uma agenda. A tela marca, o gestor decide.
+//
+// A conta é sempre a da célula inteira, nunca a do que sobrou do filtro: uma
+// busca por "QA" deixa o FAROL com uma linha, e marcá-lo como célula de uma
+// pessoa diria do FAROL o contrário do que é verdade.
 function celulaEhPontoUnico(celula) {
-  return pessoasDaCelula(celula).length === 1;
+  const total =
+    typeof celula.totalNoQuadro === "number" ? celula.totalNoQuadro : pessoasDaCelula(celula).length;
+  return total === 1;
 }
 
 function celulasFiltradas() {
@@ -7649,6 +7655,8 @@ function celulasFiltradas() {
         bate(p.nome) || bate(p.funcao) || bate(p.perfil) || bate(p.vinculo) || bate(p.orgao);
       return {
         ...celula,
+        // Tamanho real da célula, para o que não pode depender do filtro.
+        totalNoQuadro: pessoasDaCelula(celula).length,
         pessoas: pessoasDaCelula(celula).filter(filtra),
         estagiarios: (celula.estagiarios || []).filter(filtra),
       };
@@ -7873,6 +7881,403 @@ function renderizarPortalEquipes() {
   );
 }
 
+/* --------------------------------------------------------------------------
+   Exportação da alocação em PDF e JPEG
+   --------------------------------------------------------------------------
+   Mesmo caminho dos demais módulos: a folha é montada em HTML no tamanho real
+   do artefato, rasterizada pelo html2canvas e entregue como JPEG ou paginada
+   em PDF pelo jsPDF. Um só ponto de construção, então os dois formatos não
+   divergem entre si nem do que está em tela.
+
+   A folha é A4 PAISAGEM. Nomes de servidor são longos — "Lourival Magalhães
+   Nascimento Neto", com função e perfil na mesma linha — e em retrato cada
+   pessoa quebraria em duas linhas, dobrando a altura da lista.
+
+   As três colunas são montadas AQUI, distribuindo as células uma a uma na
+   coluna mais curta. Na tela quem faz isso é o CSS multicoluna, que o
+   html2canvas rasteriza de forma imprevisível: a mesma folha sairia com a
+   última caixa cortada em uma captura e inteira na seguinte.
+   -------------------------------------------------------------------------- */
+
+// Cor por vínculo na folha. É a mesma trinca validada da tela em tema claro —
+// o papel não tem tema escuro, e um segundo conjunto de cores só para o PDF
+// divergiria do primeiro na próxima mudança.
+const EXP_VINCULO = {
+  Terceirizado: "#2C63B0",
+  Efetivo: "#0F7B5F",
+  Comissionado: "#A65A05",
+  Cedido: "#5B3FB0",
+};
+
+// Altura estimada da caixa, para distribuir as colunas antes de medir. Não
+// precisa ser exata: erra alguns pixels e as colunas ficam quase iguais, que é
+// o suficiente para a folha não terminar com uma coluna vazia.
+function alturaEstimadaDaCaixa(celula) {
+  const linhas = pessoasDaCelula(celula).length + (celula.estagiarios || []).length;
+  return 78 + linhas * 17 + ((celula.sistemas || []).length > 1 ? 14 : 0);
+}
+
+function distribuirEmColunas(celulas, quantas) {
+  const colunas = Array.from({ length: quantas }, () => ({ itens: [], altura: 0 }));
+  for (const celula of celulas) {
+    const menor = colunas.reduce((a, b) => (b.altura < a.altura ? b : a));
+    menor.itens.push(celula);
+    menor.altura += alturaEstimadaDaCaixa(celula);
+  }
+  return colunas.map((c) => c.itens);
+}
+
+function linhaPessoaDaCelulaExport(pessoa, estagiario) {
+  const direita = [pessoa.perfil, pessoa.orgao ? `${pessoa.vinculo} · ${pessoa.orgao}` : pessoa.vinculo]
+    .filter(Boolean)
+    .join(" · ");
+  return `
+    <div style="display:flex;align-items:baseline;gap:8px;padding:2px 0;border-bottom:1px solid ${EXP.bordaSuave}">
+      <span style="flex:1 1 auto;min-width:0;font:400 8.5px/1.35 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">
+        <span style="font-weight:${pessoa.lider ? 600 : 400};font-size:9.5px;color:${
+          pessoa.lider ? EXP.navy : EXP.tinta
+        }">${escapeHtml(pessoa.nome)}</span>${
+          pessoa.lider
+            ? ` <span style="font:700 7px/1 'IBM Plex Sans',sans-serif;letter-spacing:.08em;color:${EXP.link}">LÍDER</span>`
+            : ""
+        }${estagiario ? ` <span style="color:${EXP.texto3}">estagiário</span>` : ""}${
+          pessoa.funcao ? `  ${escapeHtml(pessoa.funcao)}` : ""
+        }
+      </span>
+      <span style="flex:0 0 auto;font:400 7.5px/1.35 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right">${escapeHtml(
+        direita
+      )}</span>
+    </div>`;
+}
+
+function caixaDeCelulaExport(celula) {
+  const pessoas = pessoasDaCelula(celula);
+  const estagiarios = celula.estagiarios || [];
+  const outros = (celula.sistemas || []).filter(
+    (s) => normalizarTexto(s) !== normalizarTexto(celula.nome)
+  );
+  const composicao = composicaoPorVinculo(pessoas);
+  const total = pessoas.length || 1;
+
+  const faixas = composicao
+    .map(
+      (c) =>
+        `<span style="width:${(c.total / total) * 100}%;background:${
+          EXP_VINCULO[c.vinculo] || EXP.texto3
+        };height:100%;display:block"></span>`
+    )
+    .join('<span style="width:2px;flex:0 0 2px;background:#fff;height:100%;display:block"></span>');
+
+  const rotulos = composicao
+    .map(
+      (c) =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;font:400 8px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">
+           <span style="width:6px;height:6px;border-radius:50%;background:${EXP_VINCULO[c.vinculo] || EXP.texto3};display:block"></span>
+           ${c.total} ${escapeHtml(c.vinculo.toLowerCase())}${c.total > 1 ? "s" : ""}
+         </span>`
+    )
+    .join("");
+
+  return `
+    <div data-caixa style="border:1px solid ${EXP.borda};border-radius:7px;overflow:hidden;margin-bottom:10px;${
+      celulaEhPontoUnico(celula) ? `border-left:3px solid ${EXP.vermelho};` : ""
+    }">
+      <div style="background:${EXP.painel};padding:7px 10px 6px;border-bottom:1px solid ${EXP.borda}">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+          <span style="font:700 11px/1.2 'IBM Plex Sans',sans-serif;color:${EXP.navy}">${escapeHtml(celula.nome)}</span>
+          <span style="flex:0 0 auto;font:600 8.5px/1 'IBM Plex Mono',monospace;color:${EXP.texto2}">${
+            pessoas.length
+          }${estagiarios.length ? `+${estagiarios.length}` : ""}</span>
+        </div>
+        ${
+          outros.length
+            ? `<div style="margin-top:3px;font:400 8px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.texto3}">${escapeHtml(
+                outros.join(" · ")
+              )}</div>`
+            : ""
+        }
+      </div>
+      <div style="padding:7px 10px 8px">
+        <div style="display:flex;height:5px;border-radius:999px;overflow:hidden;margin-bottom:5px">${faixas}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:2px 10px;margin-bottom:5px">${rotulos}</div>
+        ${pessoas.map((p) => linhaPessoaDaCelulaExport(p, false)).join("")}
+        ${estagiarios.map((p) => linhaPessoaDaCelulaExport(p, true)).join("")}
+      </div>
+    </div>`;
+}
+
+function construirExtratoEquipes() {
+  const d = dadosDeEquipes();
+  if (!d) return null;
+
+  // A folha sai do que está em tela, filtro incluído. E quando há filtro, ela
+  // diz — um documento filtrado que se apresenta como quadro completo é pior
+  // do que documento nenhum.
+  const celulas = celulasFiltradas();
+  const termo = (state.filtroEquipes || "").trim();
+  const pessoas = celulas.flatMap(pessoasDaCelula);
+  const estagiarios = celulas.reduce((a, c) => a + (c.estagiarios || []).length, 0);
+  const terceirizados = pessoas.filter((p) => p.vinculo === "Terceirizado").length;
+  const devs = pessoas.filter((p) => p.funcao === "Desenvolvedor").length;
+  const maior = celulas.reduce((m, c) => Math.max(m, pessoasDaCelula(c).length), 0) || 1;
+
+  const indicador = (valor, rotulo, nota) => `
+    <div style="flex:1 1 0;border:1px solid ${EXP.borda};border-radius:7px;padding:8px 11px">
+      <div style="font:700 19px/1.05 'IBM Plex Mono',monospace;color:${EXP.navy}">${escapeHtml(String(valor))}</div>
+      <div style="font:600 9px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.tinta};margin-top:2px">${escapeHtml(rotulo)}</div>
+      <div style="font:400 8px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.texto3}">${escapeHtml(nota)}</div>
+    </div>`;
+
+  // Barras em duas colunas de quatro: oito barras empilhadas empurrariam as
+  // caixas para uma segunda página sem necessidade.
+  const barra = (celula) => {
+    const n = pessoasDaCelula(celula).length;
+    const extra = (celula.estagiarios || []).length;
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:1.5px 0">
+        <span style="flex:0 0 92px;font:400 8.5px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.tinta};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(
+          celula.nome
+        )}</span>
+        <span style="flex:1 1 auto;height:7px;background:${EXP.bordaSuave};border-radius:999px;overflow:hidden;display:block">
+          <span style="display:block;height:100%;width:${Math.max((n / maior) * 100, 4)}%;background:${
+            EXP.link
+          };border-radius:0 4px 4px 0"></span>
+        </span>
+        <span style="flex:0 0 26px;font:700 9px/1.3 'IBM Plex Mono',monospace;color:${EXP.navy};text-align:right">${n}${
+          extra ? `<span style="font-weight:400;color:${EXP.texto3}">+${extra}</span>` : ""
+        }</span>
+      </div>`;
+  };
+  const porColuna = Math.ceil(celulas.length / 4) || 1;
+  const colunasBarras = Array.from({ length: Math.ceil(celulas.length / porColuna) }, (_, i) =>
+    celulas.slice(i * porColuna, (i + 1) * porColuna)
+  );
+
+  const paper = document.createElement("div");
+  paper.className = "export-paper export-paper--paisagem";
+  paper.style.cssText =
+    "width:1123px;min-height:794px;background:#fff;padding:40px 48px 32px;display:flex;flex-direction:column;" +
+    "font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";box-sizing:border-box;";
+
+  paper.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px">
+      <div style="display:flex;align-items:center;gap:14px">
+        ${marcaImg("tcm-lockup.png", 40, "Tribunal de Contas dos Municípios do Estado da Bahia")}
+        ${marcaImg("tcm-55.png", 40, "55 anos de serviços prestados à sociedade")}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-top:2px;text-align:right">
+        <span style="font:700 12.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">EQUIPE E PROJETOS</span>
+        <span style="font:400 11px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(
+          `${d.unidade.sigla} — ${d.unidade.nome}`
+        )}</span>
+      </div>
+    </div>
+
+    <div style="display:flex;margin:12px 0 18px">
+      <span style="width:64px;height:3px;background:${EXP.vermelho}"></span>
+      <span style="flex:1;height:3px;background:${EXP.navy}"></span>
+    </div>
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-bottom:14px">
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+        <span style="font:700 21px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.01em">Alocação da equipe por célula</span>
+        <span style="font:400 10.5px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(
+          `${plural(pessoas.length, "pessoa", "pessoas")} em ${plural(celulas.length, "célula", "células")}` +
+            (estagiarios ? `, mais ${plural(estagiarios, "estagiário", "estagiários")}` : "") +
+            ` · ${d.referencia}`
+        )}</span>
+      </div>
+      ${
+        termo
+          ? `<div style="flex:0 0 auto;border:1px solid ${EXP.borda};background:${EXP.painel};border-radius:6px;padding:6px 11px;text-align:right">
+               <div style="font:700 8px/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${EXP.vermelhoTexto}">RECORTE FILTRADO</div>
+               <div style="font:400 9.5px/1.4 'IBM Plex Sans',sans-serif;color:${EXP.texto2};margin-top:3px">busca por "${escapeHtml(
+                 termo
+               )}"</div>
+             </div>`
+          : ""
+      }
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      ${indicador(pessoas.length, "pessoas nas células", `${estagiarios} estagiários à parte`)}
+      ${indicador(celulas.length, "células de projeto", `${celulas.reduce((a, c) => a + (c.sistemas || []).length, 0)} sistemas atendidos`)}
+      ${indicador(devs, "desenvolvedores", "função principal declarada")}
+      ${indicador(
+        pessoas.length ? `${Math.round((terceirizados / pessoas.length) * 100)}%` : "—",
+        "terceirizados",
+        `${terceirizados} de ${pessoas.length} nas células`
+      )}
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:10px;border:1px solid ${EXP.borda};background:${
+      EXP.painel
+    };border-radius:7px;padding:8px 12px;margin-bottom:12px">
+      <span style="font:700 8px/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${EXP.texto3};flex:0 0 auto">CHEFIA DA DIVISÃO</span>
+      <span style="font:700 11px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.navy};flex:0 0 auto">${escapeHtml(
+        d.chefia.nome
+      )}</span>
+      <span style="font:400 9.5px/1.4 'IBM Plex Sans',sans-serif;color:${EXP.texto2};min-width:0">${escapeHtml(
+        d.chefia.perfil
+      )}</span>
+    </div>
+
+    <div style="border:1px solid ${EXP.borda};border-radius:7px;padding:9px 12px 10px;margin-bottom:14px">
+      <div style="font:600 8.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.11em;color:${
+        EXP.texto2
+      };margin-bottom:7px">PESSOAS POR CÉLULA</div>
+      <div style="display:flex;gap:20px">
+        ${colunasBarras
+          .map((col) => `<div style="flex:1 1 0;min-width:0">${col.map(barra).join("")}</div>`)
+          .join("")}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      ${distribuirEmColunas(celulas, 3)
+        .map((col) => `<div style="flex:1 1 0;min-width:0">${col.map(caixaDeCelulaExport).join("")}</div>`)
+        .join("")}
+    </div>
+
+    <div style="margin-top:auto;padding-top:12px;border-top:1px solid ${
+      EXP.borda
+    };display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+      <div style="font:400 9.5px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:660px;text-wrap:pretty">
+        ${escapeHtml(
+          `Documento gerado a partir da relação "${d.fonte}", da própria Divisão. A célula é o agrupamento declarado na relação; ` +
+            `o líder é quem nela consta como responsável pelo projeto. Caixa com faixa vermelha é célula de uma pessoa só.`
+        )}
+      </div>
+      <div style="font:400 9.5px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
+        TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
+      </div>
+    </div>
+  `;
+  return paper;
+}
+
+// Altura de uma página A4 paisagem na escala em que a folha é desenhada.
+const ALTURA_PAGINA_PAPEL = 794;
+
+// Nenhuma caixa de célula pode nascer em uma página e terminar na seguinte. A
+// paginação do PDF é um corte cego na imagem da folha: sem este ajuste, o
+// corte cai onde calhar — no meio de um nome, de uma barra de composição ou do
+// cabeçalho da caixa. Aqui cada caixa que atravessaria a dobra é empurrada
+// inteira para a página de baixo.
+//
+// A medição exige estar no documento, e cada empurrão desloca as caixas
+// seguintes da mesma coluna: por isso a posição é lida de novo a cada caixa,
+// dentro do laço, em vez de uma vez só no começo.
+function ajustarQuebrasDePagina(paper) {
+  const sandbox = document.getElementById("export-sandbox");
+  if (!sandbox) return;
+  const jaInserida = paper.parentNode === sandbox;
+  if (!jaInserida) sandbox.appendChild(paper);
+
+  const topoDaFolha = paper.getBoundingClientRect().top;
+  for (const caixa of paper.querySelectorAll("[data-caixa]")) {
+    const area = caixa.getBoundingClientRect();
+    const topo = area.top - topoDaFolha;
+    const base = area.bottom - topoDaFolha;
+    // Caixa mais alta do que uma página não tem para onde ser empurrada; nesse
+    // caso o corte é inevitável e empurrar só criaria uma página em branco.
+    if (area.height >= ALTURA_PAGINA_PAPEL) continue;
+    const paginaDoTopo = Math.floor(topo / ALTURA_PAGINA_PAPEL);
+    const paginaDaBase = Math.floor((base - 1) / ALTURA_PAGINA_PAPEL);
+    if (paginaDaBase > paginaDoTopo) {
+      const inicioDaProxima = (paginaDoTopo + 1) * ALTURA_PAGINA_PAPEL;
+      const margemNoAlto = 14;
+      const empurrao = inicioDaProxima - topo + margemNoAlto;
+      const atual = parseFloat(caixa.style.marginTop) || 0;
+      caixa.style.marginTop = `${Math.ceil(atual + empurrao)}px`;
+    }
+  }
+
+  if (!jaInserida) sandbox.removeChild(paper);
+}
+
+async function exportarEquipes(tipo) {
+  if (!window.html2canvas) throw new Error("Biblioteca de captura indisponível.");
+  await precarregarMarcas();
+  const paper = construirExtratoEquipes();
+  if (!paper) throw new Error("A relação de equipes não pôde ser carregada.");
+  ajustarQuebrasDePagina(paper);
+  const canvas = await renderizarCanvasElemento(paper, 2);
+
+  const d = dadosDeEquipes();
+  const carimbo = new Date().toISOString().slice(0, 10);
+  const nomeBase = `equipe-projetos-${normalizarTexto(d.unidade.sigla)}-tcm-ba-${carimbo}`;
+
+  if (tipo === "jpeg") {
+    const link = document.createElement("a");
+    link.download = `${nomeBase}.jpg`;
+    link.href = canvas.toDataURL("image/jpeg", 0.95);
+    link.click();
+    return;
+  }
+
+  // Mesma paginação dos demais extratos, em paisagem: a folha é desenhada
+  // inteira e reposicionada página a página quando passa de uma.
+  const { jsPDF } = window.jspdf;
+  const img = canvas.toDataURL("image/jpeg", 0.95);
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const larguraMm = 297;
+  const alturaPaginaMm = 210;
+  const alturaTotalMm = (canvas.height * larguraMm) / canvas.width;
+  let deslocamento = 0;
+  let primeira = true;
+  while (deslocamento < alturaTotalMm - 1) {
+    if (!primeira) pdf.addPage();
+    pdf.addImage(img, "JPEG", 0, -deslocamento, larguraMm, alturaTotalMm);
+    deslocamento += alturaPaginaMm;
+    primeira = false;
+  }
+  pdf.save(`${nomeBase}.pdf`);
+}
+
+let elementoComFocoAntesDoExportEquipes = null;
+
+function abrirDialogoExportEquipes() {
+  const d = dadosDeEquipes();
+  if (!d) return;
+  const celulas = celulasFiltradas();
+  const pessoas = celulas.flatMap(pessoasDaCelula).length;
+  const termo = (state.filtroEquipes || "").trim();
+
+  document.getElementById("equipes-export-mensagem").textContent =
+    `${plural(pessoas, "pessoa", "pessoas")} em ${plural(celulas.length, "célula", "células")}` +
+    (termo ? `, no recorte filtrado por "${termo}"` : "") +
+    `. O documento sai em A4 paisagem, com o panorama de alocação e a equipe de cada célula.` +
+    (termo ? " A folha sai carimbada como recorte filtrado." : "");
+
+  elementoComFocoAntesDoExportEquipes = document.activeElement;
+  document.getElementById("equipes-export-backdrop").hidden = false;
+  document.getElementById("equipes-export-modal").hidden = false;
+  document.getElementById("btn-equipes-pdf").focus();
+}
+
+function fecharDialogoExportEquipes() {
+  document.getElementById("equipes-export-backdrop").hidden = true;
+  document.getElementById("equipes-export-modal").hidden = true;
+  if (elementoComFocoAntesDoExportEquipes) elementoComFocoAntesDoExportEquipes.focus();
+}
+
+async function baixarEquipes(tipo, btn) {
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = tipo === "pdf" ? "Gerando PDF…" : "Gerando JPEG…";
+  try {
+    await exportarEquipes(tipo);
+    fecharDialogoExportEquipes();
+  } catch (erro) {
+    console.error("Erro ao exportar a alocação:", erro);
+    window.alert("Não foi possível gerar o arquivo: " + erro.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+  }
+}
+
 function inicializarModuloEquipes() {
   const limpar = document.getElementById("btn-limpar-busca-equipes");
   if (limpar) {
@@ -7883,6 +8288,17 @@ function inicializarModuloEquipes() {
       renderizarEquipes();
     });
   }
+
+  document.getElementById("btn-exportar-equipes").addEventListener("click", abrirDialogoExportEquipes);
+  document.getElementById("btn-fechar-equipes-export").addEventListener("click", fecharDialogoExportEquipes);
+  document.getElementById("equipes-export-backdrop").addEventListener("click", fecharDialogoExportEquipes);
+  document.getElementById("btn-equipes-pdf").addEventListener("click", (ev) => baixarEquipes("pdf", ev.currentTarget));
+  document.getElementById("btn-equipes-jpeg").addEventListener("click", (ev) => baixarEquipes("jpeg", ev.currentTarget));
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape" || state.modulo !== "equipes") return;
+    if (!document.getElementById("equipes-export-modal").hidden) fecharDialogoExportEquipes();
+  });
 }
 
 /* --------------------------------------------------------------------------

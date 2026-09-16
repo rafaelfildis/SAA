@@ -626,6 +626,24 @@ mostrar onde os QA estão.
 A chefia da Divisão fica fora das células, em faixa própria: ela responde pela
 DDES inteira, e virar mais uma caixa diria que existe um projeto chamado DDES.
 
+**Exportação em PDF e JPEG**, pelo botão do cabeçalho. A folha sai em **A4
+paisagem**: nomes de servidor são longos — "Lourival Magalhães Nascimento Neto",
+com função e perfil na mesma linha — e em retrato cada pessoa quebraria em duas
+linhas, dobrando a altura da lista. O documento traz o panorama, os quatro
+números da Divisão, a chefia e a equipe de cada célula, com a marca
+institucional e a data.
+
+Três cuidados que o documento tem e a tela não precisa ter:
+
+| Cuidado | Por quê |
+| --- | --- |
+| As três colunas são montadas em JavaScript, distribuindo cada caixa na coluna mais curta | Na tela quem faz isso é o CSS multicoluna, que o `html2canvas` rasteriza de forma imprevisível: a mesma folha sairia com a última caixa cortada em uma captura e inteira na seguinte |
+| Nenhuma caixa atravessa a dobra da página | A paginação do PDF é um corte cego na imagem da folha. Sem o ajuste, o corte cai no meio de um nome. Cada caixa que atravessaria é empurrada inteira para a página seguinte |
+| A folha filtrada sai carimbada **RECORTE FILTRADO**, com o termo da busca | Um documento filtrado que se apresenta como quadro completo é pior do que documento nenhum |
+
+A exportação respeita o filtro em vigor: exporta o que está em tela. Com 34
+pessoas a folha ocupa duas páginas em PDF; unidades menores cabem em uma.
+
 ## Stack
 
 - **Frontend**: HTML5 + CSS3 + JavaScript puro (sem framework/bundler), bibliotecas carregadas via CDN:
