@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-09-16.1";
+window.SAA_TAREFAS_VERSAO = "2026-09-16.2";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -164,6 +164,17 @@ window.SAA_TAREFAS = [
     "responsavel": "Lourival Magalhães Nascimento Neto",
     "prazo": "2026-09-25",
     "prioridade": "alta",
+    "status": "a-fazer"
+  },
+  {
+    "id": "tarefa-bi-gerencia-contratos",
+    "titulo": "Criar BI com os dados da Gerência de Contratos",
+    "descricao": "Criação de BI com os dados da Gerência de Contratos.",
+    "categoria": "dados",
+    "unidade": "",
+    "responsavel": "Nelma",
+    "prazo": "",
+    "prioridade": "media",
     "status": "a-fazer"
   }
 ];
