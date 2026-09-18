@@ -135,6 +135,29 @@ barra lateral.
 Compromissos do dia lidos do Google Agenda. **Somente leitura** — a origem é o
 calendário, e o painel não grava nada.
 
+**Editar o compromisso, do painel de detalhes.** Somente leitura não podia
+significar caminho sem volta: quem abre os detalhes e vê um horário errado
+precisa corrigi-lo, e o feed iCal não aceita escrita — nada digitado nesta tela
+chegaria ao Google, aos convites ou aos lembretes, e um compromisso editado só
+aqui passaria a divergir em silêncio da agenda que o Tribunal enxerga. Então a
+edição acontece na origem, e o painel leva até ela em um toque: **Editar no
+Google Agenda** abre exatamente este compromisso, com a nota do que isso
+significa. A alteração aparece no SAA na atualização seguinte.
+
+O endereço é reconstruído a partir do próprio feed. O ICS do Google não traz
+link para o evento — `VEVENT` não tem propriedade `URL` —, mas traz o
+identificador do evento (`UID`) e o da agenda (`X-WR-CALNAME`), e é desses dois
+que o Google monta o endereço de cada evento, em base64. **Ocorrência de série
+tem endereço próprio**: o `UID` ganha o instante de início em UTC, senão editar
+a reunião de uma sexta abriria a série inteira. Conferido contra os endereços
+que a API do Google devolve para os mesmos eventos — evento simples, ocorrência
+de série e compromisso de dia inteiro —, byte a byte.
+
+Feed sem `X-WR-CALNAME` (agenda de demonstração, cache anterior ao recurso) ou
+`UID` de outra ferramenta não permitem montar o endereço do evento. Nesse caso
+o botão vira **Abrir o dia no Google Agenda** e diz por quê, em vez de apontar
+para um evento que pode não existir.
+
 ### Plano 100 dias
 
 Projetos em desenvolvimento com entrega prevista dentro de um horizonte

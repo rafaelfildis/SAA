@@ -545,6 +545,67 @@ function classificarEvento(evento) {
    PARSING ICS (ical.js) — VEVENT, RRULE, EXDATE, RECURRENCE-ID, VTIMEZONE
    ========================================================================== */
 
+/* ---------------------------------------------- Endereço do evento no Google
+
+   O feed iCal é somente leitura: nada digitado nesta tela chegaria ao Google,
+   aos convites ou aos lembretes, e um compromisso editado só aqui passaria a
+   divergir em silêncio da agenda que o Tribunal enxerga. A edição, portanto,
+   acontece na origem — e o que o painel pode fazer é levar até ela em um
+   toque, em vez de deixar o titular procurar o compromisso pela data.
+
+   O ICS do Google não traz link para o evento (VEVENT não tem propriedade
+   URL). Traz o identificador do evento (UID) e o da agenda (X-WR-CALNAME), e é
+   desses dois que o próprio Google monta o endereço de cada evento, em base64.
+   Reconstruído aqui, o endereço é idêntico ao que o Google publica. */
+
+// Identificador da agenda lida, relido no cabeçalho do ICS a cada atualização.
+let agendaDeOrigem = "";
+
+function identificadorDaAgenda(comp) {
+  try {
+    return comp.getFirstPropertyValue("x-wr-calname") || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+// O Google abrevia o próprio domínio no endereço — "@gmail.com" vira "@m" —, e
+// é assim que saem os links que ele publica. Outros domínios vão por extenso.
+function idDeAgendaCompacto(agenda) {
+  return agenda.replace(/@gmail\.com$/i, "@m");
+}
+
+// Ocorrência de série tem endereço próprio: o UID ganha o instante de início.
+// Sem o sufixo, editar uma ocorrência abriria a série inteira.
+function sufixoDeOcorrencia(evento) {
+  if (!evento.recorrente) return "";
+  const d = new Date(evento.inicio);
+  if (isNaN(d.getTime())) return "";
+  // Dia inteiro não tem instante — o Google usa só a data.
+  if (evento.diaInteiro) return `_${chaveDia(d).replace(/-/g, "")}`;
+  return `_${d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`;
+}
+
+function enderecoDoEventoNoGoogle(evento) {
+  const uid = (evento.id || "").split("::")[0].replace(/@google\.com$/i, "");
+  const agenda = evento.agendaGoogle || "";
+  if (!uid || agenda.indexOf("@") === -1) return "";
+  try {
+    const eid = btoa(`${uid}${sufixoDeOcorrencia(evento)} ${idDeAgendaCompacto(agenda)}`).replace(/=+$/, "");
+    return `https://www.google.com/calendar/event?eid=${eid}`;
+  } catch (e) {
+    // UID fora do ASCII (agenda importada de outra ferramenta): btoa recusa.
+    return "";
+  }
+}
+
+// Sem endereço de evento — agenda de demonstração, cache anterior a este
+// recurso, UID de outra ferramenta — resta abrir o dia na agenda do Google.
+function enderecoDoDiaNoGoogle(evento) {
+  const partes = chaveDia(new Date(evento.inicio)).split("-");
+  return `https://calendar.google.com/calendar/u/0/r/day/${partes[0]}/${Number(partes[1])}/${Number(partes[2])}`;
+}
+
 function mapStatus(raw) {
   switch ((raw || "").toUpperCase()) {
     case "CANCELLED":
@@ -676,6 +737,7 @@ function construirOcorrencia(icalEvent, startTime, endTime, recorrente) {
     categoriasIcs,
     status: mapStatus(statusRaw),
     recorrente: !!recorrente,
+    agendaGoogle: agendaDeOrigem,
   };
 
   evento.categoria = classificarEvento(evento);
@@ -691,6 +753,8 @@ function construirOcorrencia(icalEvent, startTime, endTime, recorrente) {
 function parseICSParaEventos(icsTexto) {
   const jcalData = ICAL.parse(icsTexto);
   const comp = new ICAL.Component(jcalData);
+
+  agendaDeOrigem = identificadorDaAgenda(comp);
 
   // Registra os fusos horários (VTIMEZONE) definidos no calendário para que
   // ICAL.Time resolva corretamente horários locais antes de converter para UTC.
@@ -1476,6 +1540,8 @@ const ICONE_PESSOAS =
   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex:0 0 auto;opacity:.75"><circle cx="9" cy="8.5" r="3.2"></circle><path d="M3.5 19c.6-3.1 2.8-4.6 5.5-4.6S14 15.9 14.6 19"></path><path d="M16 6.2a3.2 3.2 0 010 5.6M18.4 14.6c1.6.7 2.6 2.1 3 4.4"></path></svg>';
 const ICONE_LINK =
   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a3.5 3.5 0 005 0l3-3a3.5 3.5 0 10-5-5l-1 1"></path><path d="M14 11a3.5 3.5 0 00-5 0l-3 3a3.5 3.5 0 105 5l1-1"></path></svg>';
+const ICONE_LAPIS =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"></path></svg>';
 
 // Contagem legível até um horário do próprio dia ("em 1h20", "em 12 min").
 function contagemAte(minutos) {
@@ -2271,6 +2337,11 @@ function abrirPainelDetalhes(eventoId) {
     badges.push(`<span class="badge badge--conflito">⚠ Sobreposição</span>`);
   }
 
+  // Editar é sempre na origem (ver "Endereço do evento no Google"): com
+  // identificador, direto no compromisso; sem ele, no dia em que ele está.
+  const enderecoDoEvento = enderecoDoEventoNoGoogle(evento);
+  const enderecoDeEdicao = enderecoDoEvento || enderecoDoDiaNoGoogle(evento);
+
   document.getElementById("detail-panel-titulo").textContent = evento.titulo;
   document.getElementById("detail-panel-corpo").innerHTML = `
     <div class="detail-panel__badges">${badges.join("")}</div>
@@ -2282,6 +2353,16 @@ function abrirPainelDetalhes(eventoId) {
     ${(evento.participantes || []).length ? `<div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">Participantes</span><span class="detail-panel__linha-valor">${escapeHtml(evento.participantes.join(", "))}</span></div>` : ""}
     ${evento.descricao ? `<div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">Descrição</span><span class="detail-panel__linha-valor">${escapeHtml(evento.descricao)}</span></div>` : ""}
     ${evento.link ? `<a class="detail-panel__link" href="${escapeAttr(evento.link)}" target="_blank" rel="noopener">${ICONE_LINK}Entrar na reunião</a>` : ""}
+    <div class="detail-panel__acoes">
+      <a class="detail-panel__acao" href="${escapeAttr(enderecoDeEdicao)}" target="_blank" rel="noopener">
+        ${ICONE_LAPIS}<span>${enderecoDoEvento ? "Editar no Google Agenda" : "Abrir o dia no Google Agenda"}</span>
+      </a>
+      <p class="detail-panel__nota">${
+        enderecoDoEvento
+          ? "Abre este compromisso na agenda de origem. O SAA lê a agenda em modo somente leitura: a alteração é feita lá e aparece aqui na próxima atualização."
+          : "Este compromisso não traz identificador utilizável — o botão abre o dia na agenda de origem, onde ele pode ser editado."
+      }</p>
+    </div>
   `;
 
   const painel = document.getElementById("detail-panel");

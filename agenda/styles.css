@@ -1433,6 +1433,46 @@ button, input {
 }
 .detail-panel__link:hover { background: var(--color-primary); }
 
+/* Editar o compromisso: a ação fica destacada do corpo do painel por um filete
+   e vem com a nota do que ela faz. "Editar" sem aviso levaria o titular a
+   esperar que a alteração ficasse aqui — e o feed do Google é somente leitura,
+   então ela acontece na origem. O botão é contornado, não preenchido, para não
+   competir com "Entrar na reunião", que é a ação da hora da reunião. */
+.detail-panel__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.detail-panel__acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  padding: 10px 14px;
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--raio-pequeno);
+  background: transparent;
+  color: var(--color-secondary);
+  font-weight: 700;
+  font-size: 0.84rem;
+  text-decoration: none;
+}
+.detail-panel__acao:hover {
+  background: var(--color-secondary-tint);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.detail-panel__nota {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--color-text-tertiary);
+  text-wrap: pretty;
+}
+
 /* ---------------------------------- Modal de confirmação ---------------------------------- */
 
 .confirm-modal {
