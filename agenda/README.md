@@ -1,4 +1,4 @@
-# SAA — Agenda Institucional do TCM-BA
+# Portal de Gestão DTI — TCM-BA
 
 Aplicação web responsiva para visualização da agenda institucional do **Tribunal de Contas dos Municípios do Estado da Bahia**, sincronizada automaticamente com o calendário do **Google Agenda** publicado em formato ICS.
 

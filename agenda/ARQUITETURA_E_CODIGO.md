@@ -1,4 +1,4 @@
-# SAA — Arquitetura e Código-Fonte
+# Portal de Gestão DTI — Arquitetura e Código-Fonte
 
 > Documento gerado para consolidar a arquitetura do sistema e uma cópia integral do código-fonte. Repositório: [rafaelfildis/SAA](https://github.com/rafaelfildis/SAA).
 >
@@ -160,7 +160,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>SAA — Agenda Institucional do TCM-BA</title>
+<title>Portal de Gestão DTI — Agenda Institucional do TCM-BA</title>
 <meta name="description" content="Agenda institucional com sincronização automática do calendário Outlook/Microsoft 365." />
 <meta name="theme-color" content="#061A35" id="meta-theme-color" />
 <script>
@@ -201,7 +201,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
           </svg>
         </span>
         <div class="topbar__titles">
-          <h1>SAA — Agenda Institucional do TCM-BA</h1>
+          <h1>Portal de Gestão DTI — Agenda Institucional do TCM-BA</h1>
           <p>TCM-BA — Compromissos sincronizados do Outlook / Microsoft 365</p>
         </div>
       </div>
@@ -485,7 +485,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
   </div>
 
   <footer class="app-footer">
-    <p>SAA — Agenda Institucional do TCM-BA — dados sincronizados automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
+    <p>Portal de Gestão DTI — Agenda Institucional do TCM-BA — dados sincronizados automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
   </footer>
 
   <div id="export-sandbox" class="export-sandbox" aria-hidden="true"></div>
@@ -538,7 +538,7 @@ Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura 
 
 ```css
 /* ==========================================================================
-   SAA — Agenda Institucional do TCM-BA
+   Portal de Gestão DTI — Agenda Institucional do TCM-BA
    Identidade visual "Saúde Digital": institucional, tecnológica, acessível.
    ========================================================================== */
 
@@ -3705,7 +3705,7 @@ function construirTextoAgenda() {
   const grupos = agruparPorDia(eventos);
   const linhas = [];
 
-  linhas.push("SAA — Agenda Institucional do TCM-BA");
+  linhas.push("Portal de Gestão DTI — Agenda Institucional do TCM-BA");
   linhas.push("Gerado em " + formatarDataHora(new Date()));
   linhas.push("");
 

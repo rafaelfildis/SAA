@@ -1,7 +1,7 @@
 /**
  * Gera o card JPEG da agenda de um dia, sem intervenção humana.
  *
- * A exportação do SAA é feita por html2canvas, que rasteriza o DOM dentro do
+ * A exportação do Portal de Gestão DTI é feita por html2canvas, que rasteriza o DOM dentro do
  * navegador — não existe DOM em um cron de servidor. Este script fecha essa
  * lacuna: sobe a aplicação localmente, abre um Chromium headless e aciona o
  * MESMO botão "Baixar JPEG" que a pessoa clicaria, capturando o arquivo que

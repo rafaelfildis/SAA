@@ -2,7 +2,7 @@
   "name": "saa-tcm-ba",
   "version": "1.0.0",
   "private": true,
-  "description": "SAA — Agenda institucional do TCM-BA com sincronização automática de calendário Google Agenda (ICS).",
+  "description": "Portal de Gestão DTI — agenda institucional, plano 100 dias, ramais, estrutura e tarefas da DTI do TCM-BA, com sincronização automática de calendário Google Agenda (ICS).",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

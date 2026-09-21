@@ -294,7 +294,7 @@ function construirIcsDemo() {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//TCM-BA//SAA Agenda Institucional//PT-BR",
+    "PRODID:-//TCM-BA//Portal de Gestão DTI//PT-BR",
     "CALSCALE:GREGORIAN",
     ...eventos.map(veventDemo),
     "END:VCALENDAR",
@@ -2812,7 +2812,7 @@ function construirExtratoA4(grupos, totalFiltrados, opcoes) {
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;text-align:right">
         <span style="font:700 13px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">AGENDA INSTITUCIONAL</span>
         <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Gabinete da Presidência</span>
-        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">SAA · Sistema de Agenda Automatizada</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">Portal de Gestão DTI</span>
       </div>
     </div>
 
@@ -2841,10 +2841,10 @@ function construirExtratoA4(grupos, totalFiltrados, opcoes) {
 
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
       <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:460px;text-wrap:pretty">
-        Documento gerado automaticamente pelo SAA a partir do Google Agenda. Alterações devem ser feitas no calendário de origem.${USE_DEMO_DATA ? " Dados fictícios de demonstração." : ""}
+        Documento gerado automaticamente pelo Portal de Gestão DTI a partir do Google Agenda. Alterações devem ser feitas no calendário de origem.${USE_DEMO_DATA ? " Dados fictícios de demonstração." : ""}
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
-        TCM-BA · SAA<br>${totalFiltrados} compromisso${totalFiltrados === 1 ? "" : "s"}
+        TCM-BA · Portal de Gestão DTI<br>${totalFiltrados} compromisso${totalFiltrados === 1 ? "" : "s"}
       </div>
     </div>
   `;
@@ -3161,7 +3161,7 @@ function construirCardMobile(grupos, totalFiltrados, opcoes) {
     <div style="flex:0 0 auto;background:#fff;border-top:1px solid ${EXP.borda};padding:${px(26)} ${px(60)};display:flex;align-items:center;gap:${px(22)}">
       ${marcaImg("tcm-lockup.png", 58, "Tribunal de Contas dos Municípios do Estado da Bahia")}
       <div style="margin-left:auto;display:flex;flex-direction:column;gap:${px(5)};align-items:flex-end">
-        <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;color:${EXP.navy}">SAA · Agenda Institucional</span>
+        <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;color:${EXP.navy}">Portal de Gestão DTI · Agenda Institucional</span>
         <span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto2}">atualizado às ${formatarHora(new Date())}</span>
       </div>
     </div>
@@ -3359,7 +3359,7 @@ function construirTextoAgenda() {
   const grupos = agruparPorDia(eventos);
   const linhas = [];
 
-  linhas.push("SAA — Agenda Institucional do TCM-BA");
+  linhas.push("Portal de Gestão DTI — Agenda Institucional do TCM-BA");
   linhas.push("Gerado em " + formatarDataHora(new Date()));
   linhas.push("");
 
@@ -4613,7 +4613,7 @@ function construirExtratoPlano(lista) {
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;text-align:right">
         <span style="font:700 13px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">PLANO 100 DIAS</span>
         <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Gabinete da Presidência</span>
-        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">SAA · Sistema de Agenda Automatizada</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">Portal de Gestão DTI</span>
       </div>
     </div>
 
@@ -4639,10 +4639,10 @@ function construirExtratoPlano(lista) {
 
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
       <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:460px;text-wrap:pretty">
-        Documento gerado pelo SAA a partir dos projetos lançados no módulo Plano 100 dias, com os filtros em vigor no momento da emissão.
+        Documento gerado pelo Portal de Gestão DTI a partir dos projetos lançados no módulo Plano 100 dias, com os filtros em vigor no momento da emissão.
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
-        TCM-BA · SAA<br>${lista.length} projeto${lista.length === 1 ? "" : "s"}
+        TCM-BA · Portal de Gestão DTI<br>${lista.length} projeto${lista.length === 1 ? "" : "s"}
       </div>
     </div>
   `;

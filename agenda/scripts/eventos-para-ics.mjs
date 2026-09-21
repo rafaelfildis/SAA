@@ -84,7 +84,7 @@ const eventos = Array.isArray(bruto) ? bruto : bruto.events || [];
 
 const saida = [
   "BEGIN:VCALENDAR",
-  "PRODID:-//SAA//Rotina diária//PT",
+  "PRODID:-//Portal de Gestão DTI//Rotina diária//PT",
   "VERSION:2.0",
   "CALSCALE:GREGORIAN",
   "METHOD:PUBLISH",

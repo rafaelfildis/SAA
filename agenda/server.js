@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Servidor Express do SAA — Agenda Institucional do TCM-BA.
+ * Servidor Express do Portal de Gestão DTI — TCM-BA.
  *
  * Responsabilidades:
  *  - Servir os arquivos estáticos da aplicação (index.html, styles.css, script.js).
@@ -202,5 +202,5 @@ app.get("/api/calendar", async (req, res) => {
 app.use(express.static(path.join(__dirname)));
 
 app.listen(PORT, () => {
-  console.log(`SAA (Agenda TCM-BA) disponível em http://localhost:${PORT}`);
+  console.log(`Portal de Gestão DTI (TCM-BA) disponível em http://localhost:${PORT}`);
 });
