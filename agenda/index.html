@@ -480,6 +480,10 @@
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
             Linha do tempo
           </button>
+          <button class="view-toggle__btn" id="btn-vista-calendario" data-vista="calendario" type="button">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Calendário
+          </button>
           <button class="view-toggle__btn" id="btn-vista-tabela" data-vista="tabela" type="button">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line></svg>
             Tabela
@@ -579,6 +583,42 @@
           <svg class="timeline-vazio__icone" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9.5 15.5 2-2 2 2 2-2"></path></svg>
           <p>Nenhum compromisso encontrado para os filtros selecionados.</p>
         </div>
+      </section>
+
+      <section class="cal-wrap" id="vista-calendario" hidden aria-label="Calendário das pautas">
+        <div class="cal-toolbar">
+          <div class="cal-toolbar__nav">
+            <button id="btn-cal-hoje" class="btn btn--tiny-outline" type="button">Hoje</button>
+            <button id="btn-cal-anterior" class="icon-btn cal-nav-btn" type="button" aria-label="Período anterior">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button id="btn-cal-proximo" class="icon-btn cal-nav-btn" type="button" aria-label="Próximo período">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <h3 class="cal-toolbar__titulo" id="cal-titulo" aria-live="polite">—</h3>
+          </div>
+          <div class="cal-toolbar__controles">
+            <label class="cal-campo">
+              <span>Visualização</span>
+              <select id="cal-escala" class="input">
+                <option value="mes">Mês</option>
+                <option value="semana">Semana</option>
+              </select>
+            </label>
+            <label class="cal-campo">
+              <span>Data</span>
+              <input id="cal-data" class="input" type="date" />
+            </label>
+          </div>
+        </div>
+
+        <div class="cal-resumo" id="cal-resumo"></div>
+
+        <div class="cal-grade" id="cal-grade" role="grid" aria-labelledby="cal-titulo"></div>
+
+        <p class="cal-nota">
+          O calendário navega por conta própria e respeita os filtros de modalidade, busca e concluídos da barra lateral — o filtro de período vale para a linha do tempo e a tabela.
+        </p>
       </section>
 
       <section class="table-wrap" id="vista-tabela" hidden>
@@ -854,8 +894,8 @@
           <span class="filters__label" id="label-export-formato">Formato</span>
           <div class="opt-group" id="export-formato-group" role="group" aria-labelledby="label-export-formato">
             <button class="opt-card is-active" data-formato="mobile" type="button">
-              <span class="opt-card__label">Card mobile · JPEG</span>
-              <span class="opt-card__desc">1080 × 1920 px, para enviar por mensagem ou publicar</span>
+              <span class="opt-card__label">Pauta do dia · JPEG</span>
+              <span class="opt-card__desc">1080 px de largura, para enviar por mensagem ou publicar</span>
             </button>
             <button class="opt-card" data-formato="a4" type="button">
               <span class="opt-card__label">Extrato diário · A4 retrato</span>
@@ -882,13 +922,17 @@
         <div id="export-bloco-mobile">
           <span class="filters__label" id="label-export-proporcao">Proporção</span>
           <div class="opt-group" id="export-proporcao-group" role="group" aria-labelledby="label-export-proporcao">
-            <button class="opt-card is-active" data-proporcao="story" type="button">
+            <button class="opt-card is-active" data-proporcao="documento" type="button">
+              <span class="opt-card__label">Documento — altura livre</span>
+              <span class="opt-card__desc">1080 px de largura; a altura acompanha a pauta, sem sobra em branco</span>
+            </button>
+            <button class="opt-card" data-proporcao="story" type="button">
               <span class="opt-card__label">Story 9:16</span>
-              <span class="opt-card__desc">1080 × 1920 px</span>
+              <span class="opt-card__desc">1080 × 1920 px mínimos</span>
             </button>
             <button class="opt-card" data-proporcao="feed" type="button">
               <span class="opt-card__label">Feed 4:5</span>
-              <span class="opt-card__desc">1080 × 1350 px — 570 px a menos de altura</span>
+              <span class="opt-card__desc">1080 × 1350 px mínimos</span>
             </button>
           </div>
         </div>
@@ -1075,6 +1119,35 @@
       </div>
     </form>
   </aside>
+
+  <!-- Pauta de um dia do calendário -->
+  <div id="dia-backdrop" class="panel-backdrop" hidden></div>
+  <div id="dia-modal" class="dia-modal" role="dialog" aria-modal="true" aria-labelledby="dia-modal-titulo" hidden>
+    <div class="dia-modal__header">
+      <div class="dia-modal__titulos">
+        <h2 id="dia-modal-titulo">Dia</h2>
+        <p class="dia-modal__contagem" id="dia-modal-contagem"></p>
+      </div>
+      <button id="btn-fechar-dia" class="icon-btn" type="button" aria-label="Fechar pauta do dia">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="dia-modal__acoes">
+      <button id="btn-dia-copiar" class="btn btn--tiny-outline" type="button">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span id="btn-dia-copiar-rotulo">Copiar</span>
+      </button>
+      <button id="btn-dia-exportar" class="btn btn--tiny-outline" type="button">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Extrair este dia
+      </button>
+      <button id="btn-dia-abrir" class="btn btn--tiny-outline" type="button">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        Abrir na linha do tempo
+      </button>
+    </div>
+    <div class="dia-modal__body" id="dia-modal-corpo"></div>
+  </div>
 
   <div id="panel-backdrop" class="panel-backdrop" hidden></div>
   <aside id="detail-panel" class="detail-panel" aria-hidden="true" aria-label="Detalhes do compromisso">

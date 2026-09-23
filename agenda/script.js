@@ -61,12 +61,18 @@ const state = {
     dataFim: null, // "YYYY-MM-DD" ou null
   },
   exportacao: {
-    formato: "mobile", // mobile (card JPEG) | a4 (extrato PDF)
-    proporcao: "story", // story 9:16 | feed 4:5 — só no card mobile
+    formato: "mobile", // mobile (pauta do dia em JPEG) | a4 (extrato PDF)
+    proporcao: "documento", // documento (altura livre) | story 9:16 | feed 4:5 — só no card
     densidade: "completo", // completo | compromissos | resumo — só no extrato A4
   },
   ui: {
-    vista: "timeline", // timeline | tabela
+    vista: "timeline", // timeline | calendario | tabela
+    // Âncora do painel do calendário ("YYYY-MM-DD"): o mês/semana desenhado
+    // na grade. É do calendário, e não do filtro de período — ver a seção
+    // PAINEL DO CALENDÁRIO DAS PAUTAS.
+    calendarioAncora: null, // definido na inicialização, no fuso de exibição
+    calendarioEscala: "mes", // mes | semana
+    diaAberto: null, // dia cuja pauta está aberta no modal, ou null
     tabelaOrdenarPor: "data",
     tabelaOrdemAsc: true,
     tabelaPagina: 1,
@@ -1031,8 +1037,12 @@ function janelaDeExibicaoAtual() {
   return { inicioChave, fimChave };
 }
 
-function agruparPorDia(eventos) {
-  const { inicioChave, fimChave } = janelaDeExibicaoAtual();
+// `janela` opcional sobrepõe a janela de exibição derivada dos filtros. O
+// calendário precisa disso: ele navega por um mês próprio, independente do
+// período marcado na barra lateral, e sem o parâmetro um filtro de "Hoje"
+// esvaziaria a grade inteira do mês.
+function agruparPorDia(eventos, janela) {
+  const { inicioChave, fimChave } = janela || janelaDeExibicaoAtual();
   const grupos = new Map();
   eventos.forEach((evento) => {
     diasQueEventoAbrange(evento)
@@ -2191,17 +2201,430 @@ function preencherTabela(filtrados) {
   btnProxima.disabled = state.ui.tabelaPagina >= totalPaginas;
 }
 
-function atualizarVisibilidadeVista() {
-  const timelineEl = document.getElementById("vista-timeline");
-  const tabelaEl = document.getElementById("vista-tabela");
-  const btnTimeline = document.getElementById("btn-vista-timeline");
-  const btnTabela = document.getElementById("btn-vista-tabela");
-  const emTabela = state.ui.vista === "tabela";
+const VISTAS_DA_AGENDA = [
+  { chave: "timeline", secao: "vista-timeline", botao: "btn-vista-timeline" },
+  { chave: "calendario", secao: "vista-calendario", botao: "btn-vista-calendario" },
+  { chave: "tabela", secao: "vista-tabela", botao: "btn-vista-tabela" },
+];
 
-  timelineEl.hidden = emTabela;
-  tabelaEl.hidden = !emTabela;
-  btnTimeline.classList.toggle("is-active", !emTabela);
-  btnTabela.classList.toggle("is-active", emTabela);
+function atualizarVisibilidadeVista() {
+  const modulo = document.getElementById("modulo-agenda");
+  if (modulo) modulo.dataset.vista = state.ui.vista;
+
+  VISTAS_DA_AGENDA.forEach(({ chave, secao, botao }) => {
+    const ativa = state.ui.vista === chave;
+    const secaoEl = document.getElementById(secao);
+    const botaoEl = document.getElementById(botao);
+    if (secaoEl) secaoEl.hidden = !ativa;
+    if (botaoEl) botaoEl.classList.toggle("is-active", ativa);
+  });
+}
+
+/* ==========================================================================
+   PAINEL DO CALENDÁRIO DAS PAUTAS
+
+   Grade de mês (ou de semana) com uma célula por dia e, dentro dela, as
+   pautas do dia em ordem de horário. É a vista que responde à pergunta que a
+   linha do tempo não responde — "como está o mês?" —, e o ponto de partida
+   para abrir a pauta de um dia qualquer sem mexer nos filtros.
+
+   O calendário navega por conta própria: a âncora abaixo é dele, e não do
+   filtro de período da barra lateral. Fosse o contrário, abrir o calendário
+   com "Hoje" marcado — o padrão do sistema — mostraria um mês inteiro vazio
+   com um único dia preenchido. Os demais filtros (modalidade, busca,
+   concluídos) continuam valendo: são sobre o que o compromisso é, não sobre
+   quando ele acontece.
+   ========================================================================== */
+
+// Quantas pautas cabem numa célula antes de virar "+N". Três é o que a altura
+// da célula comporta sem que a grade do mês passe a rolar.
+const CAL_MAX_POR_CELULA = 3;
+
+const CAL_DIAS_SEMANA = ["SEG.", "TER.", "QUA.", "QUI.", "SEX.", "SÁB.", "DOM."];
+
+// Aritmética de dias sobre a chave "YYYY-MM-DD", no fuso de exibição. Passa
+// pelo meio-dia para que somar ou subtrair um dia nunca esbarre em virada de
+// fuso e devolva a mesma data de volta.
+function chaveSomandoDias(chave, dias) {
+  const d = new Date(`${chave}T12:00:00${offsetBahia()}`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return chaveDia(d);
+}
+
+function dataDaChave(chave) {
+  return new Date(`${chave}T12:00:00${offsetBahia()}`);
+}
+
+// Janela desenhada na grade: no mês, da segunda-feira da semana do dia 1 ao
+// domingo da semana do último dia (sempre semanas inteiras, senão a grade
+// fica com buracos nas pontas); na semana, a semana da âncora.
+function janelaDoCalendario() {
+  const ancora = dataDaChave(state.ui.calendarioAncora);
+
+  if (state.ui.calendarioEscala === "semana") {
+    const inicio = chaveDia(segundaDaSemana(ancora));
+    return { inicioChave: inicio, fimChave: chaveSomandoDias(inicio, 6) };
+  }
+
+  const primeiroDoMes = inicioDoMes(ancora);
+  const ultimoDoMes = fimDoMes(ancora);
+  return {
+    inicioChave: chaveDia(segundaDaSemana(primeiroDoMes)),
+    fimChave: chaveDia(domingoDaSemana(ultimoDoMes)),
+  };
+}
+
+// O mesmo conjunto de eventos da agenda, sem o recorte temporal: o calendário
+// tem a própria janela. Modalidade, busca e "mostrar concluídos" continuam
+// sendo aplicados.
+function eventosParaCalendario() {
+  const { categorias, mostrarConcluidos } = state.filtros;
+  return state.eventos.filter((evento) => {
+    if (categorias.size > 0 && !categorias.has(evento.categoria)) return false;
+    if (!mostrarConcluidos && situacaoTemporal(evento) === "concluido") return false;
+    if (!passaBusca(evento)) return false;
+    return true;
+  });
+}
+
+// Mapa chave do dia → itens, já recortados pela janela da grade.
+function pautasPorDiaDoCalendario() {
+  const janela = janelaDoCalendario();
+  const mapa = new Map();
+  agruparPorDia(eventosParaCalendario(), janela).forEach((grupo) => mapa.set(grupo.chave, grupo.eventos));
+  return { janela, mapa };
+}
+
+function rotuloDoPeriodoDoCalendario() {
+  const ancora = dataDaChave(state.ui.calendarioAncora);
+  if (state.ui.calendarioEscala === "semana") {
+    const seg = segundaDaSemana(ancora);
+    const dom = domingoDaSemana(ancora);
+    return `${formatarDataCurta(seg)} a ${formatarDataCurta(dom)}`;
+  }
+  return capitalizar(
+    new Intl.DateTimeFormat("pt-BR", { timeZone: DISPLAY_TIMEZONE, month: "long", year: "numeric" }).format(ancora)
+  );
+}
+
+// Faixa de números acima da grade. São contagens do que está na janela
+// desenhada — não do sistema inteiro —, porque é sobre ela que se navega.
+function renderizarResumoDoCalendario(mapa, janela) {
+  const alvo = document.getElementById("cal-resumo");
+  if (!alvo) return;
+
+  let total = 0;
+  let comSobreposicao = 0;
+  mapa.forEach((itens, chave) => {
+    total += itens.length;
+    comSobreposicao += analisarDia(itens, chave).paresConflito.length;
+  });
+
+  const hojeChave = chaveDia(new Date());
+  const hoje = mapa.has(hojeChave) ? mapa.get(hojeChave).length : 0;
+
+  const segChave = chaveDia(segundaDaSemana(new Date()));
+  let naSemana = 0;
+  for (let i = 0; i < 7; i++) {
+    const chave = chaveSomandoDias(segChave, i);
+    if (chave >= janela.inicioChave && chave <= janela.fimChave && mapa.has(chave)) {
+      naSemana += mapa.get(chave).length;
+    }
+  }
+
+  const celula = (valor, rotulo, alerta) => `
+    <div class="cal-resumo__cel${alerta && valor > 0 ? " cal-resumo__cel--alerta" : ""}">
+      <span class="cal-resumo__valor">${valor}</span>
+      <span class="cal-resumo__rotulo">${rotulo}</span>
+    </div>`;
+
+  alvo.innerHTML = [
+    celula(total, total === 1 ? "compromisso" : "compromissos", false),
+    celula(hoje, "hoje", false),
+    celula(naSemana, "esta semana", false),
+    celula(comSobreposicao, comSobreposicao === 1 ? "sobreposição" : "sobreposições", true),
+  ].join("");
+}
+
+// Uma pauta dentro da célula do dia: horário, título em até duas linhas e o
+// local abaixo. Empilhado, e não em linha única, porque numa coluna de mês
+// com sete dias o título em linha única é cortado no quarto caractere —
+// "Sessão Ordiná…" não diz de qual sessão se trata.
+//
+// O que ocupa o dia sem ocupar um horário — dia inteiro e compromissos de
+// vários dias — vira uma faixa sem horário no topo da célula: é assim que se
+// lê num calendário, e o "Dia" repetido na coluna de horário só ocupava
+// espaço que o título precisa.
+function calPautaDaCelula(item) {
+  const { evento, diaChave } = item;
+  const continuo = evento.diaInteiro || eventoEhContinuo(evento);
+
+  const classes = ["cal-pauta", `cal-pauta--${evento.categoria}`];
+  if (evento.cancelado) classes.push("cal-pauta--cancelado");
+  if (evento.conflito && !evento.cancelado) classes.push("cal-pauta--conflito");
+  if (continuo) classes.push("cal-pauta--continuo");
+
+  const hora = continuo ? "" : formatarHora(new Date(evento.inicio));
+  const dica = [hora, evento.titulo, evento.local].filter(Boolean).join(" · ");
+
+  return `
+    <span class="${classes.join(" ")}" title="${escapeAttr(dica)}">
+      ${hora ? `<span class="cal-pauta__hora">${escapeHtml(hora)}</span>` : ""}
+      <span class="cal-pauta__titulo">${escapeHtml(evento.titulo)}</span>
+      ${evento.local ? `<span class="cal-pauta__local">${escapeHtml(evento.local)}</span>` : ""}
+    </span>`;
+}
+
+function renderizarCalendario() {
+  const grade = document.getElementById("cal-grade");
+  if (!grade) return;
+
+  const { janela, mapa } = pautasPorDiaDoCalendario();
+  const escalaSemana = state.ui.calendarioEscala === "semana";
+
+  document.getElementById("cal-titulo").textContent = rotuloDoPeriodoDoCalendario();
+  const campoData = document.getElementById("cal-data");
+  if (campoData && campoData.value !== state.ui.calendarioAncora) campoData.value = state.ui.calendarioAncora;
+  const campoEscala = document.getElementById("cal-escala");
+  if (campoEscala && campoEscala.value !== state.ui.calendarioEscala) {
+    campoEscala.value = state.ui.calendarioEscala;
+  }
+
+  renderizarResumoDoCalendario(mapa, janela);
+
+  const hojeChave = chaveDia(new Date());
+  const mesDaAncora = state.ui.calendarioAncora.slice(0, 7);
+
+  const cabecalho = CAL_DIAS_SEMANA.map(
+    (dia) => `<div class="cal-grade__dia-semana" role="columnheader">${dia}</div>`
+  ).join("");
+
+  const celulas = [];
+  let chave = janela.inicioChave;
+  let guarda = 0;
+  while (chave <= janela.fimChave && guarda < 45) {
+    const itens = mapa.get(chave) || [];
+    const data = dataDaChave(chave);
+    const foraDoMes = !escalaSemana && chave.slice(0, 7) !== mesDaAncora;
+
+    const classes = ["cal-celula"];
+    if (foraDoMes) classes.push("cal-celula--fora");
+    if (chave === hojeChave) classes.push("cal-celula--hoje");
+    if (itens.length) classes.push("cal-celula--com-pauta");
+
+    const visiveis = escalaSemana ? itens : itens.slice(0, CAL_MAX_POR_CELULA);
+    const restantes = itens.length - visiveis.length;
+
+    celulas.push(`
+      <div class="${classes.join(" ")}" role="gridcell" tabindex="0"
+           data-abrir-dia="${escapeAttr(chave)}"
+           aria-label="${escapeAttr(`${capitalizar(formatarDataLonga(data))} — ${itens.length} compromisso${itens.length === 1 ? "" : "s"}`)}">
+        <span class="cal-celula__numero">${Number(chave.slice(8, 10))}</span>
+        <div class="cal-celula__pautas">
+          ${visiveis.map(calPautaDaCelula).join("")}
+          ${restantes > 0 ? `<span class="cal-celula__mais">+${restantes} compromisso${restantes === 1 ? "" : "s"}</span>` : ""}
+        </div>
+      </div>`);
+
+    chave = chaveSomandoDias(chave, 1);
+    guarda++;
+  }
+
+  grade.classList.toggle("cal-grade--semana", escalaSemana);
+  grade.innerHTML = cabecalho + celulas.join("");
+}
+
+/* --------------------------------------------------------------------------
+   PAUTA DE UM DIA (modal do calendário)
+   -------------------------------------------------------------------------- */
+
+let elementoComFocoAntesDoDia = null;
+
+// Itens do dia, na mesma ordem em que aparecem na pauta: contínuos primeiro,
+// depois os com horário.
+function itensDoDia(chave) {
+  const janela = { inicioChave: chave, fimChave: chave };
+  const grupo = agruparPorDia(eventosParaCalendario(), janela).find((g) => g.chave === chave);
+  return grupo ? grupo.eventos : [];
+}
+
+function construirTextoDoDia(chave) {
+  const itens = itensDoDia(chave);
+  const linhas = [capitalizar(formatarDataLonga(dataDaChave(chave))).toUpperCase()];
+  if (!itens.length) {
+    linhas.push("  Nenhum compromisso neste dia.");
+    return linhas.join("\n");
+  }
+  itens.forEach(({ evento, diaChave }) => {
+    const aviso = evento.cancelado ? "  [⚠ CANCELADO]" : "";
+    const local = evento.local ? ` | ${evento.local}` : "";
+    linhas.push(`  ${horarioResumoPorDia(evento, diaChave)} | ${evento.titulo}${local}${aviso}`);
+    if (evento.categoria === "pauta-online" && evento.link) linhas.push(`      Link: ${evento.link}`);
+  });
+  return linhas.join("\n");
+}
+
+function abrirModalDia(chave) {
+  const itens = itensDoDia(chave);
+  const analise = analisarDia(itens, chave);
+  state.ui.diaAberto = chave;
+  elementoComFocoAntesDoDia = document.activeElement;
+
+  document.getElementById("dia-modal-titulo").textContent = capitalizar(formatarDataLonga(dataDaChave(chave)));
+
+  const ocupacao = analise.ocupadoMin ? ` · ocupação ${duracaoCurta(analise.ocupadoMin)}` : "";
+  const sobrepostos = analise.paresConflito.length
+    ? ` · ${analise.paresConflito.length} sobreposição${analise.paresConflito.length === 1 ? "" : "ões"}`
+    : "";
+  document.getElementById("dia-modal-contagem").textContent = itens.length
+    ? `${itens.length} compromisso${itens.length === 1 ? "" : "s"} neste dia${ocupacao}${sobrepostos}.`
+    : "Nenhum compromisso neste dia.";
+
+  const corpo = document.getElementById("dia-modal-corpo");
+  if (!itens.length) {
+    corpo.innerHTML = `<p class="dia-modal__vazio">Nada agendado. As janelas livres do dia aparecem na linha do tempo.</p>`;
+  } else {
+    corpo.innerHTML = itens
+      .map(({ evento, diaChave }) => {
+        const situacao = situacaoTemporal(evento);
+        const emConflito = analise.idsConflito.has(evento.id) && !evento.cancelado;
+        const selos = [`<span class="badge badge--${evento.categoria}">${CATEGORIA_LABEL[evento.categoria]}</span>`];
+        if (situacao === "andamento") selos.unshift(`<span class="badge badge--agora">● Agora</span>`);
+        if (evento.cancelado) selos.push(`<span class="badge badge--cancelado">Cancelado</span>`);
+        if (emConflito) selos.push(`<span class="badge badge--conflito">⚠ Sobreposição</span>`);
+        if (evento.recorrente) selos.push(`<span class="badge badge--recorrente">Recorrente</span>`);
+
+        const meta = [horarioResumoPorDia(evento, diaChave), evento.local].filter(Boolean).join(" · ");
+
+        return `
+          <article class="dia-item${evento.cancelado ? " dia-item--cancelado" : ""}">
+            <div class="dia-item__topo">
+              <h3 class="dia-item__titulo">${escapeHtml(evento.titulo)}</h3>
+              <span class="dia-item__selos">${selos.join("")}</span>
+            </div>
+            <p class="dia-item__meta">${escapeHtml(meta)}</p>
+            <div class="dia-item__acoes">
+              <button class="link-button" type="button" data-abrir-detalhes="${escapeAttr(evento.id)}">Ver detalhes</button>
+              ${evento.link ? `<a class="link-button" href="${escapeAttr(evento.link)}" target="_blank" rel="noopener">Entrar na reunião</a>` : ""}
+            </div>
+          </article>`;
+      })
+      .join("");
+  }
+
+  document.getElementById("btn-dia-copiar-rotulo").textContent = "Copiar";
+  document.getElementById("dia-modal").hidden = false;
+  document.getElementById("dia-backdrop").hidden = false;
+  document.getElementById("btn-fechar-dia").focus();
+}
+
+function fecharModalDia() {
+  const modal = document.getElementById("dia-modal");
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  document.getElementById("dia-backdrop").hidden = true;
+  state.ui.diaAberto = null;
+  if (elementoComFocoAntesDoDia && document.contains(elementoComFocoAntesDoDia)) {
+    elementoComFocoAntesDoDia.focus();
+  }
+}
+
+// Recorta a agenda inteira para um único dia. É o que "Extrair este dia" e
+// "Abrir na linha do tempo" fazem: o dia escolhido no calendário vira o
+// filtro corrente, para que a extração e a pista falem do mesmo dia.
+function fixarDiaNosFiltros(chave) {
+  state.filtros.dataInicio = chave;
+  state.filtros.dataFim = chave;
+  state.filtros.periodo = "todos";
+  const campoInicio = document.getElementById("filtro-data-inicio");
+  const campoFim = document.getElementById("filtro-data-fim");
+  if (campoInicio) campoInicio.value = chave;
+  if (campoFim) campoFim.value = chave;
+  atualizarVisibilidadeBtnLimparDatas();
+  sincronizarChipsPeriodo();
+  renderizarConteudo();
+}
+
+// Passo de navegação da grade: um mês ou uma semana, conforme a escala.
+function navegarCalendario(passo) {
+  if (state.ui.calendarioEscala === "semana") {
+    state.ui.calendarioAncora = chaveSomandoDias(state.ui.calendarioAncora, 7 * passo);
+  } else {
+    // Sempre a partir do dia 1: somar um mês a 31 de janeiro cairia em março.
+    const alvo = new Date(`${state.ui.calendarioAncora.slice(0, 8)}01T12:00:00${offsetBahia()}`);
+    alvo.setUTCMonth(alvo.getUTCMonth() + passo);
+    state.ui.calendarioAncora = chaveDia(alvo);
+  }
+  renderizarCalendario();
+}
+
+function inicializarCalendario() {
+  document.getElementById("btn-cal-hoje").addEventListener("click", () => {
+    state.ui.calendarioAncora = chaveDia(new Date());
+    renderizarCalendario();
+  });
+  document.getElementById("btn-cal-anterior").addEventListener("click", () => navegarCalendario(-1));
+  document.getElementById("btn-cal-proximo").addEventListener("click", () => navegarCalendario(1));
+
+  document.getElementById("cal-escala").addEventListener("change", (ev) => {
+    state.ui.calendarioEscala = ev.target.value === "semana" ? "semana" : "mes";
+    renderizarCalendario();
+  });
+  document.getElementById("cal-data").addEventListener("change", (ev) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ev.target.value)) return;
+    state.ui.calendarioAncora = ev.target.value;
+    renderizarCalendario();
+  });
+
+  // Abrir a pauta de um dia: clique ou Enter/Espaço na célula.
+  const grade = document.getElementById("cal-grade");
+  grade.addEventListener("click", (ev) => {
+    const celula = ev.target.closest("[data-abrir-dia]");
+    if (celula) abrirModalDia(celula.dataset.abrirDia);
+  });
+  grade.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    const celula = ev.target.closest("[data-abrir-dia]");
+    if (!celula) return;
+    ev.preventDefault();
+    abrirModalDia(celula.dataset.abrirDia);
+  });
+
+  document.getElementById("btn-fechar-dia").addEventListener("click", fecharModalDia);
+  document.getElementById("dia-backdrop").addEventListener("click", fecharModalDia);
+
+  document.getElementById("btn-dia-copiar").addEventListener("click", async () => {
+    const chave = state.ui.diaAberto;
+    if (!chave) return;
+    const rotulo = document.getElementById("btn-dia-copiar-rotulo");
+    try {
+      await navigator.clipboard.writeText(construirTextoDoDia(chave));
+      rotulo.textContent = "Copiado";
+    } catch (e) {
+      rotulo.textContent = "Não foi possível copiar";
+    }
+    setTimeout(() => {
+      rotulo.textContent = "Copiar";
+    }, 2000);
+  });
+
+  document.getElementById("btn-dia-exportar").addEventListener("click", () => {
+    const chave = state.ui.diaAberto;
+    if (!chave) return;
+    fecharModalDia();
+    fixarDiaNosFiltros(chave);
+    abrirOverlayExport();
+  });
+
+  document.getElementById("btn-dia-abrir").addEventListener("click", () => {
+    const chave = state.ui.diaAberto;
+    if (!chave) return;
+    fecharModalDia();
+    fixarDiaNosFiltros(chave);
+    state.ui.vista = "timeline";
+    atualizarVisibilidadeVista();
+    document.getElementById("vista-timeline").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 /* ==========================================================================
@@ -2217,6 +2640,7 @@ function renderizarConteudo() {
 
   preencherTimeline(filtrados);
   preencherTabela(filtrados);
+  renderizarCalendario();
   renderizarDashboard(filtrados);
   renderizarCategorias();
   renderizarFiltrosAtivos();
@@ -2513,7 +2937,7 @@ async function atualizarAgenda() {
 }
 
 /* ==========================================================================
-   DOCUMENTOS DE EXTRAÇÃO — EXTRATO A4 (PDF) E CARD MOBILE (JPEG)
+   DOCUMENTOS DE EXTRAÇÃO — EXTRATO A4 (PDF) E PAUTA DO DIA (JPEG)
 
    Os dois artefatos são construídos aqui em HTML institucional puro, sempre
    em tema claro (independentemente do modo escuro da interface), e depois
@@ -2852,179 +3276,204 @@ function construirExtratoA4(grupos, totalFiltrados, opcoes) {
 }
 
 /* --------------------------------------------------------------------------
-   CARD DE COMPARTILHAMENTO EM JPEG (mobile)
+   CARD DE EXTRAÇÃO EM JPEG — PAUTA DO DIA
+
+   O artefato é uma PAUTA em duas colunas — HORÁRIO e COMPROMISSO —, no
+   mesmo formato do documento que circula internamente: cabeçalho
+   institucional, faixa da data com a contagem e a ocupação, a pauta
+   propriamente dita e o rodapé de uso interno.
+
+   O formato anterior desenhava o dia como linha do tempo em escala de horas.
+   Ela é a leitura correta NA TELA, onde se rola e se compara vãos, e por isso
+   continua sendo a vista principal do módulo; no documento que se imprime e
+   se encaminha, porém, o que se lê é a sequência: que horas, o que, onde.
+   A régua de horas gastava dois terços da imagem com espaço vazio entre
+   compromissos e empurrava o título para uma caixa estreita, justamente o
+   dado que quem recebe o card precisa ler primeiro.
+
+   A altura é determinada pelo conteúdo. As proporções fechadas (story 9:16 e
+   feed 4:5) continuam disponíveis para publicação em rede social e apenas
+   fixam uma altura mínima — a pauta nunca é cortada para caber nelas.
    -------------------------------------------------------------------------- */
 
-// Um compromisso no card: faixa de cor à esquerda, horário em coluna
-// monoespaçada e título com o local abaixo.
-function cartaoMobile(bloco, analise, escala) {
+// Assinatura institucional impressa no rodapé do documento. Fica isolada aqui
+// porque é a única informação do artefato que muda conforme a unidade que
+// expede a pauta — o resto é derivado dos compromissos.
+const CARD_RODAPE_ESQUERDA = "Documento de uso interno — não processual";
+const CARD_RODAPE_DIREITA = "Assessoria da Presidência";
+
+// Alturas mínimas por proporção. "documento" não tem: cresce com a pauta.
+const CARD_ALTURA_MINIMA_POR_PROPORCAO = {
+  story: 1920, // 1080 × 1920 (9:16)
+  feed: 1350, // 1080 × 1350 (4:5)
+};
+
+const CARD_LARGURA = 1080;
+
+// Etiqueta de uma linha da pauta: local, modalidade e avisos. São desenhadas
+// com borda e não com fundo chapado porque o documento é lido impresso em
+// preto e branco com frequência, e aí só o contorno sobrevive.
+function cardEtiqueta(texto, cor, fundo, borda, px) {
+  return `<span style="display:inline-flex;align-items:center;font:600 ${px(17)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.07em;text-transform:uppercase;color:${cor};background:${fundo};border:1px solid ${borda};border-radius:${px(6)};padding:${px(8)} ${px(12)};white-space:nowrap">${escapeHtml(texto)}</span>`;
+}
+
+// Coluna HORÁRIO: início em destaque, término e duração abaixo. Os três em
+// monoespaçada para que os dígitos alinhem em coluna de uma linha para outra.
+function cardColunaHorario(bloco, cancelado, px) {
+  const { evento } = bloco;
+
+  if (evento.diaInteiro) {
+    return `
+      <div style="display:flex;flex-direction:column;gap:${px(6)}">
+        <span style="font:600 ${px(34)}/1 'IBM Plex Mono',monospace;color:${EXP.navy}">Dia</span>
+        <span style="font:400 ${px(21)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">inteiro</span>
+      </div>`;
+  }
+
+  const corHora = cancelado ? EXP.vermelhoForte : EXP.navy;
+  const risco = cancelado ? ";text-decoration:line-through" : "";
+  return `
+    <div style="display:flex;flex-direction:column;gap:${px(6)}">
+      <span style="font:600 ${px(40)}/1 'IBM Plex Mono',monospace;color:${corHora}${risco}">${hhmmDeMinutos(bloco.ini)}</span>
+      <span style="font:400 ${px(21)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">até ${hhmmDeMinutos(bloco.fim)}</span>
+      <span style="font:400 ${px(21)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">${duracaoCurta(bloco.dur)}</span>
+    </div>`;
+}
+
+// Local em etiqueta: só o nome do lugar, sem o endereço completo. O ICS traz
+// "Plenário do TCM-BA — Av. 4, nº 495, Centro Administrativo da Bahia,
+// Salvador", e o endereço inteiro em caixa alta ocupa a linha toda da pauta
+// sem dizer nada que quem recebe o documento já não saiba.
+const CARD_LOCAL_MAX = 42;
+
+function cardLocalCurto(local) {
+  const texto = (local || "").trim();
+  if (texto.length <= CARD_LOCAL_MAX) return texto;
+  // Corta no travessão ou na vírgula — o que vem antes é o nome do lugar,
+  // o que vem depois é endereço. Um hífen NÃO separa: em "Hotel Mercure -
+  // Rio Vermelho" ele liga o hotel ao bairro, e o bairro é o que localiza.
+  const primeiro = texto.split(/\s+—\s+|,/)[0].trim() || texto;
+  return primeiro.length > CARD_LOCAL_MAX ? `${primeiro.slice(0, CARD_LOCAL_MAX - 1).trimEnd()}…` : primeiro;
+}
+
+// Uma linha da pauta: horário à esquerda, título e etiquetas à direita.
+function cardLinhaPauta(bloco, analise, px) {
   const { evento } = bloco;
   const cat = expCat(evento.categoria);
   const cancelado = !!evento.cancelado;
   const emAndamento = analise.emAndamento && analise.emAndamento.evento.id === evento.id;
-  const temConflito = analise.idsConflito.has(evento.id);
-  const px = (v) => `${Math.round(v * escala)}px`;
+  const emConflito = analise.idsConflito.has(evento.id) && !cancelado;
 
-  const fundo = cancelado ? "#FEF7F8" : emAndamento ? "#F2FAF7" : "#fff";
-  const borda = cancelado ? "2px solid #F6C4CE" : emAndamento ? "2px solid #C4E3D9" : `1px solid ${EXP.borda}`;
-  const corFaixa = cancelado ? EXP.vermelho : cat.cor;
-
-  const marcadores = [];
+  const etiquetas = [];
+  if (evento.local) {
+    etiquetas.push(cardEtiqueta(cardLocalCurto(evento.local), EXP.textoForte, "#fff", EXP.borda, px));
+  }
+  if (cancelado) {
+    etiquetas.push(cardEtiqueta("Cancelado", EXP.vermelhoForte, "#FDECEF", "#F6C4CE", px));
+  }
+  if (emConflito) {
+    etiquetas.push(cardEtiqueta("Sobreposição", EXP.vermelhoForte, "#FDECEF", "#F6C4CE", px));
+  }
   if (emAndamento) {
-    marcadores.push(
-      `<span style="font:600 ${px(15)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.07em;color:#0F7B5F;background:#fff;border:1px solid #C4E3D9;border-radius:${px(7)};padding:${px(6)} ${px(10)}">AGORA</span>`
-    );
+    etiquetas.push(cardEtiqueta("Agora", "#0F7B5F", "#EDF7F3", "#C4E3D9", px));
   }
-  if (temConflito && !cancelado) {
-    marcadores.push(
-      `<span style="font:600 ${px(15)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.07em;color:${EXP.vermelhoForte};background:#FDECEF;border:1px solid #F6C4CE;border-radius:${px(7)};padding:${px(6)} ${px(10)}">CONFLITO</span>`
-    );
-  }
+  etiquetas.push(cardEtiqueta(cat.label, cat.cor, cat.bg, cat.borda, px));
 
-  const modalidade = `${evento.local ? escapeHtml(evento.local) + " · " : ""}${cat.label}`;
+  const corTitulo = cancelado ? EXP.cancelTitulo : EXP.tinta;
+  const riscoTitulo = cancelado ? ";text-decoration:line-through" : "";
 
   return `
-    <div style="position:relative;display:grid;grid-template-columns:${px(150)} 1fr;gap:${px(24)};padding:${px(24)} ${px(26)} ${px(24)} ${px(30)};background:${fundo};border:${borda};border-radius:${px(18)};flex:0 0 auto;box-shadow:0 ${px(2)} ${px(8)} rgba(11,49,99,.05)">
-      <span style="position:absolute;left:0;top:0;bottom:0;width:${px(8)};background:${corFaixa};border-radius:${px(18)} 0 0 ${px(18)}"></span>
-      <div style="display:flex;flex-direction:column;gap:${px(4)}">
-        <span style="font:600 ${px(34)}/1.1 'IBM Plex Mono',monospace;color:${cancelado ? EXP.vermelhoForte : emAndamento ? "#0F7B5F" : EXP.navy}${cancelado ? ";text-decoration:line-through" : ""}">${evento.diaInteiro ? "Dia" : hhmmDeMinutos(bloco.ini)}</span>
-        <span style="font:400 ${px(20)}/1.2 'IBM Plex Mono',monospace;color:${EXP.texto3}">${evento.diaInteiro ? "inteiro" : duracaoCurta(bloco.dur)}</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:${px(9)};min-width:0">
-        <div style="display:flex;align-items:center;gap:${px(10)};flex-wrap:wrap">
-          <span style="font:700 ${px(30)}/1.3 'IBM Plex Sans',sans-serif;color:${cancelado ? EXP.cancelTitulo : EXP.tinta}${cancelado ? ";text-decoration:line-through" : ""};text-wrap:pretty">${escapeHtml(evento.titulo)}</span>
-          ${marcadores.join("")}
-        </div>
-        ${
-          cancelado
-            ? `<span style="font:600 ${px(17)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.08em;color:${EXP.vermelhoForte}">CANCELADO</span>`
-            : `<span style="font:400 ${px(22)}/1.35 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-wrap:pretty">${modalidade}</span>`
-        }
+    <div style="display:grid;grid-template-columns:${px(208)} 1fr;gap:${px(28)};padding:${px(26)} 0;border-top:1px solid ${EXP.bordaSuave};flex:0 0 auto">
+      ${cardColunaHorario(bloco, cancelado, px)}
+      <div style="display:flex;flex-direction:column;gap:${px(14)};min-width:0">
+        <span style="font:700 ${px(30)}/1.3 'IBM Plex Sans',sans-serif;color:${corTitulo}${riscoTitulo};text-wrap:pretty">${escapeHtml(evento.titulo)}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:${px(10)}">${etiquetas.join("")}</div>
       </div>
     </div>`;
+}
+
+// Janela livre entre dois compromissos. Entra na própria sequência da pauta,
+// no lugar em que o vão existe, e não numa lista à parte no rodapé: é ali que
+// ela responde à pergunta de quem procura onde encaixar mais uma coisa.
+function cardLinhaJanela(janela, px) {
+  const [ini, fim] = janela;
+  const rotulo = `${duracaoCurta(fim - ini)} livre · ${hhmmDeMinutos(ini)} – ${hhmmDeMinutos(fim)}`;
+  return `
+    <div style="display:grid;grid-template-columns:${px(208)} 1fr;gap:${px(28)};padding:${px(14)} 0;border-top:1px solid ${EXP.bordaSuave};flex:0 0 auto">
+      <span style="font:400 ${px(21)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3};padding-top:${px(6)}">${hhmmDeMinutos(ini)}</span>
+      <div style="border:2px dashed ${"#C9DED6"};border-radius:${px(10)};padding:${px(10)} ${px(18)};background:repeating-linear-gradient(135deg,#F4F8F6 0 ${px(10)},#EEF5F1 ${px(10)} ${px(20)})">
+        <span style="font:600 ${px(20)}/1.2 'IBM Plex Mono',monospace;color:${EXP.verde}">${escapeHtml(rotulo)}</span>
+      </div>
+    </div>`;
+}
+
+// Faixa de destaque acima da pauta, para o que ocupa o dia sem ocupar um
+// horário — compromissos de dia inteiro e de vários dias. Sem ela, um evento
+// de dia inteiro ou aparecia como uma linha de horário vazio no meio da
+// pauta, ou simplesmente sumia do documento.
+function cardFaixaDestaque(analise, px) {
+  if (!analise.contínuos.length) return "";
+  const itens = analise.contínuos
+    .map((it) => `${escapeHtml(it.evento.titulo)} <span style="font:400 ${px(20)}/1 'IBM Plex Mono',monospace;color:#8A6410">· ${escapeHtml(duracaoLegivel(it.evento))}</span>`)
+    .join(`<span style="color:#C9A227"> — </span>`);
+  return `
+    <div style="background:#FDF6E3;border:1px solid #F0DCBE;border-left:${px(6)} solid #E0A800;border-radius:${px(10)};padding:${px(18)} ${px(22)};margin-bottom:${px(26)};flex:0 0 auto">
+      <span style="font:600 ${px(22)}/1.35 'IBM Plex Sans',sans-serif;color:#7A5300;text-wrap:pretty">${itens}</span>
+    </div>`;
+}
+
+// Cabeçalho das duas colunas. Repetido a cada dia quando a extração cobre
+// mais de um, porque o documento é lido em partes e um cabeçalho só no topo
+// não alcança a segunda metade da folha.
+function cardCabecalhoColunas(px) {
+  return `
+    <div style="display:grid;grid-template-columns:${px(208)} 1fr;gap:${px(28)};padding-bottom:${px(14)};flex:0 0 auto">
+      <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:${EXP.texto3}">HORÁRIO</span>
+      <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:${EXP.texto3}">COMPROMISSO</span>
+    </div>`;
+}
+
+// A pauta de um dia: destaque, cabeçalho das colunas e as linhas em ordem de
+// horário, com as janelas livres intercaladas na posição em que ocorrem.
+function cardPautaDoDia(analise, incluirJanelas, px) {
+  const linhas = [];
+  const janelas = incluirJanelas ? analise.janelas.slice() : [];
+  let proximaJanela = 0;
+
+  analise.blocos.forEach((bloco) => {
+    while (proximaJanela < janelas.length && janelas[proximaJanela][1] <= bloco.ini) {
+      linhas.push(cardLinhaJanela(janelas[proximaJanela], px));
+      proximaJanela++;
+    }
+    linhas.push(cardLinhaPauta(bloco, analise, px));
+  });
+  while (proximaJanela < janelas.length) {
+    linhas.push(cardLinhaJanela(janelas[proximaJanela], px));
+    proximaJanela++;
+  }
+
+  if (!linhas.length && !analise.contínuos.length) {
+    linhas.push(
+      `<div style="padding:${px(40)} 0;border-top:1px solid ${EXP.bordaSuave};font:400 ${px(24)}/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Nenhum compromisso neste dia.</div>`
+    );
+  }
+
+  // O cabeçalho das colunas só entra quando há o que pôr debaixo dele: num dia
+  // ocupado apenas por um compromisso de vários dias, "HORÁRIO · COMPROMISSO"
+  // sobrava no documento anunciando uma tabela vazia.
+  const temHorarios = analise.blocos.length > 0 || janelas.length > 0;
+  return cardFaixaDestaque(analise, px) + (temHorarios ? cardCabecalhoColunas(px) : "") + linhas.join("");
 }
 
 /**
- * Card de compartilhamento em JPEG, 1080 × 1920 (story 9:16) ou 1080 × 1350
- * (feed 4:5).
+ * Documento de pauta em JPEG, 1080 px de largura e altura livre.
  *
- * O dia é desenhado como LINHA DO TEMPO EM ESCALA, não como lista de cartões.
- * A lista desperdiçava a imagem: com quatro compromissos de uma hora, dois
- * terços do card ficavam em branco e os vazios da agenda — que são a
- * informação mais útil de quem olha o card para marcar algo — não apareciam.
- * Na pista, cada hora ocupa a mesma altura, um compromisso de 3h ocupa o
- * triplo de um de 1h, e as janelas livres aparecem no lugar e no tamanho
- * reais, hachuradas e rotuladas.
- *
- * A pista cobre 08:00–18:00 e se estende quando há compromisso fora dessa
- * faixa — senão um compromisso às 19h simplesmente sumiria do card.
- *
- * Períodos de vários dias não têm pista: uma escala de horas só significa
- * alguma coisa dentro de um dia. Nesse caso o card cai para a lista, que
- * continua sendo a leitura correta para semana e mês.
+ * Um dia: cabeçalho com a data por extenso e a pauta corrida. Vários dias:
+ * a mesma pauta repetida sob o título de cada data, na ordem do calendário.
  */
-
-const CARD_PISTA_INI = 8 * 60; // 08:00
-const CARD_PISTA_FIM = 18 * 60; // 18:00
-
-// Alturas fixas do card, em px do artefato final (1080 de largura).
-const CARD_HERO_STORY = 500;
-const CARD_HERO_FEED = 400;
-const CARD_RODAPE = 123;
-const CARD_PISTA_PAD = 68; // padding vertical da área da pista (36 + 32)
-
-// Abaixo desta altura o compromisso não comporta local e modalidade, e colapsa
-// para uma linha só — decidido em pixels disponíveis, não em minutos, porque
-// um compromisso de 1h em coluna dividida tem menos espaço que um em coluna
-// cheia.
-const CARD_ALTURA_COLAPSO = 100;
-const CARD_ALTURA_MINIMA = 56;
-
-function cardFaixaDoDia(blocos) {
-  if (!blocos.length) return "—";
-  const ini = Math.min(...blocos.map((b) => b.ini));
-  const fim = Math.max(...blocos.map((b) => b.fim));
-  return `${hhmmDeMinutos(ini)} – ${hhmmDeMinutos(fim)}`;
-}
-
-// Régua de horas: uma linha e um rótulo por hora cheia da pista.
-function cardReguaHoras(t0, t1, y, px) {
-  let saida = "";
-  for (let m = t0; m <= t1; m += 60) {
-    saida += `<div style="position:absolute;left:${px(96)};right:0;top:${px(y(m))};height:1px;background:${EXP.borda}"></div>`;
-    saida += `<div style="position:absolute;left:0;width:${px(84)};top:${px(y(m) - 11)};text-align:right;font:500 ${px(19)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">${hhmmDeMinutos(m)}</div>`;
-  }
-  return saida;
-}
-
-// Janelas livres desenhadas no lugar e no tamanho reais. O rótulo diz duração
-// e horário juntos ("2h30 livre · 12:00 – 14:30"): só a duração obrigaria a
-// conferir a régua para saber quando.
-function cardJanelasLivres(janelas, t0, t1, y, px) {
-  return janelas
-    .map(([ji, jf]) => {
-      const ini = Math.max(ji, t0);
-      const fim = Math.min(jf, t1);
-      if (fim - ini < JANELA_MINIMA_MIN) return "";
-      const altura = y(fim) - y(ini) - 8;
-      const compacta = altura < 60;
-      const rotulo = `${duracaoCurta(fim - ini)} livre · ${hhmmDeMinutos(ini)} – ${hhmmDeMinutos(fim)}`;
-      return `
-        <div style="position:absolute;left:0;right:0;top:${px(y(ini) + 4)};height:${px(altura)};border-radius:${px(14)};border:2px dashed #C9DED6;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#F4F8F6 0 ${px(12)},#EEF5F1 ${px(12)} ${px(24)})">
-          <span style="font:600 ${px(compacta ? 17 : 20)}/1 'IBM Plex Mono',monospace;color:${EXP.verde};background:#fff;border:1px solid #C9DED6;border-radius:999px;padding:${compacta ? `${px(7)} ${px(14)}` : `${px(11)} ${px(20)}`}">${escapeHtml(rotulo)}</span>
-        </div>`;
-    })
-    .join("");
-}
-
-function cardBlocoNaPista(bloco, analise, t0, t1, y, px) {
-  const { evento } = bloco;
-  const ini = Math.max(bloco.ini, t0);
-  const fim = Math.min(bloco.fim, t1);
-  const altura = Math.max(y(fim) - y(ini) - 8, CARD_ALTURA_MINIMA);
-
-  const { col, total } = analise.colunaDe.get(evento.id) || { col: 0, total: 1 };
-  const larguraCol = 100 / total;
-  const estreito = total > 1;
-  const curto = altura < CARD_ALTURA_COLAPSO;
-
-  const cat = EXP_CAT[evento.categoria] || EXP_CAT["pauta-presencial"];
-  const cancelado = evento.cancelado;
-  const emConflito = analise.idsConflito.has(evento.id);
-  const corFaixa = cancelado ? EXP.cancelTitulo : cat.cor;
-
-  const selo = (texto, cor, bg, borda) =>
-    `<span style="font:600 ${px(14)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:${cor};background:${bg};border:1px solid ${borda};border-radius:${px(7)};padding:${px(6)} ${px(10)};flex:0 0 auto">${texto}</span>`;
-
-  const meta = curto
-    ? ""
-    : `<div style="display:flex;align-items:center;gap:${px(10)};min-width:0">
-         ${cancelado ? selo("Cancelado", EXP.vermelhoForte, "#FDECEF", "#F6C4CE") : selo(cat.label, cat.cor, cat.bg, cat.borda)}
-         ${evento.local ? `<span style="font:400 ${px(20)}/1.2 'IBM Plex Sans',sans-serif;color:${EXP.texto2};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${escapeHtml(evento.local)}</span>` : ""}
-         ${emConflito ? selo("Conflito", EXP.vermelhoForte, "#FDECEF", "#F6C4CE") : ""}
-       </div>`;
-
-  return `
-    <div style="position:absolute;top:${px(y(ini) + 4)};height:${px(altura)};left:${col * larguraCol}%;width:${total > 1 ? `calc(${larguraCol}% - ${px(8)})` : "100%"};background:#fff;border:1px solid ${EXP.borda};border-radius:${px(14)};overflow:hidden;display:flex;align-items:${curto ? "center" : "flex-start"};gap:${px(20)};padding:${curto ? `${px(10)} ${px(20)} ${px(10)} ${px(26)}` : `${px(18)} ${px(22)} ${px(16)} ${px(28)}`};box-shadow:0 ${px(2)} ${px(10)} rgba(11,49,99,.06)">
-      <span style="position:absolute;left:0;top:0;bottom:0;width:${px(8)};background:${corFaixa}"></span>
-      <div style="display:flex;flex-direction:column;gap:${px(2)};flex:0 0 auto;min-width:0">
-        <span style="font:600 ${px(curto ? 26 : 32)}/1 'IBM Plex Mono',monospace;color:${corFaixa};white-space:nowrap">${hhmmDeMinutos(bloco.ini)}</span>
-        <span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3};display:${curto ? "none" : "block"}">${duracaoCurta(bloco.dur)}</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:${px(6)};min-width:0;flex:1">
-        <span style="font:700 ${px(estreito || curto ? 22 : 27)}/1.25 'IBM Plex Sans',sans-serif;color:${cancelado ? EXP.cancelTitulo : EXP.tinta}${cancelado ? ";text-decoration:line-through" : ""};text-wrap:pretty;overflow:hidden;max-height:${px(curto ? 28 : 68)};white-space:${curto ? "nowrap" : "normal"};text-overflow:ellipsis">${escapeHtml(evento.titulo)}</span>
-        ${meta}
-      </div>
-    </div>`;
-}
-
 function construirCardMobile(grupos, totalFiltrados, opcoes) {
   const { proporcao, incluirCancelados, incluirJanelas } = opcoes;
-  const feed = proporcao === "feed";
-  const largura = 1080;
-  const altura = feed ? 1350 : 1920;
-  const escala = 1;
-  const px = (v) => `${Math.round(v * escala)}px`;
+  const px = (v) => `${Math.round(v)}px`;
 
   const gruposVisiveis = grupos
     .map((g) => ({
@@ -3035,95 +3484,62 @@ function construirCardMobile(grupos, totalFiltrados, opcoes) {
 
   const diaUnico = gruposVisiveis.length === 1;
   const primeiro = gruposVisiveis[0];
-  const analise = primeiro ? analisarDia(primeiro.eventos, primeiro.chave) : null;
+  const analisePrimeiro = primeiro ? analisarDia(primeiro.eventos, primeiro.chave) : null;
 
   const dataRef = primeiro ? new Date(`${primeiro.chave}T12:00:00${offsetBahia()}`) : new Date();
   const diaSemana = new Intl.DateTimeFormat("pt-BR", { timeZone: DISPLAY_TIMEZONE, weekday: "long" })
     .format(dataRef)
     .toUpperCase();
-  const diaMes = new Intl.DateTimeFormat("pt-BR", { timeZone: DISPLAY_TIMEZONE, day: "2-digit", month: "short" })
+  // "3 DE SET" — dia sem zero à esquerda, como se lê em voz alta.
+  const diaDoMes = new Intl.DateTimeFormat("pt-BR", { timeZone: DISPLAY_TIMEZONE, day: "numeric" }).format(dataRef);
+  const mesCurto = new Intl.DateTimeFormat("pt-BR", { timeZone: DISPLAY_TIMEZONE, month: "short" })
     .format(dataRef)
     .replace(".", "")
     .toUpperCase();
+  const diaMes = `${diaDoMes} DE ${mesCurto}`;
 
   const totalDoCard = gruposVisiveis.reduce((a, g) => a + g.eventos.length, 0);
-  const ocupacao = analise ? duracaoCurta(analise.ocupadoMin) : "—";
-  const livre = analise ? duracaoCurta(analise.livreMin) : "—";
-  const conflitos = analise ? analise.paresConflito.length : 0;
-  const faixaDia = analise && diaUnico ? cardFaixaDoDia(analise.blocos) : "—";
+  const ocupacao = analisePrimeiro ? duracaoCurta(analisePrimeiro.ocupadoMin) : "—";
 
-  const alturaHero = feed ? CARD_HERO_FEED : CARD_HERO_STORY;
-
-  const indicador = (rotulo, valor, alerta) => `
-    <div style="flex:1;padding:${px(18)} ${px(22)};border-radius:${px(16)};background:${alerta ? "rgba(216,4,37,.26)" : "rgba(255,255,255,.1)"};border:1px solid ${alerta ? "rgba(243,179,190,.4)" : "rgba(255,255,255,.18)"};display:flex;flex-direction:column;gap:${px(8)}">
-      <span style="font:600 ${px(17)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${alerta ? "#F3B3BE" : "#9FB6D8"}">${rotulo}</span>
-      <span style="font:600 ${px(38)}/1 'IBM Plex Mono',monospace;color:#fff">${valor}</span>
-    </div>`;
-
-  // ---- corpo: pista em escala (um dia) ou lista (vários dias) -------------
-  let corpo = "";
-
+  // ---- corpo: uma pauta por dia -------------------------------------------
+  let corpo;
   if (!gruposVisiveis.length) {
     corpo = `<div style="padding:${px(60)} 0;text-align:center;font:400 ${px(26)}/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Nenhum compromisso encontrado para os filtros selecionados.</div>`;
   } else if (diaUnico) {
-    let t0 = CARD_PISTA_INI;
-    let t1 = CARD_PISTA_FIM;
-    analise.blocos.forEach((b) => {
-      t0 = Math.min(t0, Math.floor(b.ini / 60) * 60);
-      t1 = Math.max(t1, Math.ceil(b.fim / 60) * 60);
-    });
-
-    // Compromissos de dia inteiro ou de vários dias não têm posição na escala:
-    // vão numa faixa acima da pista, que também encolhe a pista na medida.
-    const continuos = analise.contínuos
-      .map((it) => {
-        const cat = EXP_CAT[it.evento.categoria] || EXP_CAT["pauta-presencial"];
-        return `<span style="display:flex;align-items:center;gap:${px(10)};background:#fff;border:1px solid ${EXP.borda};border-left:${px(6)} solid ${cat.cor};border-radius:${px(10)};padding:${px(12)} ${px(18)};font:600 ${px(21)}/1.2 'IBM Plex Sans',sans-serif;color:${EXP.tinta}">${escapeHtml(it.evento.titulo)}<span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">${duracaoLegivel(it.evento)}</span></span>`;
-      })
-      .join("");
-    const faixaContinuos = continuos
-      ? `<div style="display:flex;flex-direction:column;gap:${px(10)};padding-bottom:${px(18)};flex:0 0 auto">${continuos}</div>`
-      : "";
-    const alturaContinuos = analise.contínuos.length * 62 + (continuos ? 18 : 0);
-
-    const alturaPista = altura - alturaHero - CARD_RODAPE - CARD_PISTA_PAD - alturaContinuos;
-    const pxPorMinuto = alturaPista / (t1 - t0);
-    const y = (m) => (m - t0) * pxPorMinuto;
-
-    corpo = `
-      ${faixaContinuos}
-      <div style="position:relative;flex:0 0 auto;height:${px(alturaPista)}">
-        ${cardReguaHoras(t0, t1, y, px)}
-        <div style="position:absolute;left:${px(112)};right:0;top:0;bottom:0">
-          ${incluirJanelas ? cardJanelasLivres(analise.janelas, t0, t1, y, px) : ""}
-          ${analise.blocos.map((b) => cardBlocoNaPista(b, analise, t0, t1, y, px)).join("")}
-        </div>
-      </div>`;
+    corpo = cardPautaDoDia(analisePrimeiro, incluirJanelas, px);
   } else {
     corpo = gruposVisiveis
-      .map((grupo) => {
+      .map((grupo, indice) => {
         const analiseGrupo = analisarDia(grupo.eventos, grupo.chave);
-        const titulo = `<div style="font:600 ${px(20)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:${EXP.texto2};padding-top:${px(10)};flex:0 0 auto">${escapeHtml(dataLongaDaChave(grupo.chave).toUpperCase())}</div>`;
-        const continuos = analiseGrupo.contínuos
-          .map((it) => cartaoMobile({ ...it, ini: 0, fim: 1440, dur: 1440 }, analiseGrupo, escala))
-          .join("");
-        const blocos = analiseGrupo.blocos.map((bloco) => cartaoMobile(bloco, analiseGrupo, escala)).join("");
-        return titulo + continuos + blocos;
+        const titulo = `<div style="font:700 ${px(24)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:${EXP.navy};padding:${indice ? px(38) : "0"} 0 ${px(18)};flex:0 0 auto">${escapeHtml(dataLongaDaChave(grupo.chave).toUpperCase())}</div>`;
+        return titulo + cardPautaDoDia(analiseGrupo, incluirJanelas && diaUnico, px);
       })
       .join("");
   }
 
+  // ---- faixa da data, no pé do cabeçalho ----------------------------------
+  const rotuloEsquerda = diaUnico ? escapeHtml(diaSemana) : escapeHtml(subtituloDaPagina().toUpperCase());
+  const valorEsquerda = diaUnico ? escapeHtml(diaMes) : `${totalDoCard} COMPROMISSOS`;
+  const contagem = `${totalDoCard} compromisso${totalDoCard === 1 ? "" : "s"}`;
+  const resumoDireita = diaUnico
+    ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:${px(8)};padding-bottom:${px(10)}">
+         <span style="font:600 ${px(23)}/1 'IBM Plex Sans',sans-serif;color:#fff">${contagem}</span>
+         <span style="font:400 ${px(22)}/1 'IBM Plex Sans',sans-serif;color:#9FB6D8">Ocupação ${escapeHtml(ocupacao)}</span>
+       </div>`
+    : "";
+
   const paper = document.createElement("div");
   paper.className = "export-paper";
+  const alturaMinima = CARD_ALTURA_MINIMA_POR_PROPORCAO[proporcao];
   paper.style.cssText =
-    `width:${largura}px;height:${altura}px;display:flex;flex-direction:column;background:${EXP.painel};` +
-    "overflow:hidden;box-sizing:border-box;font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";";
+    `width:${CARD_LARGURA}px;${alturaMinima ? `min-height:${alturaMinima}px;` : ""}display:flex;flex-direction:column;background:#fff;` +
+    "box-sizing:border-box;font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";";
 
   paper.innerHTML = `
-    <div style="background:linear-gradient(150deg,${EXP.navy} 0%,${EXP.navyMid} 55%,${EXP.navyEscuro} 100%);padding:${feed ? `${px(40)} ${px(60)} ${px(36)}` : `${px(56)} ${px(60)} ${px(48)}`};display:flex;flex-direction:column;justify-content:space-between;flex:0 0 auto;height:${px(alturaHero)};overflow:hidden">
+    <div style="background:linear-gradient(150deg,${EXP.navy} 0%,${EXP.navyMid} 55%,${EXP.navyEscuro} 100%);padding:${px(48)} ${px(56)} ${px(40)};display:flex;flex-direction:column;gap:${px(44)};flex:0 0 auto">
       <div style="display:flex;align-items:center;gap:${px(20)}">
-        <div style="width:${px(84)};height:${px(84)};border-radius:${px(18)};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto">
-          ${marcaImg("tcm-mark.png", 68, "TCM-BA")}
+        <div style="width:${px(80)};height:${px(80)};border-radius:${px(16)};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto">
+          ${marcaImg("tcm-mark.png", 64, "TCM-BA")}
         </div>
         <div style="display:flex;flex-direction:column;gap:${px(7)}">
           <span style="font:700 ${px(30)}/1 'IBM Plex Sans',sans-serif;color:#fff;letter-spacing:-.01em">Agenda Institucional</span>
@@ -3132,38 +3548,21 @@ function construirCardMobile(grupos, totalFiltrados, opcoes) {
       </div>
 
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:${px(24)}">
-        <div style="display:flex;flex-direction:column;gap:${px(10)}">
-          <span style="font:600 ${px(21)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#9FB6D8">${diaUnico ? escapeHtml(diaSemana) : escapeHtml(subtituloDaPagina().toUpperCase())}</span>
-          <span style="font:700 ${px(feed ? 64 : 80)}/1 Bitter,Georgia,serif;color:#fff;letter-spacing:-.03em">${diaUnico ? escapeHtml(diaMes) : `${totalDoCard} COMPROMISSOS`}</span>
+        <div style="display:flex;flex-direction:column;gap:${px(10)};min-width:0">
+          <span style="font:600 ${px(21)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#9FB6D8">${rotuloEsquerda}</span>
+          <span style="font:700 ${px(72)}/1 Bitter,Georgia,serif;color:#fff;letter-spacing:-.03em">${valorEsquerda}</span>
         </div>
-        ${
-          diaUnico
-            ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:${px(8)};padding-bottom:${px(8)}">
-                 <span style="font:600 ${px(17)}/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#9FB6D8">EXPEDIENTE OCUPADO</span>
-                 <span style="font:600 ${px(34)}/1 'IBM Plex Mono',monospace;color:#fff">${faixaDia}</span>
-               </div>`
-            : ""
-        }
-      </div>
-
-      <div style="display:flex;gap:${px(14)}">
-        ${indicador("COMPROMISSOS", totalDoCard, false)}
-        ${indicador("OCUPAÇÃO", ocupacao, false)}
-        ${indicador("LIVRE", livre, false)}
-        ${indicador("CONFLITOS", conflitos, conflitos > 0)}
+        ${resumoDireita}
       </div>
     </div>
 
-    <div style="flex:1;min-height:0;background:${EXP.painel};padding:${px(36)} ${px(52)} ${px(32)} ${px(44)};display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:1;background:#fff;padding:${px(38)} ${px(52)} ${px(40)};display:flex;flex-direction:column">
       ${corpo}
     </div>
 
-    <div style="flex:0 0 auto;background:#fff;border-top:1px solid ${EXP.borda};padding:${px(26)} ${px(60)};display:flex;align-items:center;gap:${px(22)}">
-      ${marcaImg("tcm-lockup.png", 58, "Tribunal de Contas dos Municípios do Estado da Bahia")}
-      <div style="margin-left:auto;display:flex;flex-direction:column;gap:${px(5)};align-items:flex-end">
-        <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;color:${EXP.navy}">SAA · Agenda Institucional</span>
-        <span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto2}">atualizado às ${formatarHora(new Date())}</span>
-      </div>
+    <div style="flex:0 0 auto;background:${EXP.painel};border-top:1px solid ${EXP.borda};padding:${px(24)} ${px(52)};display:flex;align-items:center;justify-content:space-between;gap:${px(24)}">
+      <span style="font:400 ${px(20)}/1.2 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(CARD_RODAPE_ESQUERDA)}</span>
+      <span style="font:400 ${px(20)}/1.2 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-align:right">${escapeHtml(CARD_RODAPE_DIREITA)}</span>
     </div>
   `;
   return paper;
@@ -3300,7 +3699,8 @@ async function exportarPapel(tipo) {
   const canvas = await renderizarCanvasElemento(paper, escala);
 
   const carimbo = new Date().toISOString().slice(0, 10);
-  const sufixo = formato === "a4" ? "extrato" : proporcao === "feed" ? "card-feed" : "card-story";
+  const sufixo =
+    formato === "a4" ? "extrato" : proporcao === "feed" ? "card-feed" : proporcao === "story" ? "card-story" : "pauta";
   const nomeBase = `agenda-tcm-ba-${carimbo}-${sufixo}`;
 
   if (tipo === "jpeg") {
@@ -3335,7 +3735,7 @@ async function exportarPapel(tipo) {
     return;
   }
 
-  // Card mobile em PDF: página sob medida, com a mesma proporção da imagem.
+  // Pauta do dia em PDF: página sob medida, com a mesma proporção da imagem.
   const larguraMm = 120;
   const alturaMm = (canvas.height * larguraMm) / canvas.width;
   const pdf = new jsPDF({
@@ -3583,7 +3983,7 @@ function inicializarInterface() {
   sincronizarOpcoesExport();
 
   // Cada artefato tem controles próprios: o extrato A4 não tem proporção de
-  // story, e o card mobile não tem linha de assinatura.
+  // story, e a pauta do dia não tem linha de assinatura.
   function sincronizarOpcoesExport() {
     const ehA4 = state.exportacao.formato === "a4";
     const alternar = (id, visivel) => {
@@ -3656,13 +4056,16 @@ function inicializarInterface() {
   // Alternância entre linha do tempo e tabela
   // ---------------------------------------------------------------------
 
-  document.getElementById("btn-vista-timeline").addEventListener("click", () => {
-    state.ui.vista = "timeline";
-    atualizarVisibilidadeVista();
-  });
-  document.getElementById("btn-vista-tabela").addEventListener("click", () => {
-    state.ui.vista = "tabela";
-    atualizarVisibilidadeVista();
+  VISTAS_DA_AGENDA.forEach(({ chave, botao }) => {
+    const botaoEl = document.getElementById(botao);
+    if (!botaoEl) return;
+    botaoEl.addEventListener("click", () => {
+      state.ui.vista = chave;
+      atualizarVisibilidadeVista();
+      // A grade só é desenhada quando aparece: renderizá-la escondida mediria
+      // células de altura zero e deixaria as pautas fora de lugar na abertura.
+      if (chave === "calendario") renderizarCalendario();
+    });
   });
 
   // ---------------------------------------------------------------------
@@ -3732,7 +4135,8 @@ function inicializarInterface() {
   });
 
   // ---------------------------------------------------------------------
-  // Tecla Esc: fecha o overlay mais recente (confirmação > texto > painel > drawer)
+  // Tecla Esc: fecha o overlay mais recente
+  // (confirmação > texto > exportação > detalhes > pauta do dia > drawer)
   // ---------------------------------------------------------------------
 
   document.addEventListener("keydown", (ev) => {
@@ -3753,6 +4157,10 @@ function inicializarInterface() {
     }
     if (document.getElementById("detail-panel").getAttribute("aria-hidden") === "false") {
       fecharPainelDetalhes();
+      return;
+    }
+    if (!document.getElementById("dia-modal").hidden) {
+      fecharModalDia();
       return;
     }
     if (state.ui.sidebarAberta) {
@@ -8718,7 +9126,10 @@ function inicializarModuloProjetos() {
 }
 
 function iniciar() {
+  // A âncora do calendário abre no dia corrente, no fuso de exibição.
+  state.ui.calendarioAncora = chaveDia(new Date());
   inicializarInterface();
+  inicializarCalendario();
   inicializarModuloProjetos();
   inicializarModuloRamais();
   inicializarModuloEquipes();

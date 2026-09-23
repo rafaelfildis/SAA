@@ -92,8 +92,11 @@ Cada compromisso, depois de parseado do ICS, vira este objeto (usado em todo o `
 1. `obterEventosFiltrados()` — aplica período, categorias, busca, intervalo de datas e o toggle "mostrar concluídos".
 2. `preencherTimeline(filtrados)` — agrupa por dia e monta os cards (`criarCardElemento`).
 3. `preencherTabela(filtrados)` — visão alternativa em tabela ordenável/paginada.
-4. `renderizarDashboard(filtrados)` — atualiza os indicadores (Em andamento / Próximos / Concluídos), o título da página conforme o período, e o banner de conflito.
-5. `renderizarFiltrosAtivos()` — chips removíveis dos filtros ativos.
+4. `renderizarCalendario()` — painel do calendário das pautas: grade de mês ou de semana, uma célula por dia. Não recebe `filtrados`: o calendário tem janela própria (`janelaDoCalendario()`, ancorada em `state.ui.calendarioAncora`) e aplica só os filtros não temporais, por `eventosParaCalendario()`. Clicar numa célula abre a pauta do dia (`abrirModalDia`).
+5. `renderizarDashboard(filtrados)` — atualiza os indicadores (Em andamento / Próximos / Concluídos), o título da página conforme o período, e o banner de conflito.
+6. `renderizarFiltrosAtivos()` — chips removíveis dos filtros ativos.
+
+As três visões da agenda (linha do tempo, calendário e tabela) são declaradas em `VISTAS_DA_AGENDA` e alternadas por `atualizarVisibilidadeVista()`, que também grava a vista corrente em `#modulo-agenda[data-vista]` — é por esse atributo que o CSS retira os blocos do dia (alerta de sobreposição, "agora/a seguir", resumo do dia) quando a grade do mês está em tela.
 
 Conflitos de horário são calculados por `marcarConflitos(eventos)` (varredura por dia, O(n²) mas n é pequeno por dia) e o status temporal (`andamento` / `futuro` / `concluido`) por `situacaoTemporal(evento)`, comparando `Date.now()` com início/fim.
 

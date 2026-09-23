@@ -1867,12 +1867,309 @@ html, body { overflow-x: hidden; }
   .status-bar { flex-direction: column; align-items: flex-start; }
 }
 
+/* ==========================================================================
+   PAINEL DO CALENDÁRIO DAS PAUTAS
+
+   Grade de sete colunas, uma por dia da semana, começando na segunda — é como
+   a semana de trabalho é lida, e é o que deixa sábado e domingo juntos na
+   ponta direita, onde se olha por último.
+
+   As células têm altura mínima fixa e não crescem com o conteúdo: um dia com
+   oito compromissos não pode empurrar a linha inteira para baixo e desalinhar
+   o mês. O que não cabe vira "+N compromissos", e o dia inteiro se lê no
+   modal da pauta.
+   ========================================================================== */
+
+.cal-wrap { display: flex; flex-direction: column; gap: 16px; }
+.cal-wrap[hidden] { display: none; }
+
+/* ---------------------------------- Barra de navegação ------------------- */
+
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cal-toolbar__nav { display: flex; align-items: center; gap: 8px; }
+.cal-toolbar__titulo {
+  font-family: var(--fonte-titulo);
+  font-size: 1.15rem;
+  color: var(--color-heading);
+  margin-left: 8px;
+}
+.cal-nav-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--raio-pequeno);
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+}
+.cal-nav-btn:hover { background: var(--color-secondary-tint); color: var(--color-secondary); }
+
+.cal-toolbar__controles { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.cal-campo { display: flex; flex-direction: column; gap: 4px; }
+.cal-campo > span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.cal-campo .input { min-width: 140px; }
+
+/* ---------------------------------- Faixa de números --------------------- */
+
+.cal-resumo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+.cal-resumo__cel {
+  background: var(--color-surface);
+  padding: 14px 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.cal-resumo__valor {
+  font-family: var(--fonte-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-numero);
+}
+.cal-resumo__rotulo { font-size: 0.82rem; color: var(--color-text-secondary); }
+.cal-resumo__cel--alerta { background: var(--color-error-tint); }
+.cal-resumo__cel--alerta .cal-resumo__valor { color: var(--color-error-strong); }
+.cal-resumo__cel--alerta .cal-resumo__rotulo { color: var(--color-error-strong); }
+
+/* ---------------------------------- Grade -------------------------------- */
+
+.cal-grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+.cal-grade__dia-semana {
+  background: var(--color-surface-alt);
+  padding: 10px 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+}
+
+.cal-celula {
+  background: var(--color-surface);
+  min-height: 168px;
+  padding: 8px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.cal-celula:hover, .cal-celula:focus-visible { background: var(--color-secondary-tint); }
+.cal-celula:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: -2px; }
+
+/* Dias de outro mês continuam na grade — a semana precisa fechar —, mas
+   recuados: são contexto, não o período que se está lendo. */
+.cal-celula--fora { background: var(--color-surface-alt); }
+.cal-celula--fora .cal-celula__numero { color: var(--color-text-tertiary); opacity: 0.6; }
+.cal-celula--fora .cal-pauta { opacity: 0.6; }
+
+.cal-celula__numero {
+  font-family: var(--fonte-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-strong);
+  align-self: flex-start;
+  min-width: 22px;
+  text-align: center;
+  padding: 2px 0;
+}
+.cal-celula--hoje .cal-celula__numero {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 999px;
+}
+/* No tema escuro o navy institucional se confunde com o fundo do painel e o
+   dia corrente deixa de se destacar: ali a marcação passa para o azul claro
+   de interface, com o número em tinta escura. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cal-celula--hoje .cal-celula__numero {
+    background: var(--color-secondary);
+    color: var(--color-background);
+  }
+}
+:root[data-theme="dark"] .cal-celula--hoje .cal-celula__numero {
+  background: var(--color-secondary);
+  color: var(--color-background);
+}
+
+.cal-celula__pautas { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.cal-pauta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 5px 7px;
+  border-radius: 5px;
+  border-left: 3px solid var(--cat-presencial);
+  background: var(--cat-presencial-bg);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+.cal-pauta__hora {
+  font-family: var(--fonte-mono);
+  font-weight: 600;
+  color: var(--cat-presencial);
+}
+/* Duas linhas de título e uma de local: é o que a célula do mês comporta sem
+   empurrar a linha da semana para baixo. O resto se lê no modal do dia. */
+.cal-pauta__titulo {
+  color: var(--color-text-primary);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.cal-pauta__local {
+  color: var(--color-text-tertiary);
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-pauta--pauta-online { border-left-color: var(--cat-online); background: var(--cat-online-bg); }
+.cal-pauta--pauta-online .cal-pauta__hora { color: var(--cat-online); }
+.cal-pauta--viagem { border-left-color: var(--cat-viagem); background: var(--cat-viagem-bg); }
+.cal-pauta--viagem .cal-pauta__hora { color: var(--cat-viagem); }
+.cal-pauta--continuo {
+  border-left-color: var(--cat-viagem);
+  background: var(--cat-viagem-bg);
+}
+.cal-pauta--continuo .cal-pauta__titulo { font-weight: 600; color: var(--cat-viagem); }
+.cal-pauta--conflito { border-left-color: var(--color-error); background: var(--color-error-tint); }
+.cal-pauta--conflito .cal-pauta__hora { color: var(--color-error-strong); }
+.cal-pauta--cancelado { background: var(--st-cancelado-bg); border-left-color: var(--st-cancelado-cor); }
+.cal-pauta--cancelado .cal-pauta__titulo { text-decoration: line-through; color: var(--st-cancelado-titulo); }
+.cal-pauta--cancelado .cal-pauta__hora { color: var(--st-cancelado-cor); text-decoration: line-through; }
+
+.cal-celula__mais {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+  padding: 2px 6px;
+}
+
+/* Na semana, sete células para a tela inteira: cabe a lista completa do dia,
+   sem o "+N". */
+.cal-grade--semana .cal-celula { min-height: 360px; }
+
+#modulo-agenda[data-vista="calendario"] .conflict-alert,
+#modulo-agenda[data-vista="calendario"] .day-brief,
+#modulo-agenda[data-vista="calendario"] .day-stats,
+#modulo-agenda[data-vista="calendario"] .content-toolbar { display: none !important; }
+
+.cal-nota {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* ---------------------------------- Pauta do dia (modal) ----------------- */
+
+.dia-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 47;
+  background: var(--color-surface);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-media);
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(80vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.dia-modal[hidden] { display: none; }
+
+.dia-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+.dia-modal__titulos h2 {
+  font-family: var(--fonte-titulo);
+  font-size: 1.05rem;
+  color: var(--color-heading);
+}
+.dia-modal__contagem { font-size: 0.82rem; color: var(--color-text-secondary); margin-top: 4px; }
+
+.dia-modal__acoes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-border-soft);
+  background: var(--color-surface-alt);
+}
+
+.dia-modal__body { padding: 16px 20px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.dia-modal__vazio { font-size: 0.85rem; color: var(--color-text-secondary); line-height: 1.5; }
+
+.dia-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--raio-pequeno);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--color-surface);
+}
+.dia-item--cancelado { background: var(--card-superficie-cancelado); border-color: var(--st-cancelado-borda); }
+.dia-item__topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.dia-item__titulo { font-size: 0.92rem; font-weight: 600; color: var(--color-titulo-card); line-height: 1.35; }
+.dia-item--cancelado .dia-item__titulo { text-decoration: line-through; color: var(--st-cancelado-titulo); }
+.dia-item__selos { display: flex; gap: 5px; flex-wrap: wrap; }
+.dia-item__meta { font-family: var(--fonte-mono); font-size: 0.78rem; color: var(--color-text-secondary); }
+.dia-item__acoes { display: flex; gap: 14px; flex-wrap: wrap; }
+
+@media (max-width: 860px) {
+  .cal-resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cal-celula { min-height: 104px; padding: 6px; }
+  .cal-pauta__local { display: none; }
+  .cal-pauta__titulo { -webkit-line-clamp: 1; line-clamp: 1; }
+  .cal-grade--semana .cal-celula { min-height: 160px; }
+  .cal-toolbar__controles { width: 100%; }
+}
+
 /* ---------------------------------- Impressão ---------------------------------- */
 
 @media print {
   .topbar, .sidebar, .sidebar-backdrop, .breadcrumbs, .page-header, .conflict-alert, .dashboard, .status-bar,
   .active-filters, .content-toolbar, .export-overlay, .app-footer,
-  .detail-panel, .panel-backdrop, .confirm-modal, .text-export-modal, .skip-link { display: none !important; }
+  .detail-panel, .panel-backdrop, .confirm-modal, .text-export-modal, .skip-link,
+  .dia-modal, .cal-toolbar, .cal-nota { display: none !important; }
   .app-shell { display: block; }
   .main { padding: 0; }
   .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }

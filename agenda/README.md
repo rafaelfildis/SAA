@@ -45,7 +45,7 @@ conformidade com o eMAG.
 
 | Arquivo | Uso |
 | --- | --- |
-| `tcm-mark.png` | Símbolo "A" isolado — topbar, sobre placa branca, e cabeçalho do card JPEG |
+| `tcm-mark.png` | Símbolo "A" isolado — topbar, sobre placa branca, e cabeçalho da pauta em JPEG |
 | `tcm-lockup.png` | Assinatura horizontal completa — rodapés e cabeçalho do extrato A4 |
 | `tcm-55.png` | Selo comemorativo dos 55 anos |
 | `tcm-marca.svg` | Símbolo isolado em vetor (reconstrução), disponível para uso avulso |
@@ -73,7 +73,8 @@ publicar a marca do Tribunal cortada.
 - **Resumo do dia** em quatro números derivados — quantos compromissos ainda faltam, ocupação sobre 10h úteis, total livre e número de sobreposições. Em janelas de vários dias (semana, mês, "todos") a mesma faixa troca de leitura para contagem por situação.
 - **Linha do tempo em escala real de horas** (07:30–18:30 por padrão, 96px/hora) para a agenda de um único dia: um compromisso de 3h30 ocupa três vezes e meia o espaço de um de 1h. Inclui régua de horas, linha vermelha do "agora", **janelas livres** desenhadas no lugar e no tamanho reais e **sobreposições** dividindo a pista em colunas.
 - **Alerta de sobreposição** no topo, nomeando o par de compromissos, os horários e o tempo sobreposto, com link para a posição na linha do tempo.
-- Duas visões alternáveis: **linha do tempo** e **tabela** (ordenável, paginada; some no mobile, vira cards).
+- Três visões alternáveis: **linha do tempo**, **calendário** e **tabela** (ordenável, paginada; some no mobile, vira cards).
+- **Painel do calendário das pautas**: grade de mês ou de semana, uma célula por dia, com as pautas em ordem de horário (horário, título em até duas linhas e local). Navega por conta própria — âncora independente do filtro de período, senão abrir o calendário com "Hoje" marcado mostraria um mês vazio —, mantém os filtros de modalidade, busca e concluídos, e traz a faixa de números da janela desenhada: compromissos, hoje, esta semana e sobreposições. Clicar num dia abre a **pauta do dia**, com copiar, extrair em JPEG/PDF e abrir na linha do tempo.
 - **Layout mobile** de referência 390px: abaixo de 720px a pista em escala real sai e a lista vertical assume, com o mesmo conteúdo.
 - **Painel lateral** de detalhes por compromisso (botão "Ver detalhes"), com foco preso e retorno de foco ao fechar.
 - **Modal de confirmação** antes de exportações grandes (>40 compromissos) e **validação inline** do filtro de datas.
@@ -834,7 +835,7 @@ O endereço secreto **nunca é servido ao navegador**: a constante `CALENDAR_ICS
   > e o Google publica o link do Meet na `DESCRIPTION`, de onde `lerUrl()` o extrai —
   > esses compromissos são classificados corretamente como *pauta online*. Os demais
   > caem no fallback *presencial*, salvo quando o título contiver palavra reconhecida.
-- **Números derivados, nunca escritos à mão**: ocupação, janelas livres, sobreposições, "ainda hoje", "agora" e "a seguir" saem todos de `analisarDia()`, em tempo de render. O extrato em PDF e o card JPEG chamam a mesma função que a tela, de modo que o que é impresso é exatamente o que está exibido — e não uma segunda contagem que pode divergir.
+- **Números derivados, nunca escritos à mão**: ocupação, janelas livres, sobreposições, "ainda hoje", "agora" e "a seguir" saem todos de `analisarDia()`, em tempo de render. O extrato em PDF, a pauta em JPEG e o calendário chamam a mesma função que a tela, de modo que o que é impresso é exatamente o que está exibido — e não uma segunda contagem que pode divergir.
 - **Nível de detalhe por altura disponível**: na linha do tempo, o quanto cada compromisso mostra é decidido pelos pixels que sobram no bloco, não pela duração em minutos. Um compromisso de 1h em coluna dividida mostra menos que um de 1h em coluna cheia, porque tem menos espaço.
 - **Cache local**: a última lista de eventos processada é salva em `localStorage` a cada atualização bem-sucedida. Se a busca falhar (rede/CORS/indisponibilidade do Google), a interface exibe os dados salvos com aviso de que podem estar desatualizados.
 - **Duas camadas intermediárias equivalentes**: `server.js` (Express) para rodar localmente/em qualquer provedor Node (Render, Railway, VPS), e `api/calendar.js` (função serverless) para deploy na Vercel — a Vercel não executa o Express diretamente, então a mesma lógica de fetch + cache + CORS foi duplicada nesse formato específico.
@@ -895,37 +896,37 @@ uma página.
 - Períodos maiores que um dia repetem o bloco com um subtítulo por data e
   paginam automaticamente.
 
-### Card de compartilhamento — JPEG mobile
+### Pauta do dia — JPEG
 
-1080 × 1920 px (story 9:16) ou 1080 × 1350 px (feed 4:5), para enviar por
-mensagem ou publicar.
+1080 px de largura e **altura livre**, para enviar por mensagem, imprimir ou
+anexar. As proporções fechadas de rede social continuam disponíveis e apenas
+fixam uma altura mínima: story 9:16 (1080 × 1920) e feed 4:5 (1080 × 1350) — a
+pauta nunca é cortada para caber nelas.
 
-O dia é desenhado como **linha do tempo em escala**, não como lista de cartões.
-A lista desperdiçava a imagem — com quatro compromissos de uma hora, dois terços
-do card ficavam em branco — e escondia justamente o que interessa a quem abre o
-card para marcar alguma coisa: onde estão os vazios.
+O documento é uma **pauta em duas colunas — HORÁRIO e COMPROMISSO**, no mesmo
+formato que circula internamente. O formato anterior desenhava o dia como linha
+do tempo em escala de horas; ela é a leitura correta *na tela*, onde se rola e
+se comparam vãos, e por isso continua sendo a vista principal do módulo. No
+documento que se imprime e se encaminha, porém, o que se lê é a sequência — que
+horas, o quê, onde: a régua de horas gastava dois terços da imagem com espaço
+vazio entre compromissos e espremia o título numa caixa estreita, justamente o
+dado que quem recebe o card lê primeiro.
 
 - Cabeçalho em gradiente navy com a marca, o dia da semana, a data em corpo
-  grande, a faixa **expediente ocupado** (primeiro início → último fim) e quatro
-  indicadores: compromissos, ocupação, livre e conflitos. O de conflitos só fica
-  vermelho quando há conflito.
-- **Pista de 08:00 às 18:00**, com régua de horas e altura idêntica por hora: um
-  compromisso de 3h ocupa o triplo de um de 1h. A faixa se estende sozinha
-  quando há compromisso fora dela — senão um compromisso às 19h sumiria do card.
-- **Janelas livres no lugar e no tamanho reais**, hachuradas, rotuladas com
-  duração e horário juntos ("2h30 livre · 12:00 – 14:30"): só a duração
-  obrigaria a conferir a régua para saber quando.
-- Cada compromisso traz faixa de cor da modalidade, horário e duração em coluna
-  monoespaçada, modalidade, local e selo de conflito quando houver. Blocos com
-  menos de 100px colapsam para uma linha; sobrepostos dividem a pista em
-  colunas. O nível de detalhe é decidido pelos pixels disponíveis, não pela
-  duração em minutos.
-- Compromissos de dia inteiro ou de vários dias não têm posição numa escala de
-  horas: aparecem numa faixa acima da pista, que encolhe na medida.
-- No formato feed, com 570px a menos, a escala é **recalculada** em vez de
-  descartar blocos — todo o dia continua no card, mais comprimido.
-- Períodos de vários dias não têm pista: uma escala de horas só significa algo
-  dentro de um dia, então semana e mês continuam saindo como lista.
+  grande ("3 DE SET") e, à direita, a contagem de compromissos e a ocupação.
+- **Coluna HORÁRIO**: início em destaque, término ("até 13:00") e duração, os
+  três em monoespaçada para que os dígitos alinhem de uma linha para a outra.
+- **Coluna COMPROMISSO**: título e etiquetas de local, modalidade, cancelamento,
+  sobreposição e "agora". O local entra só com o nome do lugar — o endereço
+  completo do ICS ocupava a linha toda sem dizer nada a quem recebe.
+- **Janelas livres** intercaladas na própria sequência, no ponto em que o vão
+  existe, rotuladas com duração e horário juntos ("1h30 livre · 12:30 – 14:00").
+- Compromissos de **dia inteiro ou de vários dias** entram numa faixa de
+  destaque acima da pauta: ocupam o dia sem ocupar um horário.
+- **Rodapé de uso interno**, com a assinatura da unidade que expede a pauta
+  (`CARD_RODAPE_ESQUERDA` e `CARD_RODAPE_DIREITA`, em `script.js`).
+- Períodos de vários dias repetem a pauta sob o título de cada data, na ordem do
+  calendário. O cabeçalho das colunas só entra quando há horário debaixo dele.
 
 Ambos podem ser baixados em **JPEG** ou **PDF**, sempre respeitam os filtros
 ativos (período, categorias, busca, concluídos) e são construídos pela mesma
@@ -948,8 +949,9 @@ colar em e-mail ou mensagem.
 - [x] Filtro diário, semanal (segunda a domingo) e mensal.
 - [x] Filtros de categoria combinados.
 - [x] Exportação do extrato A4 em PDF e imagem.
-- [x] Exportação do card mobile em JPEG (story e feed) e PDF.
-- [x] Linha do tempo em escala real: ocupação 6h30, 3 janelas livres somando 2h30 e 1 sobreposição no conjunto de demonstração — os mesmos números na tela, no extrato A4 e no card JPEG.
+- [x] Exportação da pauta do dia em JPEG (documento, story e feed) e PDF.
+- [x] Painel do calendário das pautas, em mês e em semana, com a pauta do dia em modal.
+- [x] Linha do tempo em escala real: ocupação 6h30, 3 janelas livres somando 2h30 e 1 sobreposição no conjunto de demonstração — os mesmos números na tela, no calendário, no extrato A4 e na pauta em JPEG.
 - [x] Sobreposição dividindo a pista em colunas e alerta nomeando o par.
 - [x] Layout responsivo (mobile 390px: lista vertical em coluna única, sem rolagem horizontal / desktop: pista em escala real com filtros fixos ao lado).
 - [x] Exibição em `America/Bahia` independente do fuso do dispositivo.
