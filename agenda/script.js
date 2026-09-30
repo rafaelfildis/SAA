@@ -2365,7 +2365,7 @@ function aplicarTema(tema) {
   if (btn) btn.setAttribute("aria-pressed", String(efetivoEscuro));
 
   const metaTema = document.getElementById("meta-theme-color");
-  if (metaTema) metaTema.setAttribute("content", efetivoEscuro ? "#0B2A4E" : "#0A3165");
+  if (metaTema) metaTema.setAttribute("content", efetivoEscuro ? "#16212D" : "#FFFFFF");
 }
 
 function alternarTema() {
@@ -2812,7 +2812,7 @@ function construirExtratoA4(grupos, totalFiltrados, opcoes) {
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;text-align:right">
         <span style="font:700 13px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">AGENDA INSTITUCIONAL</span>
         <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Gabinete da Presidência</span>
-        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">SAA · Sistema de Agenda Automatizada</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">Portal de Gestão DTI</span>
       </div>
     </div>
 
@@ -2841,10 +2841,10 @@ function construirExtratoA4(grupos, totalFiltrados, opcoes) {
 
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
       <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:460px;text-wrap:pretty">
-        Documento gerado automaticamente pelo SAA a partir do Google Agenda. Alterações devem ser feitas no calendário de origem.${USE_DEMO_DATA ? " Dados fictícios de demonstração." : ""}
+        Documento gerado automaticamente pelo Portal de Gestão DTI a partir do Google Agenda. Alterações devem ser feitas no calendário de origem.${USE_DEMO_DATA ? " Dados fictícios de demonstração." : ""}
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
-        TCM-BA · SAA<br>${totalFiltrados} compromisso${totalFiltrados === 1 ? "" : "s"}
+        TCM-BA · DTI<br>${totalFiltrados} compromisso${totalFiltrados === 1 ? "" : "s"}
       </div>
     </div>
   `;
@@ -3120,7 +3120,7 @@ function construirCardMobile(grupos, totalFiltrados, opcoes) {
     "overflow:hidden;box-sizing:border-box;font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;color:" + EXP.tinta + ";";
 
   paper.innerHTML = `
-    <div style="background:linear-gradient(150deg,${EXP.navy} 0%,${EXP.navyMid} 55%,${EXP.navyEscuro} 100%);padding:${feed ? `${px(40)} ${px(60)} ${px(36)}` : `${px(56)} ${px(60)} ${px(48)}`};display:flex;flex-direction:column;justify-content:space-between;flex:0 0 auto;height:${px(alturaHero)};overflow:hidden">
+    <div style="background:${EXP.navy};padding:${feed ? `${px(40)} ${px(60)} ${px(36)}` : `${px(56)} ${px(60)} ${px(48)}`};display:flex;flex-direction:column;justify-content:space-between;flex:0 0 auto;height:${px(alturaHero)};overflow:hidden">
       <div style="display:flex;align-items:center;gap:${px(20)}">
         <div style="width:${px(84)};height:${px(84)};border-radius:${px(18)};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto">
           ${marcaImg("tcm-mark.png", 68, "TCM-BA")}
@@ -3161,7 +3161,7 @@ function construirCardMobile(grupos, totalFiltrados, opcoes) {
     <div style="flex:0 0 auto;background:#fff;border-top:1px solid ${EXP.borda};padding:${px(26)} ${px(60)};display:flex;align-items:center;gap:${px(22)}">
       ${marcaImg("tcm-lockup.png", 58, "Tribunal de Contas dos Municípios do Estado da Bahia")}
       <div style="margin-left:auto;display:flex;flex-direction:column;gap:${px(5)};align-items:flex-end">
-        <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;color:${EXP.navy}">SAA · Agenda Institucional</span>
+        <span style="font:600 ${px(19)}/1 'IBM Plex Sans',sans-serif;color:${EXP.navy}">Portal de Gestão DTI · Agenda</span>
         <span style="font:400 ${px(17)}/1 'IBM Plex Mono',monospace;color:${EXP.texto2}">atualizado às ${formatarHora(new Date())}</span>
       </div>
     </div>
@@ -3359,7 +3359,7 @@ function construirTextoAgenda() {
   const grupos = agruparPorDia(eventos);
   const linhas = [];
 
-  linhas.push("SAA — Agenda Institucional do TCM-BA");
+  linhas.push("Portal de Gestão DTI — Agenda Institucional do TCM-BA");
   linhas.push("Gerado em " + formatarDataHora(new Date()));
   linhas.push("");
 
@@ -4090,8 +4090,13 @@ function seloSituacao(p) {
 function atualizarBadgeProjetos() {
   const badge = document.getElementById("nav-badge-projetos");
   if (!badge) return;
-  badge.textContent = state.projetos.length;
-  badge.hidden = state.projetos.length === 0;
+  // O contador do menu aponta o que pede providência (vencido, em risco ou
+  // atrasado), não o total cadastrado: um número que só cresce não avisa nada.
+  const pendentes = state.projetos.filter(exigeProvidencia).length;
+  badge.textContent = pendentes;
+  badge.hidden = pendentes === 0;
+  badge.title = `${plural(pendentes, "item exige", "itens exigem")} providência`;
+  badge.classList.add("sidebar__nav-badge--alerta");
 }
 
 function renderizarResumoProjetos(lista) {
@@ -4613,7 +4618,7 @@ function construirExtratoPlano(lista) {
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;text-align:right">
         <span style="font:700 13px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:${EXP.navy}">PLANO 100 DIAS</span>
         <span style="font:400 11.5px/1 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">Gabinete da Presidência</span>
-        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">SAA · Sistema de Agenda Automatizada</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:${EXP.texto3}">Portal de Gestão DTI</span>
       </div>
     </div>
 
@@ -4639,10 +4644,10 @@ function construirExtratoPlano(lista) {
 
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid ${EXP.borda};display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
       <div style="font:400 10px/1.6 'IBM Plex Sans',sans-serif;color:${EXP.texto3};max-width:460px;text-wrap:pretty">
-        Documento gerado pelo SAA a partir dos projetos lançados no módulo Plano 100 dias, com os filtros em vigor no momento da emissão.
+        Documento gerado pelo Portal de Gestão DTI a partir dos projetos lançados no módulo Plano 100 dias, com os filtros em vigor no momento da emissão.
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
-        TCM-BA · SAA<br>${lista.length} projeto${lista.length === 1 ? "" : "s"}
+        TCM-BA · DTI<br>${lista.length} projeto${lista.length === 1 ? "" : "s"}
       </div>
     </div>
   `;
@@ -6456,7 +6461,7 @@ function construirExtratoEstrutura(visao) {
         }
       </div>
       <div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
-        TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
+        Portal de Gestão DTI · TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
       </div>
     </div>
   `;
@@ -6748,12 +6753,139 @@ function renderizarPortalProjetos() {
   }
 }
 
+// Faixa "Exige atenção agora" do portal: o que precisa de providência antes de
+// qualquer clique, lido da base inteira (sem os filtros das telas internas).
+// Só entra o que tem prazo ou conflito real — contrato vencido ou perto de
+// vencer, projeto atrasado, tarefa com prazo estourado, sobreposição na agenda
+// de hoje. Quatro itens no máximo: uma faixa que lista tudo deixa de apontar.
+function nomeCurtoProjeto(p) {
+  // "Contrato 29/2021 — Serviço de link…" vira "Contrato 29/2021": o número é
+  // o que se procura no módulo; o objeto inteiro não cabe numa cela.
+  const nome = String(p.nome || "");
+  return p.tipo === "contrato" && nome.includes(" — ") ? nome.split(" — ")[0] : nome;
+}
+
+function juntarNomes(nomes) {
+  if (nomes.length <= 1) return nomes.join("");
+  return `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+}
+
+function itensDeAtencao() {
+  const itens = [];
+  const hoje = hojeChave();
+
+  const pendentes = (state.projetos || []).filter(exigeProvidencia);
+  const porPrazo = (a, b) => a.prazoEntrega.localeCompare(b.prazoEntrega);
+  const estourados = pendentes.filter(prazoEstourado).sort(porPrazo);
+  const proximos = pendentes.filter((p) => !prazoEstourado(p)).sort(porPrazo);
+
+  proximos.slice(0, 2).forEach((p) => {
+    const dias = diasRestantes(p);
+    const quando = dias <= 0 ? "VENCE HOJE" : dias === 1 ? "VENCE AMANHÃ" : `VENCE EM ${dias} DIAS`;
+    itens.push({
+      nivel: dias <= 30 ? "critico" : "aviso",
+      rotulo: `${quando} · ${dataCurtaDaChave(p.prazoEntrega)}`,
+      texto: p.nome,
+      ir: "projetos",
+    });
+  });
+
+  if (estourados.length === 1) {
+    const p = estourados[0];
+    itens.push({ nivel: "aviso", rotulo: rotuloPrazo(p).toUpperCase(), texto: p.nome, ir: "projetos" });
+  } else if (estourados.length > 1) {
+    const nomes = estourados.map(nomeCurtoProjeto);
+    const exibidos = nomes.length > 3 ? [...nomes.slice(0, 3), `mais ${nomes.length - 3}`] : nomes;
+    itens.push({
+      nivel: "aviso",
+      rotulo: `${estourados.length} COM PRAZO VENCIDO`,
+      texto: `${juntarNomes(exibidos)} sem renovação ou entrega registrada`,
+      ir: "projetos",
+    });
+  }
+
+  const atrasadas = (state.tarefas || []).filter(tarefaAtrasada);
+  if (atrasadas.length) {
+    itens.push({
+      nivel: "critico",
+      rotulo: `${plural(atrasadas.length, "TAREFA ATRASADA", "TAREFAS ATRASADAS")}`,
+      texto: atrasadas[0].titulo,
+      ir: "tarefas",
+    });
+  }
+
+  // Sobreposições de hoje, contadas sobre todos os compromissos do dia — não
+  // sobre o recorte de datas que ficou escolhido na tela da Agenda.
+  const deHoje = (state.eventos || [])
+    .filter((e) => diasQueEventoAbrange(e).includes(hoje))
+    .map((evento) => ({ evento, diaChave: hoje }));
+  if (deHoje.length) {
+    const pares = analisarDia(deHoje, hoje).paresConflito;
+    if (pares.length) {
+      const [a, b] = pares[0];
+      itens.push({
+        nivel: "aviso",
+        rotulo: `${plural(pares.length, "SOBREPOSIÇÃO", "SOBREPOSIÇÕES")} HOJE`,
+        texto: `${a.evento.titulo} e ${b.evento.titulo}`,
+        ir: "agenda",
+      });
+    }
+  }
+
+  // O projeto do horizonte ainda em aberto fecha a faixa quando sobra espaço:
+  // é o prazo que o plano inteiro persegue.
+  if (itens.length < 4) {
+    const emCurso = (state.projetos || [])
+      .filter((p) => p.tipo !== "contrato" && !exigeProvidencia(p) && situacaoEfetiva(p) !== "concluido")
+      .sort(porPrazo)[0];
+    if (emCurso) {
+      const dias = diasRestantes(emCurso);
+      const situacao = (SITUACOES[situacaoEfetiva(emCurso)] || {}).label || "";
+      itens.push({
+        nivel: "info",
+        rotulo: `${plural(dias, "DIA", "DIAS")} · ${dataCurtaDaChave(emCurso.prazoEntrega)}`,
+        texto: `Entrega do ${emCurso.nome}${situacao ? `, ${situacao.toLowerCase()}` : ""}`,
+        ir: "projetos",
+      });
+    }
+  }
+
+  return itens.slice(0, 4);
+}
+
+function renderizarPortalAtencao() {
+  const lista = document.getElementById("portal-atencao-lista");
+  if (!lista) return;
+  const itens = itensDeAtencao();
+  const urgentes = itens.filter((i) => i.nivel !== "info").length;
+
+  lista.innerHTML = itens
+    .map(
+      (i) => `<li>
+        <button type="button" class="atencao atencao--${i.nivel}" data-ir="${i.ir}">
+          <span class="atencao__rotulo">${escapeHtml(i.rotulo)}</span>
+          <span class="atencao__texto">${escapeHtml(i.texto)}</span>
+        </button>
+      </li>`
+    )
+    .join("");
+  lista.hidden = !itens.length;
+
+  const vazio = document.getElementById("portal-atencao-vazio");
+  if (vazio) vazio.hidden = urgentes > 0;
+  const contagem = document.getElementById("portal-atencao-contagem");
+  if (contagem) contagem.textContent = urgentes ? plural(urgentes, "item", "itens") : "";
+  const secao = document.getElementById("portal-atencao");
+  if (secao) secao.classList.toggle("portal-atencao--calma", urgentes === 0);
+}
+
 function renderizarPortal() {
   const data = document.getElementById("portal-data");
   if (data) {
     const hoje = formatarDataLonga(new Date());
     data.textContent = hoje.charAt(0).toUpperCase() + hoje.slice(1);
   }
+  renderizarPortalAtencao();
   renderizarPortalAgenda();
   renderizarPortalProjetos();
   renderizarPortalRamais();
@@ -8252,7 +8384,7 @@ function construirExtratoEquipes() {
         )}
       </div>
       <div style="font:400 9.5px/1.6 'IBM Plex Mono',monospace;color:${EXP.texto3};text-align:right;flex:0 0 auto">
-        TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
+        Portal de Gestão DTI · TCM-BA<br>${escapeHtml(formatarDataLonga(new Date()))}
       </div>
     </div>
   `;
@@ -8435,7 +8567,7 @@ function inicializarModuloEquipes() {
 const MODULOS = ["portal", "agenda", "projetos", "ramais", "estrutura", "tarefas", "equipes"];
 
 const ROTULO_MODULO = {
-  portal: "Portal",
+  portal: "Início",
   agenda: "Agenda",
   projetos: "Plano 100 dias",
   ramais: "Ramais",
@@ -8447,7 +8579,7 @@ const ROTULO_MODULO = {
 // A linha de apoio da topbar acompanha o módulo: "compromissos sincronizados
 // do Google Agenda" descreve a agenda, não o plano de entregas.
 const SUBTITULO_MODULO = {
-  portal: "TCM-BA — Agenda, Plano 100 dias, Ramais, Estrutura DTI e Tarefas",
+  portal: "DTI · TCM-BA — agenda, plano, tarefas, equipe, estrutura e ramais",
   agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
   projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
   ramais: "TCM-BA — lista telefônica: prédio sede, prédio anexo e inspetorias regionais",

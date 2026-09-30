@@ -118,8 +118,8 @@ const diaSemana = new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO, weekday: "l
 const dataLonga = new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO, day: "2-digit", month: "long", year: "numeric" }).format(dataObj);
 
 const assunto = eventos.length
-  ? `SAA · Agenda de ${diaSemana}, ${dataLonga} — ${eventos.length} compromisso${eventos.length === 1 ? "" : "s"}`
-  : `SAA · Agenda de ${diaSemana}, ${dataLonga} — sem compromissos`;
+  ? `Portal de Gestão DTI · Agenda de ${diaSemana}, ${dataLonga} — ${eventos.length} compromisso${eventos.length === 1 ? "" : "s"}`
+  : `Portal de Gestão DTI · Agenda de ${diaSemana}, ${dataLonga} — sem compromissos`;
 
 function cartao(ev) {
   const cat = classificar(ev);
@@ -155,7 +155,7 @@ const html = `<div style="margin:0;padding:0;background:${COR.painel};font-famil
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;border:1px solid ${COR.borda};border-radius:10px;overflow:hidden;">
 <tr><td style="background:${COR.navy};background-image:linear-gradient(135deg,${COR.navy},${COR.navyEscuro});padding:26px;">
-<div style="font:600 13px/1.3 Georgia,serif;color:#FFFFFF;">SAA &middot; Agenda Institucional</div>
+<div style="font:600 13px/1.3 Georgia,serif;color:#FFFFFF;">Portal de Gestão DTI &middot; Agenda Institucional</div>
 <div style="font:400 12px/1.5 Arial,sans-serif;color:#AFC2DE;margin-top:2px;">Tribunal de Contas dos Municípios do Estado da Bahia</div>
 <div style="font:400 11px/1.4 'Courier New',monospace;color:#8FA8CC;letter-spacing:.14em;margin-top:18px;text-transform:uppercase;">${esc(diaSemana)}</div>
 <div style="font:700 30px/1.15 Georgia,serif;color:#FFFFFF;margin-top:2px;">${esc(dataLonga)}</div>
@@ -179,12 +179,12 @@ ${livres.length ? `<tr><td style="padding:8px 26px 0 26px;">
 <a href="${PAINEL}" style="display:inline-block;background:${COR.vermelho};color:#FFFFFF;font:600 14px/1 Arial,sans-serif;text-decoration:none;padding:13px 20px;border-radius:7px;">Abrir a agenda e exportar em PDF ou JPEG</a>
 </td></tr>
 <tr><td style="border-top:1px solid ${COR.borda};background:#F8FAFD;padding:16px 26px;">
-<div style="font:400 11px/1.6 Arial,sans-serif;color:${COR.texto3};">Gerado automaticamente pelo SAA a partir do Google Agenda. Alterações devem ser feitas no calendário de origem. Fuso horário ${FUSO}.</div>
+<div style="font:400 11px/1.6 Arial,sans-serif;color:${COR.texto3};">Gerado automaticamente pelo Portal de Gestão DTI a partir do Google Agenda. Alterações devem ser feitas no calendário de origem. Fuso horário ${FUSO}.</div>
 </td></tr>
 </table></td></tr></table></div>`;
 
 const texto = [
-  "SAA - Agenda Institucional",
+  "Portal de Gestao DTI - Agenda Institucional",
   "",
   `${diaSemana.toUpperCase()}, ${dataLonga}`,
   eventos.length

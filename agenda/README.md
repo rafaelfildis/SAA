@@ -1,4 +1,8 @@
-# SAA — Agenda Institucional do TCM-BA
+# Portal de Gestão DTI — TCM-BA
+
+> Antigo **SAA — Agenda Institucional**. O sistema passou a se chamar **Portal de
+> Gestão DTI** e reúne os módulos da Diretoria de Tecnologia da Informação:
+> Agenda, Tarefas, Ramais, Plano 100 dias, Equipe e projetos e Estrutura DTI.
 
 Aplicação web responsiva para visualização da agenda institucional do **Tribunal de Contas dos Municípios do Estado da Bahia**, sincronizada automaticamente com o calendário do **Google Agenda** publicado em formato ICS.
 
@@ -78,6 +82,39 @@ publicar a marca do Tribunal cortada.
 - **Painel lateral** de detalhes por compromisso (botão "Ver detalhes"), com foco preso e retorno de foco ao fechar.
 - **Modal de confirmação** antes de exportações grandes (>40 compromissos) e **validação inline** do filtro de datas.
 - Acessibilidade: skip-link, `:focus-visible`, landmarks (`header`/`nav`/`main`/`aside`), `aria-live`/`aria-invalid`/`aria-expanded`, tecla Esc fecha painéis/drawer/modal na ordem correta.
+
+## Redesenho 2026 (Portal de Gestão DTI)
+
+Visual aprovado no canvas de design e aplicado como uma camada final de
+`styles.css` ("REDESENHO 2026"), sem reescrever as regras de cada módulo:
+
+- **Menu lateral navy**, sempre escuro nos dois temas, com a marca no topo e os
+  módulos agrupados em *Visão geral* (Início), *Operação* (Agenda, Tarefas,
+  Ramais) e *Gestão* (Plano 100 dias, Equipe e projetos, Estrutura DTI). Os
+  filtros de cada módulo continuam no menu; os tokens de cor são redefinidos
+  dentro dele, então chips, datas e listas herdam a paleta escura.
+- **Topbar clara** com a trilha de navegação, a busca do módulo e as ações. No
+  celular a trilha dá lugar ao nome do sistema e ao botão do menu.
+- **Início em quadrantes**: cabeçalho com o nome do sistema e atalhos, a faixa
+  **"Exige atenção agora"** e os seis cartões de módulo em grade de três
+  colunas, com indicadores em ladrilhos.
+- O contador do **Plano 100 dias** no menu passa a mostrar o que exige
+  providência (vencido, em risco ou atrasado), em vermelho, e não o total
+  cadastrado.
+- Botão primário navy, cantos de 10–16 px, números-resumo em cartões
+  separados, colunas do quadro de tarefas em fundo próprio e porta de entrada
+  dos Ramais em verde chapado.
+
+**Faixa "Exige atenção agora".** Lida da base inteira, sem os filtros das telas
+internas, com no máximo quatro itens: os dois contratos ou projetos mais
+próximos de vencer (vermelho até 30 dias), os que já estão com prazo vencido
+(agrupados em um item), tarefas atrasadas, sobreposições na agenda de hoje e,
+sobrando espaço, a entrega do projeto do horizonte. Sem pendência, a faixa diz
+isso por extenso.
+
+**Exportações.** O extrato A4, o card JPEG e as folhas do Plano, da Estrutura e
+da Equipe mantêm a marca oficial e o fio vermelho e navy, agora assinados como
+"Portal de Gestão DTI". O card JPEG ganhou o cabeçalho em navy chapado.
 
 ## Portal
 

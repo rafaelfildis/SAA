@@ -3846,3 +3846,563 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
   text-transform: uppercase;
   color: var(--color-text-tertiary);
 }
+
+/* ==========================================================================
+   REDESENHO 2026 — PORTAL DE GESTÃO DTI
+
+   Camada final, aprovada no canvas de design: menu lateral navy com os
+   módulos agrupados (Visão geral · Operação · Gestão), topbar clara com a
+   trilha de navegação e a busca, e um portal de entrada em quadrantes com a
+   faixa "Exige atenção agora".
+
+   Fica no fim do arquivo de propósito: sobrepõe o visual anterior sem mexer
+   nas regras de cada módulo, que continuam valendo para o que não é
+   redesenhado aqui. As cores seguem os tokens do :root, então o tema escuro
+   acompanha sem regra duplicada — exceto onde o redesenho cria tokens novos.
+   ========================================================================== */
+
+:root {
+  --color-background: #F3F5F9;
+  --topbar-altura: 68px;
+  --sidebar-largura: 256px;
+
+  --sb-fundo: #0A1A33;
+  --sb-texto: #C3CDE0;
+  --sb-rotulo: #8C9BB8;
+  --sb-ativo: #1B3563;
+  --sb-hover: rgba(255, 255, 255, 0.06);
+  --sb-divisor: rgba(255, 255, 255, 0.08);
+
+  --btn-primario-fundo: #0B3163;
+  --btn-primario-texto: #FFFFFF;
+  --btn-primario-hover: #14448A;
+
+  --campo-fundo: #F7F9FC;
+  --campo-borda: #D5DCE8;
+  --cartao-hover-borda: #9FB0CC;
+  --cartao-hover-sombra: 0 8px 24px rgba(11, 49, 99, 0.10);
+  --tile-fundo: #F5F7FB;
+
+  --atencao-critico-fundo: #FCEEF0;
+  --atencao-critico-texto: #A30F27;
+  --atencao-aviso-fundo: #FDF3E6;
+  --atencao-aviso-texto: #8A4A03;
+  --atencao-info-fundo: #EEF3FA;
+  --atencao-info-texto: #14448A;
+
+  --mod-agenda: #2C63B0;
+  --mod-projetos: #0B3163;
+  --mod-tarefas: #8A4A03;
+  --mod-equipes: #0E6570;
+  --mod-estrutura: #5B3FA8;
+  --mod-ramais: #0F7B5F;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-background: #0E1620;
+    --sb-fundo: #08111D;
+    --sb-ativo: #1B3563;
+    --btn-primario-fundo: #8FC0F5;
+    --btn-primario-texto: #061627;
+    --btn-primario-hover: #B3D5FA;
+    --campo-fundo: #1A2634;
+    --campo-borda: #2A3746;
+    --cartao-hover-borda: #4A5E78;
+    --cartao-hover-sombra: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --tile-fundo: #1A2634;
+    --atencao-critico-fundo: rgba(244, 120, 138, 0.14);
+    --atencao-critico-texto: #FF9AAA;
+    --atencao-aviso-fundo: rgba(227, 178, 91, 0.14);
+    --atencao-aviso-texto: #E9C07A;
+    --atencao-info-fundo: rgba(143, 192, 245, 0.12);
+    --atencao-info-texto: #9FC8F5;
+    --mod-agenda: #8FC0F5;
+    --mod-projetos: #A9C6EE;
+    --mod-tarefas: #E9B978;
+    --mod-equipes: #6FD0DB;
+    --mod-estrutura: #B7A6F2;
+    --mod-ramais: #62CFA4;
+  }
+}
+:root[data-theme="dark"] {
+  --color-background: #0E1620;
+  --sb-fundo: #08111D;
+  --sb-ativo: #1B3563;
+  --btn-primario-fundo: #8FC0F5;
+  --btn-primario-texto: #061627;
+  --btn-primario-hover: #B3D5FA;
+  --campo-fundo: #1A2634;
+  --campo-borda: #2A3746;
+  --cartao-hover-borda: #4A5E78;
+  --cartao-hover-sombra: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --tile-fundo: #1A2634;
+  --atencao-critico-fundo: rgba(244, 120, 138, 0.14);
+  --atencao-critico-texto: #FF9AAA;
+  --atencao-aviso-fundo: rgba(227, 178, 91, 0.14);
+  --atencao-aviso-texto: #E9C07A;
+  --atencao-info-fundo: rgba(143, 192, 245, 0.12);
+  --atencao-info-texto: #9FC8F5;
+  --mod-agenda: #8FC0F5;
+  --mod-projetos: #A9C6EE;
+  --mod-tarefas: #E9B978;
+  --mod-equipes: #6FD0DB;
+  --mod-estrutura: #B7A6F2;
+  --mod-ramais: #62CFA4;
+}
+
+body { background: var(--color-background); }
+
+/* ---------------------------------- Topbar clara ---------------------------------- */
+
+.topbar {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: none;
+  padding: 0 24px;
+  gap: 20px;
+}
+.topbar .icon-btn { color: var(--color-text-strong); }
+.topbar .icon-btn:hover { background: var(--color-background); }
+.topbar__theme-btn { width: 44px; height: 44px; border: 1px solid var(--campo-borda); border-radius: 10px; }
+
+.topbar__titles h1 { color: var(--color-heading); font-family: var(--fonte-titulo); font-size: 1rem; }
+.topbar__titles p { color: var(--color-text-secondary); }
+.topbar__marca { box-shadow: none; border: 1px solid var(--color-border); }
+
+.topbar .breadcrumbs { margin: 0; min-width: 0; }
+.topbar .breadcrumbs ol { font-size: 0.88rem; margin: 0; padding: 0; list-style: none; }
+.topbar .breadcrumbs li[aria-current="page"] { font-weight: 600; }
+
+/* A esquerda (trilha) ocupa o que sobra: quando a busca sai da tela, no
+   portal, as ações continuam encostadas à direita. */
+.topbar__left { flex: 1 1 auto; }
+.topbar__search {
+  flex: 0 1 440px;
+  max-width: 440px;
+  margin-left: 0;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  background: var(--campo-fundo);
+  border: 1px solid var(--campo-borda);
+  border-radius: 10px;
+}
+.topbar__search-icon { color: var(--color-text-secondary); }
+.topbar__search input { color: var(--color-text-primary); font-size: 0.88rem; }
+.topbar__search input::placeholder { color: var(--color-text-tertiary); }
+.topbar__search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-tint); }
+.topbar__actions { margin-left: 0; }
+
+/* A marca e o nome ficam no menu lateral; na topbar o título só aparece no
+   celular, quando o menu vira gaveta. No desktop ele segue no documento para
+   leitores de tela, fora da vista. */
+@media (min-width: 861px) {
+  .topbar__brand {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 860px) {
+  .topbar { padding: 0 14px; gap: 12px; }
+  .topbar .breadcrumbs { display: none; }
+}
+
+/* ---------------------------------- Botões ---------------------------------- */
+
+.btn { border-radius: 10px; padding: 10px 16px; font-size: 0.86rem; min-height: 40px; }
+.btn--primary { background: var(--btn-primario-fundo); color: var(--btn-primario-texto); }
+.btn--primary:hover:not(:disabled) { background: var(--btn-primario-hover); box-shadow: none; }
+.btn--ghost { border-color: var(--campo-borda); color: var(--color-heading); }
+.btn--ghost-dark {
+  background: var(--color-surface);
+  color: var(--color-heading);
+  border: 1px solid var(--campo-borda);
+}
+.btn--ghost-dark:hover { background: var(--color-background); }
+.btn--secondary { background: var(--color-surface); color: var(--color-heading); border: 1px solid var(--campo-borda); }
+.btn--secondary:hover:not(:disabled) { background: var(--color-background); color: var(--color-heading); }
+
+/* ---------------------------------- Menu lateral navy ---------------------------------- */
+
+/* O menu é sempre escuro, nos dois temas. Os filtros dos módulos moram nele,
+   então os tokens de cor são redefinidos aqui dentro: chips, campos de data e
+   listas de categoria herdam a paleta escura sem regra por componente. */
+.sidebar {
+  width: var(--sidebar-largura);
+  background: var(--sb-fundo);
+  color: var(--sb-texto);
+  border-right: none;
+  color-scheme: dark;
+
+  --color-surface: #11264A;
+  --color-surface-alt: #132B52;
+  --color-background: #0F2344;
+  --color-border: #22406F;
+  --color-border-soft: #1A3560;
+  --color-text-primary: #E8EEF5;
+  --color-text-secondary: #A9B7CF;
+  --color-text-tertiary: #93A2BF;
+  --color-text-strong: #D6DEEC;
+  --color-heading: #FFFFFF;
+  --color-primary: #1B3563;
+  --color-secondary: #9FC4F0;
+  --color-accent: #8FC0F5;
+  --color-secondary-tint: rgba(159, 196, 240, 0.14);
+  --color-accent-tint: rgba(143, 192, 245, 0.14);
+  --color-success: #62CFA4;
+  --color-success-tint: rgba(98, 207, 164, 0.14);
+  --color-warning: #E9B978;
+  --color-warning-tint: rgba(233, 185, 120, 0.14);
+  --color-error: #FF9AAA;
+  --color-error-strong: #FFB0BC;
+  --color-error-tint: rgba(244, 120, 138, 0.14);
+  --cat-presencial: #9FC4F0;
+  --cat-presencial-bg: rgba(159, 196, 240, 0.14);
+  --cat-presencial-borda: rgba(159, 196, 240, 0.32);
+  --cat-online: #8FC0F5;
+  --cat-online-bg: rgba(143, 192, 245, 0.14);
+  --cat-online-borda: rgba(143, 192, 245, 0.32);
+  --cat-viagem: #E9B978;
+  --cat-viagem-bg: rgba(233, 185, 120, 0.14);
+  --cat-viagem-borda: rgba(233, 185, 120, 0.32);
+  --cat-escola: #62CFA4;
+  --cat-escola-bg: rgba(98, 207, 164, 0.14);
+  --cat-escola-borda: rgba(98, 207, 164, 0.32);
+}
+
+.sidebar__marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 20px 10px;
+}
+.sidebar__marca-placa {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar__marca-placa img { width: 30px; height: 30px; object-fit: contain; }
+.sidebar__marca-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sidebar__marca-titulo { font-family: var(--fonte-titulo); font-weight: 600; font-size: 1rem; line-height: 1.2; color: #FFFFFF; }
+.sidebar__marca-sub { font-size: 0.75rem; letter-spacing: 0.04em; color: var(--sb-rotulo); }
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 16px 20px;
+  border-bottom: 1px solid var(--sb-divisor);
+}
+.sidebar__grupo { display: flex; flex-direction: column; gap: 4px; }
+.sidebar__grupo-rotulo {
+  font-size: 0.69rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sb-rotulo);
+  padding: 0 12px 6px;
+}
+.sidebar__nav-item {
+  min-height: 44px;
+  padding: 0 12px;
+  gap: 12px;
+  border-radius: 8px;
+  color: var(--sb-texto);
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+.sidebar__nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+.sidebar__nav-item:hover { background: var(--sb-hover); color: #FFFFFF; }
+.sidebar__nav-item.is-active { background: var(--sb-ativo); color: #FFFFFF; }
+.sidebar__nav-item:focus-visible { outline: 3px solid #8FC0F5; outline-offset: 2px; }
+.sidebar__nav-badge {
+  min-width: 24px;
+  height: 22px;
+  box-sizing: border-box;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: #22406F;
+  color: #FFFFFF;
+  font: 600 0.75rem/22px var(--fonte-mono);
+}
+.sidebar__nav-badge--alerta { background: #B3122B; }
+
+.sidebar__filters { padding: 20px; }
+.sidebar .filters__label { color: var(--sb-rotulo); letter-spacing: 0.08em; }
+.sidebar__collapse-btn {
+  background: transparent;
+  color: var(--sb-texto);
+  border-top: 1px solid var(--sb-divisor);
+}
+.sidebar__collapse-btn:hover { color: #FFFFFF; }
+
+@media (min-width: 861px) {
+  .sidebar {
+    top: var(--topbar-altura);
+    height: calc(100vh - var(--topbar-altura));
+  }
+  .app-shell.is-sidebar-recolhida .sidebar__marca { padding: 16px 4px 8px; justify-content: center; }
+  .app-shell.is-sidebar-recolhida .sidebar__marca-texto { display: none; }
+}
+
+/* ---------------------------------- Área de conteúdo ---------------------------------- */
+
+.main { padding: 32px 40px 40px; }
+@media (max-width: 860px) { .main { padding: 20px 16px 24px; } }
+
+.page-header { margin-bottom: 22px; }
+.page-title { font-size: 2rem; }
+.page-subtitle { font-size: 0.9rem; color: var(--color-text-strong); }
+
+/* Números-resumo em cartões separados, como no portal: cada indicador se lê
+   sozinho em vez de uma faixa de celas coladas. */
+.day-stats {
+  gap: 12px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+  border-radius: 0;
+}
+.day-stats__cel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.day-stats__cel:last-child { border-right: 1px solid var(--color-border); }
+.day-stats__valor { font-size: 1.62rem; }
+.day-stats__rotulo { letter-spacing: 0.08em; }
+.day-stats__cel--conflito.is-ativo { border-color: var(--st-cancelado-borda); }
+@media (max-width: 860px) {
+  .day-stats__cel:nth-child(2) { border-right: 1px solid var(--color-border); }
+  .day-stats__cel:nth-child(1), .day-stats__cel:nth-child(2) { border-bottom: 1px solid var(--color-border); }
+}
+
+.pista-card { border-radius: 14px; box-shadow: none; }
+
+.chip { background: var(--color-surface); border-color: var(--campo-borda); padding: 7px 14px; font-weight: 500; }
+.chip.is-active { background: var(--btn-primario-fundo); border-color: var(--btn-primario-fundo); color: var(--btn-primario-texto); font-weight: 600; }
+.sidebar .chip { background: var(--color-surface); border-color: var(--color-border); }
+.sidebar .chip.is-active { background: #FFFFFF; border-color: #FFFFFF; color: #0B3163; }
+
+/* ---------------------------------- Portal em quadrantes ---------------------------------- */
+
+.portal { gap: 28px; padding-block: 0 32px; }
+
+.portal__cabecalho {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.portal__eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+.portal__titulo {
+  font-size: 2.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--color-heading);
+  margin: 0 0 8px;
+}
+.portal__subtitulo { font-size: 0.94rem; color: var(--color-text-strong); }
+.portal__acoes { display: flex; gap: 10px; flex-wrap: wrap; }
+.portal__acoes .btn { min-height: 44px; }
+
+.portal-atencao {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+.portal-atencao__topo { display: flex; align-items: center; gap: 10px; }
+.portal-atencao__icone { display: inline-flex; color: var(--atencao-critico-texto); }
+.portal-atencao--calma .portal-atencao__icone { color: var(--color-success); }
+.portal-atencao__titulo { margin: 0; font-size: 0.94rem; font-weight: 600; color: var(--color-text-primary); }
+.portal-atencao__contagem { font-size: 0.82rem; color: var(--color-text-secondary); }
+.portal-atencao__vazio { margin: 0; font-size: 0.88rem; color: var(--color-text-strong); }
+.portal-atencao__lista {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.atencao {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  text-align: left;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.atencao:hover { border-color: currentColor; }
+.atencao:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.atencao__rotulo { font-family: var(--fonte-mono); font-size: 0.75rem; font-weight: 600; }
+.atencao__texto {
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.atencao--critico { background: var(--atencao-critico-fundo); color: var(--atencao-critico-texto); }
+.atencao--aviso { background: var(--atencao-aviso-fundo); color: var(--atencao-aviso-texto); }
+.atencao--info { background: var(--atencao-info-fundo); color: var(--atencao-info-texto); }
+
+.portal__secao-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: -12px; }
+.portal__secao {
+  font-family: var(--fonte-titulo);
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-primary);
+}
+.portal__secao-nota { font-size: 0.82rem; color: var(--color-text-secondary); }
+
+.portal__grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+@media (min-width: 1100px) { .portal__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .portal__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.portal-card {
+  --mod: var(--mod-projetos);
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: none;
+}
+.portal-card--agenda { --mod: var(--mod-agenda); }
+.portal-card--projetos { --mod: var(--mod-projetos); border-left-color: var(--color-border); }
+.portal-card--tarefas { --mod: var(--mod-tarefas); }
+.portal-card--equipes { --mod: var(--mod-equipes); }
+.portal-card--estrutura { --mod: var(--mod-estrutura); }
+.portal-card--ramais { --mod: var(--mod-ramais); }
+
+.portal-card:hover,
+.portal-card:focus-visible {
+  transform: none;
+  border-color: var(--cartao-hover-borda);
+  box-shadow: var(--cartao-hover-sombra);
+}
+.portal-card:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+
+.portal-card__icone,
+.portal-card--projetos .portal-card__icone {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--mod);
+  background: color-mix(in srgb, var(--mod) 12%, transparent);
+}
+.portal-card__titulo { font-size: 1.19rem; font-weight: 600; margin-bottom: 2px; }
+.portal-card__descricao { font-size: 0.82rem; }
+
+.portal-card__metricas {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  border-top: none;
+}
+.portal-metrica {
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--tile-fundo);
+}
+.portal-metrica dt {
+  min-height: 0;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-secondary);
+}
+.portal-metrica dd { font-size: 1.375rem; color: var(--color-heading); white-space: nowrap; }
+.portal-metrica--acesa { background: var(--atencao-critico-fundo); }
+.portal-metrica--acesa dt,
+.portal-metrica--acesa dd { color: var(--atencao-critico-texto); }
+
+.portal-card__destaque {
+  padding: 14px 0 0;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-border-soft);
+  border-radius: 0;
+  font-size: 0.88rem;
+}
+.portal-card__cta { font-size: 0.88rem; }
+
+@media (max-width: 860px) {
+  .portal { padding: 0 0 24px; }
+  .portal__titulo { font-size: 1.75rem; }
+  .portal-atencao { padding: 16px; }
+  .portal-atencao__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .portal__grid { grid-template-columns: 1fr; }
+  .portal-metrica dt { min-height: 0; font-size: 0.72rem; }
+}
+@media (max-width: 560px) {
+  .portal-atencao__lista { grid-template-columns: 1fr; }
+  .portal__acoes { width: 100%; }
+  .portal__acoes .btn { flex: 1 1 auto; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atencao { transition: none; }
+}
+
+/* ---------------------------------- Ajustes por módulo ---------------------------------- */
+
+/* Quadro de tarefas: quatro colunas cabem inteiras ao lado do menu de 256px
+   a partir de 1280px; abaixo disso a rolagem horizontal continua valendo. */
+.quadro { grid-auto-columns: minmax(236px, 1fr); gap: 16px; }
+.quadro-coluna { background: var(--coluna-fundo); border-color: transparent; border-radius: 14px; }
+
+/* Porta de entrada dos Ramais: bloco chapado verde, como no design — é a
+   informação mais procurada da tela e não compete com o navy do menu. */
+.porta-entrada {
+  background: var(--porta-fundo);
+  border: none;
+  border-radius: 16px;
+  box-shadow: none;
+  padding: 24px 28px;
+}
+
+:root { --coluna-fundo: #E9EDF4; --porta-fundo: #0B5E48; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --coluna-fundo: #131D29; --porta-fundo: #0F4A3B; }
+}
+:root[data-theme="dark"] { --coluna-fundo: #131D29; --porta-fundo: #0F4A3B; }
