@@ -8755,6 +8755,9 @@ function semearCarteira() {
 function inicializarModuloProjetos() {
   state.projetos = lerProjetos();
   semearCarteira();
+  // O contador do menu aparece em qualquer módulo, não só depois de passar
+  // pelo início ou pelo próprio Plano.
+  atualizarBadgeProjetos();
 
   preencherSelectSituacoes(document.getElementById("status-situacao"), SITUACAO_PADRAO);
 

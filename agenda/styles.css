@@ -4406,3 +4406,44 @@ body { background: var(--color-background); }
   :root:not([data-theme="light"]) { --coluna-fundo: #131D29; --porta-fundo: #0F4A3B; }
 }
 :root[data-theme="dark"] { --coluna-fundo: #131D29; --porta-fundo: #0F4A3B; }
+
+/* ---------------------------------- Ajustes mobile (auditoria em 390px) ---------------------------------- */
+
+@media (max-width: 860px) {
+  /* 1fr sozinho é minmax(auto, 1fr): o cartão cresceria até o conteúdo mais
+     largo (os números em nowrap) e passaria da borda da tela. */
+  .portal__grid { grid-template-columns: minmax(0, 1fr); }
+  .portal-card { min-width: 0; }
+  .portal-card__metricas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .portal-metrica { padding: 10px; min-width: 0; }
+  .portal-metrica dd { font-size: 1.2rem; }
+
+  /* Topbar: a busca ocupa o espaço que sobra e encolhe; nada pode ficar por
+     cima do botão do menu. */
+  .topbar__left { flex: 0 1 auto; }
+  .topbar__search { flex: 1 1 auto; min-width: 0; max-width: none; padding: 0 12px; }
+  .topbar__actions { gap: 6px; }
+  .topbar__actions .btn { padding: 0 11px; min-width: 44px; min-height: 44px; justify-content: center; }
+  .topbar__theme-btn { width: 44px; height: 44px; }
+}
+
+@media (max-width: 560px) {
+  /* Onde há busca, ela precisa do espaço mais do que o nome do sistema, que
+     já está no menu. No início (sem busca), o nome volta. */
+  .topbar:has(.topbar__search:not([hidden])) .topbar__brand { display: none; }
+  .topbar { gap: 8px; padding: 0 12px; }
+  .portal__titulo { font-size: 1.6rem; }
+  .portal__eyebrow { font-size: 0.68rem; }
+}
+
+/* Alvos de toque: em tela sensível ao toque, chips, setas do quadro e números
+   de ramal ganham altura mínima de dedo. */
+@media (pointer: coarse) {
+  .chip { min-height: 40px; }
+  .quadro .icon-btn { width: 36px; height: 36px; }
+  .ramal-numero, .porta-entrada__numero { min-height: 40px; display: inline-flex; align-items: center; }
+}
+@media (max-width: 860px) {
+  .chip { min-height: 38px; }
+  .quadro .icon-btn { width: 34px; height: 34px; }
+}
