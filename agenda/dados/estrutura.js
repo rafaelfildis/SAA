@@ -782,9 +782,10 @@
     },
 
     // Relação da Netra Tecnologia (NETRA-CON-26213, 02/10/2026). As áreas
-    // seguem a ordem e o recorte do documento — inclusive a SEATU como área
-    // própria, com gestor próprio, e não como seção da DINT, que é como a
-    // empresa organiza a alocação.
+    // seguem a ordem e o recorte do documento. A SEATU, que o ofício lista
+    // como área com gestor próprio, é desenhada abaixo da DINT, como na
+    // estrutura atual, e a DINT mostra as duas equipes — 3 profissionais dela
+    // e 8 da Seção.
     netra: {
       rotulo: "Estrutura Netra",
       chamada: "Profissionais da Netra Tecnologia alocados no TCM-BA, por área, cargo e gestor",
@@ -806,14 +807,20 @@
           nome: "Divisão de Infraestrutura Tecnológica",
           natureza: "Área",
           gestor: "Rafael Levita",
+          // A caixa e o painel da DINT contam também a equipe da Seção, que é
+          // dela: são os postos de apoio aos sistemas e de transmissão e
+          // eventos que a resposta da própria Divisão lota na DINT.
+          incluiSubunidades: true,
           pessoas: NETRA_DINT,
-        },
-        {
-          sigla: "SEATU",
-          nome: "Seção de Atendimento ao Usuário",
-          natureza: "Área",
-          gestor: "Raul Lima",
-          pessoas: NETRA_SEATU,
+          subunidades: [
+            {
+              sigla: "SEATU",
+              nome: "Seção de Atendimento ao Usuário",
+              natureza: "Área",
+              gestor: "Raul Lima",
+              pessoas: NETRA_SEATU,
+            },
+          ],
         },
         {
           sigla: "DDES",

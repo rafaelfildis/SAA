@@ -5600,6 +5600,16 @@ function subunidadesDe(u) {
   return Array.isArray(u.subunidades) ? u.subunidades : [];
 }
 
+// Quadro que a caixa e o painel da unidade mostram. Com `incluiSubunidades`,
+// a unidade responde também pela equipe das unidades subordinadas — é o caso
+// da DINT na visão Netra, cuja Seção tem gestor próprio, mas cuja equipe é da
+// Divisão. O total da visão continua somando cada pessoa uma vez só, pela
+// unidade em que ela está.
+function pessoasDoQuadro(u) {
+  if (!u.incluiSubunidades) return pessoasDaUnidade(u);
+  return [...pessoasDaUnidade(u), ...subunidadesDe(u).flatMap(pessoasDoQuadro)];
+}
+
 // Uma seção subordinada a uma divisão é unidade do organograma como qualquer
 // outra: conta nas funções cobertas, no total de unidades e no de pessoas. O
 // que muda é onde ela é desenhada, não se ela existe.
@@ -5759,7 +5769,7 @@ function linhaDePessoa(pessoa, destacada, liderNoTitulo) {
 // administração pública a proporção entre efetivo e comissionado é leitura de
 // estrutura, não curiosidade.
 function resumoDeQuadro(u) {
-  const pessoas = pessoasDaUnidade(u);
+  const pessoas = pessoasDoQuadro(u);
   if (!pessoas.length) return "";
   // Quadro de contratada não tem vínculo a separar: o que o distingue é o
   // cargo, e o resumo diz quantos há de cada faixa.
@@ -5781,13 +5791,31 @@ function resumoDeQuadro(u) {
 // Aqui os nomes aparecem por inteiro, em colunas, porque o painel só existe
 // depois de alguém pedir para vê-lo — diferente do organograma, que precisa
 // caber em uma tela.
-function painelDeEquipe(u, busca) {
+// Blocos de pessoas da unidade, na ordem da hierarquia. Serve o painel e o
+// papel. Unidade que responde pela equipe das subordinadas ganha um bloco por
+// unidade, com o gestor de cada uma, para que se veja quem está onde.
+function gruposDeEquipe(u) {
   const titular = titularDaUnidade(u);
-  const pessoas = pessoasDaUnidade(u).filter((p) => p !== titular);
-  const grupos = PAPEIS_UNIDADE.map((papel) => ({
-    ...papel,
-    pessoas: pessoas.filter((p) => (p.papel || "equipe") === papel.id),
-  })).filter((g) => g.pessoas.length);
+  const porPapel = (unidade, prefixo) => {
+    const pessoas = pessoasDaUnidade(unidade).filter((p) => p !== titular);
+    return PAPEIS_UNIDADE.map((papel) => ({
+      ...papel,
+      rotulo: prefixo || papel.rotulo,
+      pessoas: pessoas.filter((p) => (p.papel || "equipe") === papel.id),
+    })).filter((g) => g.pessoas.length);
+  };
+  if (!u.incluiSubunidades) return porPapel(u);
+
+  const rotuloDe = (unidade) => {
+    const t = titularDaUnidade(unidade);
+    return t ? `${unidade.sigla} · gestor ${t.nome}` : unidade.sigla;
+  };
+  const daSubunidade = (su) => [...porPapel(su, rotuloDe(su)), ...subunidadesDe(su).flatMap(daSubunidade)];
+  return [...porPapel(u, rotuloDe(u)), ...subunidadesDe(u).flatMap(daSubunidade)];
+}
+
+function painelDeEquipe(u, busca) {
+  const grupos = gruposDeEquipe(u);
 
   if (!grupos.length) {
     return `<p class="unidade-painel__vazio">${escapeHtml(
@@ -5947,7 +5975,7 @@ function noDoFluxo({
 // Chamada de ação da caixa: quantas pessoas há para ver, ou que não há.
 function chamadaDeEquipe(u, aberta) {
   const titular = titularDaUnidade(u);
-  const equipe = pessoasDaUnidade(u).filter((p) => p !== titular).length;
+  const equipe = pessoasDoQuadro(u).filter((p) => p !== titular).length;
   if (!equipe) {
     // Unidade proposta sem quadro nenhum não tem chefia de quem se excetuar, e
     // a caixa desenhada como posição não nomeia nenhuma: o que a chamada tem a
@@ -5955,7 +5983,7 @@ function chamadaDeEquipe(u, aberta) {
     if (!pessoasDaUnidade(u).length) return "quadro a definir";
     return desenhadaComoPosicao(u) ? "sem equipe além do titular" : "sem equipe além da chefia";
   }
-  if (pessoasDaUnidade(u).every((p) => p.papel === "contratada")) {
+  if (pessoasDoQuadro(u).every((p) => p.papel === "contratada")) {
     return aberta ? `ocultar profissionais (${equipe})` : `ver profissionais e cargos (${equipe})`;
   }
   return aberta
@@ -6457,11 +6485,7 @@ function blocoCargoExport(u) {
 
 function blocoUnidadeExport(u, minuta) {
   const titular = titularDaUnidade(u);
-  const pessoas = pessoasDaUnidade(u).filter((p) => p !== titular);
-  const grupos = PAPEIS_UNIDADE.map((papel) => ({
-    ...papel,
-    pessoas: pessoas.filter((p) => (p.papel || "equipe") === papel.id),
-  })).filter((g) => g.pessoas.length);
+  const grupos = gruposDeEquipe(u);
 
   const cabecalho = `
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:5px;border-bottom:1.5px solid ${EXP.navy}">
@@ -6506,9 +6530,15 @@ function blocoUnidadeExport(u, minuta) {
 function construirExtratoEstrutura(visao) {
   const minuta = minutaEmTela(visao);
   const estrutural = visaoEstrutural(visao);
-  // Topo sem quadro (a empresa contratada) não vira bloco vazio na lista.
+  // Topo sem quadro (a empresa contratada) não vira bloco vazio na lista, e a
+  // subordinada cuja equipe já sai no bloco da unidade de cima não se repete.
+  const jaListadas = new Set(
+    unidadesDaVisao(visao)
+      .filter((u) => u.incluiSubunidades)
+      .flatMap((u) => achatarUnidades(subunidadesDe(u)))
+  );
   const unidades = [visao.topo, ...unidadesDaVisao(visao)].filter(
-    (u) => u !== visao.topo || pessoasDaUnidade(u).length || estrutural
+    (u) => (u !== visao.topo || pessoasDaUnidade(u).length || estrutural) && !jaListadas.has(u)
   );
 
   const paper = document.createElement("div");
