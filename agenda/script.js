@@ -4140,6 +4140,9 @@ function renderizarResumoProjetos(lista) {
     `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"}`;
 
   document.getElementById("proj-subtitulo").textContent = subtituloDoPlano();
+  const proximos = typeof window.SAA_PROJETOS_PROXIMOS_PASSOS === "string" ? window.SAA_PROJETOS_PROXIMOS_PASSOS.trim() : "";
+  document.getElementById("proj-proximos-texto").textContent = proximos;
+  document.getElementById("proj-proximos").hidden = !proximos;
   renderizarAvisoDeOcultos(lista);
 }
 
@@ -8680,7 +8683,7 @@ function trocarModulo(modulo) {
    Ligação com a interface
    -------------------------------------------------------------------------- */
 
-// Carrega a carteira que vem com o sistema (dados/contratos.js e
+// Carrega a carteira que vem com o sistema (dados/contratos.js, quando houver, e
 // dados/projetos.js) na primeira abertura de cada navegador. Sem isto, esses
 // registros só existiriam para quem importasse o arquivo à mão, em cada
 // dispositivo.
@@ -8692,6 +8695,7 @@ function trocarModulo(modulo) {
 function semearCarteira() {
   const contratos = Array.isArray(window.SAA_CONTRATOS) ? window.SAA_CONTRATOS : [];
   const projetos = Array.isArray(window.SAA_PROJETOS) ? window.SAA_PROJETOS : [];
+  const retirados = new Set(Array.isArray(window.SAA_PROJETOS_RETIRADOS) ? window.SAA_PROJETOS_RETIRADOS : []);
   const semente = [...contratos, ...projetos];
   // A marca combina as duas versões: acrescentar um projeto faz a semente
   // rodar de novo e alcançar quem já usa o sistema, sem tocar no que a pessoa
@@ -8711,8 +8715,12 @@ function semearCarteira() {
   const validos = semente.filter(projetoValido);
   if (!validos.length) return false;
 
-  const porId = new Map(state.projetos.map((p) => [p.id, p]));
-  let mudou = 0;
+  // Um plano novo que substitui o anterior precisa tirar da tela o que veio
+  // com a versão passada, senão a mesclagem por id o manteria para sempre.
+  // Só sai o que está na lista de retirados: o cadastrado à mão fica.
+  const antes = state.projetos.length;
+  const porId = new Map(state.projetos.filter((p) => !retirados.has(p.id)).map((p) => [p.id, p]));
+  let mudou = antes - porId.size;
   validos.forEach((p) => {
     // Carimbo de origem: permite distinguir, mais tarde, um registro que veio
     // do sistema e nunca foi tocado de um que a pessoa ajustou.

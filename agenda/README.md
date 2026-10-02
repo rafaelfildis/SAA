@@ -227,10 +227,22 @@ vigência**, e o campo aparece travado com a regra escrita ao lado.
 | faltam 90 dias ou menos | **Em risco** |
 | mais que isso | **Em andamento** |
 
-A carteira vem de `dados/contratos.js`, e **fornecedor, unidade responsável e
-fiscalização vieram das respostas das três Divisões** ao levantamento da
-Presidência, de agosto de 2026 — antes disso os 30 contratos estavam sem essas
-três informações.
+A carteira de 30 contratos que vinha em `dados/contratos.js` saiu do Plano em
+outubro de 2026 (continua no histórico do Git). As regras acima seguem valendo
+para qualquer registro lançado com `tipo: "contrato"`.
+
+#### Carteira atual (outubro de 2026)
+
+O plano que vem com o sistema está em `dados/projetos.js`: 21 entregas da DTI
+agrupadas em **Processos**, **Soluções**, **Contratos**, **Pendência** e
+**Continuidade estratégica** — o grupo vai no campo `area`, que a lista mostra e
+a busca alcança. Concluídos (✅) entram com 100%; os itens em curso (🔁) têm o
+progresso estimado pela etapa informada e se corrigem na tela.
+
+`SAA_PROJETOS_PROXIMOS_PASSOS` aparece numa faixa azul no topo do módulo.
+`SAA_PROJETOS_RETIRADOS` lista os ids das carteiras anteriores: na abertura
+seguinte eles saem do navegador, mesmo editados, porque o plano novo os
+substitui; o que foi cadastrado à mão permanece.
 
 A antecedência de 90 dias é a janela para prorrogar ou abrir nova licitação.
 Derivar em vez de gravar é o que impede o painel de envelhecer: no dia em que
