@@ -261,6 +261,15 @@ cada troca de filtro.
 **Horizonte "Todas":** os chips de entrega incluem uma opção sem teto de data,
 porque contratos correm por anos e a janela de 100 dias esconderia a maioria.
 
+**Caixas que filtram:** os quatro indicadores do topo são clicáveis. *Em
+andamento*, *Em risco ou vencidos* e *Concluídos* recortam a lista pelo mesmo
+critério com que contam; clicar de novo, ou em *Projetos*, volta a mostrar
+todos (*Projetos* limpa também as situações marcadas na barra lateral). A caixa
+em vigor fica destacada em azul e o resumo acima da lista diz o recorte. Os
+números das caixas não mudam ao filtrar — continuam dizendo o todo, para que o
+caminho de volta esteja sempre à vista. Teclado: Tab até a caixa e Enter ou
+espaço.
+
 **Histórico:** cada lançamento registra data e hora, situação, progresso e uma
 nota do que mudou, e entra no topo da pilha sem apagar o anterior. Editar
 dados cadastrais não inventa lançamento — só entra registro quando situação,

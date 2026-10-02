@@ -664,28 +664,28 @@
         </div>
 
         <section class="day-stats" id="proj-stats" aria-label="Resumo dos projetos">
-          <div class="day-stats__cel">
+          <div class="day-stats__cel day-stats__cel--filtro" data-caixa="" role="button" tabindex="0" aria-pressed="true" title="Mostrar todos os projetos">
             <span class="day-stats__rotulo">Projetos</span>
             <span class="day-stats__linha">
               <span class="day-stats__valor" id="proj-stat-total">0</span>
               <span class="day-stats__unidade" id="proj-stat-total-rotulo">cadastrados</span>
             </span>
           </div>
-          <div class="day-stats__cel">
+          <div class="day-stats__cel day-stats__cel--filtro" data-caixa="andamento" role="button" tabindex="0" aria-pressed="false" title="Filtrar os projetos em andamento">
             <span class="day-stats__rotulo">Em andamento</span>
             <span class="day-stats__linha">
               <span class="day-stats__valor" id="proj-stat-andamento">0</span>
               <span class="day-stats__unidade" id="proj-stat-andamento-rotulo">projetos</span>
             </span>
           </div>
-          <div class="day-stats__cel day-stats__cel--conflito" id="proj-cel-risco">
+          <div class="day-stats__cel day-stats__cel--conflito day-stats__cel--filtro" id="proj-cel-risco" data-caixa="risco" role="button" tabindex="0" aria-pressed="false" title="Filtrar os projetos em risco ou vencidos">
             <span class="day-stats__rotulo">Em risco ou vencidos</span>
             <span class="day-stats__linha">
               <span class="day-stats__valor" id="proj-stat-risco">0</span>
               <span class="day-stats__unidade" id="proj-stat-risco-rotulo">nenhum</span>
             </span>
           </div>
-          <div class="day-stats__cel day-stats__cel--livre">
+          <div class="day-stats__cel day-stats__cel--livre day-stats__cel--filtro" data-caixa="concluidos" role="button" tabindex="0" aria-pressed="false" title="Filtrar os projetos concluídos">
             <span class="day-stats__rotulo">Concluídos</span>
             <span class="day-stats__linha">
               <span class="day-stats__valor" id="proj-stat-concluidos">0</span>

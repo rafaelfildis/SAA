@@ -116,6 +116,9 @@ state.projetoEditando = null;
 state.filtrosProjeto = {
   horizonte: HORIZONTE_TODAS,
   situacoes: new Set(),
+  // Caixa de indicador clicada no topo do Plano ("andamento", "risco" ou
+  // "concluidos"); vazio mostra todos.
+  caixa: "",
   busca: "",
   // Intervalo explícito de prazo de entrega. Quando preenchido, manda no que
   // é exibido e o horizonte em dias sai de cena — os dois não devem disputar
@@ -4024,8 +4027,19 @@ function projetosNoHorizonte() {
   return projetosFiltrados();
 }
 
-function projetosFiltrados({ ignorarHorizonte = false } = {}) {
-  const { horizonte, situacoes, busca, prazoInicio, prazoFim } = state.filtrosProjeto;
+// As caixas de indicador do topo do Plano também filtram: cada uma recorta a
+// lista pelo mesmo critério com que conta. "Em risco ou vencidos" usa o
+// predicado do contador, e não só a situação, para que o número da caixa e o
+// tamanho da lista filtrada sejam sempre o mesmo.
+const CAIXAS_PROJETO = {
+  andamento: { rotulo: "em andamento", passa: (p) => situacaoEfetiva(p) === "em-andamento" },
+  risco: { rotulo: "em risco ou vencidos", passa: (p) => exigeProvidencia(p) },
+  concluidos: { rotulo: "concluídos", passa: (p) => situacaoEfetiva(p) === "concluido" },
+};
+
+function projetosFiltrados({ ignorarHorizonte = false, ignorarCaixa = false } = {}) {
+  const { horizonte, situacoes, caixa, busca, prazoInicio, prazoFim } = state.filtrosProjeto;
+  const filtroCaixa = !ignorarCaixa && CAIXAS_PROJETO[caixa];
   const hoje = hojeChave();
   const limite = chaveMaisDias(hoje, horizonte);
   const porIntervalo = filtroDePrazoAtivo();
@@ -4045,6 +4059,7 @@ function projetosFiltrados({ ignorarHorizonte = false } = {}) {
         return false;
       }
       if (situacoes.size && !situacoes.has(situacaoEfetiva(p))) return false;
+      if (filtroCaixa && !filtroCaixa.passa(p)) return false;
       if (busca) {
         const alvo = normalizarTexto(
           `${p.nome} ${p.descricao || ""} ${p.responsavel || ""} ${p.area || ""} ` +
@@ -4099,12 +4114,15 @@ function atualizarBadgeProjetos() {
   badge.classList.add("sidebar__nav-badge--alerta");
 }
 
-function renderizarResumoProjetos(lista) {
-  const emAndamento = lista.filter((p) => situacaoEfetiva(p) === "em-andamento").length;
-  const risco = lista.filter(exigeProvidencia).length;
-  const concluidos = lista.filter((p) => situacaoEfetiva(p) === "concluido").length;
+// `base` é a lista sem o recorte da caixa clicada: os números das caixas
+// continuam dizendo o todo, senão clicar em "Em andamento" zeraria as outras e
+// a pessoa perderia o caminho de volta. A lista exibida é `lista`.
+function renderizarResumoProjetos(lista, base = lista) {
+  const emAndamento = base.filter(CAIXAS_PROJETO.andamento.passa).length;
+  const risco = base.filter(CAIXAS_PROJETO.risco.passa).length;
+  const concluidos = base.filter(CAIXAS_PROJETO.concluidos.passa).length;
 
-  document.getElementById("proj-stat-total").textContent = lista.length;
+  document.getElementById("proj-stat-total").textContent = base.length;
   // "No horizonte" só é verdade quando existe um horizonte; sem recorte, o
   // número é simplesmente o que está cadastrado.
   document.getElementById("proj-stat-total-rotulo").textContent =
@@ -4116,7 +4134,9 @@ function renderizarResumoProjetos(lista) {
   document.getElementById("proj-stat-concluidos").textContent = concluidos;
   document.getElementById("proj-cel-risco").classList.toggle("is-alerta", risco > 0);
 
-  const estourados = lista.filter(prazoEstourado);
+  marcarCaixaAtiva();
+
+  const estourados = base.filter(prazoEstourado);
   const alerta = document.getElementById("proj-alerta");
   if (estourados.length) {
     const soContratos = estourados.every((p) => p.tipo === "contrato");
@@ -4136,14 +4156,38 @@ function renderizarResumoProjetos(lista) {
 
   atualizarBadgeProjetos();
 
+  const caixa = CAIXAS_PROJETO[state.filtrosProjeto.caixa];
   document.getElementById("proj-resumo").textContent =
-    `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"}`;
+    `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"}` + (caixa ? ` · ${caixa.rotulo}` : "");
 
   document.getElementById("proj-subtitulo").textContent = subtituloDoPlano();
   const proximos = typeof window.SAA_PROJETOS_PROXIMOS_PASSOS === "string" ? window.SAA_PROJETOS_PROXIMOS_PASSOS.trim() : "";
   document.getElementById("proj-proximos-texto").textContent = proximos;
   document.getElementById("proj-proximos").hidden = !proximos;
   renderizarAvisoDeOcultos(lista);
+}
+
+function marcarCaixaAtiva() {
+  const caixa = state.filtrosProjeto.caixa;
+  document.querySelectorAll("#proj-stats [data-caixa]").forEach((cel) => {
+    const ativa = cel.dataset.caixa === caixa;
+    cel.classList.toggle("is-filtro", ativa);
+    cel.setAttribute("aria-pressed", String(ativa));
+  });
+}
+
+// Clicar numa caixa filtra por ela; clicar de novo, ou em "Projetos", volta a
+// mostrar todos. "Projetos" limpa também as situações marcadas na barra
+// lateral, porque quem clica no total espera ver o total.
+function escolherCaixaProjeto(chave) {
+  const filtros = state.filtrosProjeto;
+  if (!chave) {
+    filtros.caixa = "";
+    filtros.situacoes.clear();
+  } else {
+    filtros.caixa = filtros.caixa === chave ? "" : chave;
+  }
+  renderizarProjetos();
 }
 
 // Filtro que esconde registros sem dizer nada leva a pessoa a concluir que os
@@ -4184,6 +4228,7 @@ function renderizarAvisoDeOcultos(lista) {
 function verTodosOsProjetos(acao) {
   if (acao === "limpar") {
     state.filtrosProjeto.situacoes.clear();
+    state.filtrosProjeto.caixa = "";
     state.filtrosProjeto.busca = "";
     const busca = document.getElementById("busca");
     if (busca) busca.value = "";
@@ -4412,7 +4457,7 @@ function renderizarFiltrosSituacao(lista) {
 
 function renderizarProjetos() {
   const lista = projetosNoHorizonte();
-  renderizarResumoProjetos(lista);
+  renderizarResumoProjetos(lista, projetosFiltrados({ ignorarCaixa: true }));
   renderizarPistaProjetos(lista);
   renderizarListaProjetos(lista);
   renderizarFiltrosSituacao(lista);
@@ -8805,6 +8850,18 @@ function inicializarModuloProjetos() {
   document.getElementById("modulo-projetos").addEventListener("click", (ev) => {
     const alvo = ev.target.closest("[data-projeto]");
     if (alvo) abrirPainelProjeto(alvo.dataset.projeto);
+  });
+
+  const caixasProjeto = document.getElementById("proj-stats");
+  caixasProjeto.addEventListener("click", (ev) => {
+    const cel = ev.target.closest("[data-caixa]");
+    if (cel) escolherCaixaProjeto(cel.dataset.caixa);
+  });
+  caixasProjeto.addEventListener("keydown", (ev) => {
+    const cel = ev.target.closest("[data-caixa]");
+    if (!cel || (ev.key !== "Enter" && ev.key !== " ")) return;
+    ev.preventDefault();
+    escolherCaixaProjeto(cel.dataset.caixa);
   });
 
   document.getElementById("situacao-lista").addEventListener("click", (ev) => {
