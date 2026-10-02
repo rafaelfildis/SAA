@@ -14,7 +14,7 @@
 // Script clássico e não módulo de propósito: se este arquivo falhar ao
 // carregar, o sistema continua de pé sem estes projetos, em vez de quebrar.
 
-window.SAA_PROJETOS_VERSAO = "2026-10-02";
+window.SAA_PROJETOS_VERSAO = "2026-10-02.1";
 
 // Próximo passo do plano, mostrado no topo do módulo.
 window.SAA_PROJETOS_PROXIMOS_PASSOS =
@@ -491,17 +491,17 @@ window.SAA_PROJETOS = [
     "area": "Continuidade estratégica",
     "dataInicio": "2026-09-10",
     "prazoEntrega": "2026-12-19",
-    "situacao": "em-andamento",
-    "progresso": 0,
+    "situacao": "concluido",
+    "progresso": 100,
     "historico": [
       {
-        "em": "2026-10-02T12:00:00.000-03:00",
-        "situacao": "em-andamento",
-        "progresso": 0,
-        "nota": "Rede de segurança operacional para contingências e apoio em incidentes."
+        "em": "2026-10-01T12:00:00.000-03:00",
+        "situacao": "concluido",
+        "progresso": 100,
+        "nota": "Contrato concluído em 01/10/2026. Rede de segurança operacional para contingências e apoio em incidentes."
       }
     ],
     "criadoEm": "2026-10-02T12:00:00.000-03:00",
-    "atualizadoEm": "2026-10-02T12:00:00.000-03:00"
+    "atualizadoEm": "2026-10-02T15:00:00.000-03:00"
   }
 ];
