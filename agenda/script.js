@@ -96,7 +96,7 @@ state.filtroProjetos = new Set();
 // Módulo Estrutura DTI: qual das duas visões está em tela, e a busca própria
 // do módulo. A visão abre na estrutura atual — a vigente é o ponto de
 // partida, e a minuta se lê em comparação com ela, não no lugar dela.
-state.estruturaVisao = "atual"; // atual | sugerida
+state.estruturaVisao = "atual"; // atual | sugerida | netra
 state.filtroEstrutura = "";
 // Sigla da unidade cuja equipe está aberta no fluxograma, ou null. Uma por
 // vez: o esqueleto do organograma não pode se mexer quando alguém abre uma
@@ -3806,7 +3806,11 @@ function aplicarFiltrosDaURL() {
   const visaoPedida = (params.get("visao") || "").toLowerCase();
   if (visaoPedida) {
     state.estruturaVisao =
-      visaoPedida === "proposta" || visaoPedida === "sugerida" ? "sugerida" : "atual";
+      visaoPedida === "proposta" || visaoPedida === "sugerida"
+        ? "sugerida"
+        : visaoPedida === "netra"
+        ? "netra"
+        : "atual";
   }
 
   const dia = dataValida(params.get("data"));
@@ -5534,7 +5538,7 @@ function inicializarModuloRamais() {
    escrita na tela, em vez de ser preenchido por conta própria.
    -------------------------------------------------------------------------- */
 
-const VISOES_ESTRUTURA = ["atual", "sugerida"];
+const VISOES_ESTRUTURA = ["atual", "sugerida", "netra"];
 
 const SELO_ESTADO_UNIDADE = {
   nova: "Unidade nova",
@@ -5560,6 +5564,7 @@ const PAPEIS_UNIDADE = [
   { id: "gerencia", rotulo: "Gerências (DAS-3)" },
   { id: "equipe", rotulo: "Relação de lotação" },
   { id: "tecnica", rotulo: "Equipe técnica" },
+  { id: "contratada", rotulo: "Profissionais Netra" },
 ];
 
 // Faixas de senioridade da equipe técnica, do topo para a base. A distribuição
@@ -5570,6 +5575,7 @@ const FAIXAS_SENIORIDADE = [
   { chave: "senior", singular: "sênior", plural: "sêniores" },
   { chave: "pleno", singular: "pleno", plural: "plenos" },
   { chave: "junior", singular: "júnior", plural: "juniores" },
+  { chave: "tecnico", singular: "técnico", plural: "técnicos" },
   { chave: "estagiario", singular: "estagiário", plural: "estagiários" },
 ];
 
@@ -5581,7 +5587,9 @@ function dadosDeEstrutura() {
 function visaoDeEstrutura(chave) {
   const d = dadosDeEstrutura();
   if (!d) return null;
-  return d[VISOES_ESTRUTURA.includes(chave) ? chave : "atual"];
+  // Sem a visão no arquivo de dados, a tela cai na estrutura atual em vez de
+  // quebrar o módulo inteiro.
+  return d[VISOES_ESTRUTURA.includes(chave) ? chave : "atual"] || d.atual;
 }
 
 function pessoasDaUnidade(u) {
@@ -5643,7 +5651,25 @@ function titularDaUnidade(u) {
   // Núcleo cujas frentes têm líder declarado, mas cuja chefia depende de ato.
   // Sem a marca, a primeira gerência seria promovida a chefe pelo desenho.
   if (u.titularADesignar) return null;
-  return pessoas.find((p) => p.papel === "chefia") || pessoas.find((p) => p.papel === "gerencia") || null;
+  const chefia = pessoas.find((p) => p.papel === "chefia") || pessoas.find((p) => p.papel === "gerencia");
+  if (chefia) return chefia;
+  // Na relação da contratada, quem responde pela área é o gestor do Tribunal,
+  // que não está no quadro listado: entra como titular, sem contar como
+  // pessoa da unidade.
+  return u.gestor ? { nome: u.gestor, cargo: u.funcaoDoGestor || "", papel: "gestor" } : null;
+}
+
+// Rótulo de quem responde pela unidade, no selo da caixa e no painel.
+function rotuloDoTitular(titular) {
+  if (titular.papel === "gerencia") return "Gerência";
+  if (titular.papel === "gestor") return "Gestor da área";
+  return "Chefia";
+}
+
+// Título da unidade: sigla e nome, ou só a sigla quando a fonte não nomeia a
+// unidade — melhor do que inventar o nome por extenso.
+function tituloDaUnidade(u) {
+  return u.nome ? `${u.sigla} — ${u.nome}` : u.sigla;
 }
 
 // Texto pesquisável da unidade: nome, sigla, natureza, subordinação, o que
@@ -5665,6 +5691,7 @@ function pessoaBate(pessoa, busca) {
     normalizarTexto(pessoa.cargo).includes(busca) ||
     normalizarTexto(pessoa.nivel).includes(busca) ||
     normalizarTexto(pessoa.funcao).includes(busca) ||
+    normalizarTexto(pessoa.lider).includes(busca) ||
     normalizarTexto(pessoa.vinculo).includes(busca) ||
     String(pessoa.matricula || "").includes(busca)
   );
@@ -5691,17 +5718,22 @@ function funcoesSemUnidade(visao) {
 // Duas linhas por pessoa: nome, e abaixo cargo, matrícula e vínculo. Com onze
 // pessoas em uma divisão, uma linha por atributo faria o cartão crescer sem
 // acrescentar informação.
-function linhaDePessoa(pessoa, destacada) {
+function linhaDePessoa(pessoa, destacada, liderNoTitulo) {
   // Quem vem da equipe técnica tem perfil de senioridade e não tem matrícula
   // nem vínculo declarados. Exibir "cargo não consta" para essas pessoas
   // transformaria a diferença entre as duas relações em erro de preenchimento.
-  if (pessoa.papel === "tecnica") {
+  if (pessoa.papel === "tecnica" || pessoa.papel === "contratada") {
     return `
       <li class="org-pessoa org-pessoa--tecnica${destacada ? " is-destacada" : ""}">
         <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
         <span class="org-pessoa__detalhe">
           <span class="org-pessoa__nivel">${escapeHtml(pessoa.nivel || "perfil não declarado")}</span>
           ${pessoa.funcao ? `<span class="org-pessoa__funcao">${escapeHtml(pessoa.funcao)}</span>` : ""}
+          ${
+            pessoa.lider && !liderNoTitulo
+              ? `<span class="org-pessoa__funcao">${escapeHtml(`Líder: ${pessoa.lider}`)}</span>`
+              : ""
+          }
         </span>
       </li>`;
   }
@@ -5729,6 +5761,12 @@ function linhaDePessoa(pessoa, destacada) {
 function resumoDeQuadro(u) {
   const pessoas = pessoasDaUnidade(u);
   if (!pessoas.length) return "";
+  // Quadro de contratada não tem vínculo a separar: o que o distingue é o
+  // cargo, e o resumo diz quantos há de cada faixa.
+  if (pessoas.every((p) => p.papel === "contratada")) {
+    const faixas = distribuicaoDeSenioridade(pessoas);
+    return `${plural(pessoas.length, "profissional", "profissionais")}${faixas ? ` · ${faixas}` : ""}`;
+  }
   const efetivos = pessoas.filter((p) => p.vinculo === "Efetivo").length;
   const comissionados = pessoas.filter((p) => p.vinculo === "Comissionado").length;
   const tecnicos = pessoas.filter((p) => p.papel === "tecnica").length;
@@ -5757,9 +5795,25 @@ function painelDeEquipe(u, busca) {
     )}</p>`;
   }
 
+  // Onde a relação informa o líder de cada profissional, a lista se divide por
+  // líder: é a pergunta que se faz a ela — quem responde a quem.
+  const porLider = (g) => {
+    if (!g.pessoas.some((p) => p.lider)) return [g];
+    const lideres = new Map();
+    g.pessoas.forEach((p) => {
+      const chave = p.lider || "Sem líder informado";
+      if (!lideres.has(chave)) lideres.set(chave, []);
+      lideres.get(chave).push(p);
+    });
+    return [...lideres.entries()]
+      .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], "pt-BR"))
+      .map(([lider, pessoasDoLider]) => ({ id: g.id, rotulo: `Líder: ${lider}`, pessoas: pessoasDoLider, porLider: true }));
+  };
+
   return grupos
+    .flatMap(porLider)
     .map((g) => {
-      const faixas = g.id === "tecnica" ? distribuicaoDeSenioridade(g.pessoas) : "";
+      const faixas = g.id === "tecnica" || g.id === "contratada" ? distribuicaoDeSenioridade(g.pessoas) : "";
       return `
       <div class="unidade-painel__grupo">
         <h5 class="unidade-painel__grupo-titulo">
@@ -5768,7 +5822,7 @@ function painelDeEquipe(u, busca) {
         </h5>
         <ul class="org-pessoas unidade-painel__lista">
           ${g.pessoas
-            .map((p) => linhaDePessoa(p, Boolean(busca) && pessoaBate(p, busca)))
+            .map((p) => linhaDePessoa(p, Boolean(busca) && pessoaBate(p, busca), g.porLider))
             .join("")}
         </ul>
       </div>`;
@@ -5901,6 +5955,9 @@ function chamadaDeEquipe(u, aberta) {
     if (!pessoasDaUnidade(u).length) return "quadro a definir";
     return desenhadaComoPosicao(u) ? "sem equipe além do titular" : "sem equipe além da chefia";
   }
+  if (pessoasDaUnidade(u).every((p) => p.papel === "contratada")) {
+    return aberta ? `ocultar profissionais (${equipe})` : `ver profissionais e cargos (${equipe})`;
+  }
   return aberta
     ? `ocultar equipe (${equipe})`
     : `ver equipe alocada (${equipe})`;
@@ -5970,7 +6027,7 @@ function filhosDoFluxo(u, busca, paraPapel) {
     const no = noDoFluxo({
       classe: classeDaUnidade(su),
       selo: seloDaUnidade(su),
-      titulo: paraPapel ? su.sigla : `${su.sigla} — ${su.nome}`,
+      titulo: paraPapel ? su.sigla : tituloDaUnidade(su),
       subtitulo: paraPapel ? su.nome : "",
       responsavel: posicao
         ? ""
@@ -5982,7 +6039,7 @@ function filhosDoFluxo(u, busca, paraPapel) {
       vago: !titular,
       linhas: [
         !posicao && titular
-          ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")
+          ? papelResumido(titular, rotuloDoTitular(titular))
           : "",
         su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
         visaoEstrutural() ? "" : resumoDeQuadro(su),
@@ -6008,23 +6065,26 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
   const topo = visao.topo;
   const diretor = titularDaUnidade(topo);
   const topoAberto = !paraPapel && state.estruturaUnidadeAberta === topo.sigla;
+  // Topo sem quadro próprio — a empresa contratada, na visão Netra — não abre
+  // painel: não haveria ninguém para listar.
+  const topoSemEquipe = !pessoasDaUnidade(topo).length;
 
   const noTopo = noDoFluxo({
     classe: "diretoria",
     selo: topo.natureza || "",
-    titulo: paraPapel ? topo.sigla : `${topo.sigla} — ${topo.nome}`,
+    titulo: paraPapel ? topo.sigla : tituloDaUnidade(topo),
     subtitulo: paraPapel ? topo.nome : "",
-    responsavel: diretor ? diretor.nome : "chefia a confirmar",
-    vago: !diretor,
-    linhas: [diretor && diretor.cargo ? diretor.cargo : ""],
+    responsavel: diretor ? diretor.nome : topo.legenda || "chefia a confirmar",
+    vago: !diretor && !topo.legenda,
+    linhas: [diretor && diretor.cargo ? diretor.cargo : "", topo.referencia || ""],
     destacado:
       !paraPapel &&
       Boolean(busca) &&
       (textoDaUnidade(topo).includes(busca) ||
         pessoasDaUnidade(topo).some((p) => pessoaBate(p, busca))),
-    unidade: paraPapel || visaoEstrutural(visao) ? "" : topo.sigla,
+    unidade: paraPapel || visaoEstrutural(visao) || topoSemEquipe ? "" : topo.sigla,
     aberta: topoAberto,
-    chamada: paraPapel || visaoEstrutural(visao) ? "" : chamadaDeEquipe(topo, topoAberto),
+    chamada: paraPapel || visaoEstrutural(visao) || topoSemEquipe ? "" : chamadaDeEquipe(topo, topoAberto),
   });
 
   const ramos = visao.unidades
@@ -6039,7 +6099,7 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
       const no = noDoFluxo({
         classe: classeDaUnidade(u),
         selo: seloDaUnidade(u),
-        titulo: paraPapel ? u.sigla : `${u.sigla} — ${u.nome}`,
+        titulo: paraPapel ? u.sigla : tituloDaUnidade(u),
         subtitulo: paraPapel ? u.nome : "",
         responsavel: posicao
           ? ""
@@ -6051,7 +6111,7 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
         vago: !titular,
         linhas: [
           !posicao && titular
-            ? papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")
+            ? papelResumido(titular, rotuloDoTitular(titular))
             : "",
           visaoEstrutural(visao) ? "" : resumoDeQuadro(u),
         ],
@@ -6093,6 +6153,36 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
         <ul>${ramos}</ul>
       </li>
     </ul>`;
+}
+
+// Linha de apoio da visão, em números. Serve a tela e o papel, para que os
+// dois não digam coisas diferentes do mesmo desenho.
+function subtituloDaVisao(visao) {
+  const unidades = unidadesDaVisao(visao).length;
+  if (visaoEstrutural(visao)) {
+    return (
+      `${plural(unidades, "unidade", "unidades")} · ` +
+      `${plural(visao.totalDeCargos || 0, "cargo", "cargos")}: estrutura proposta por nível e cargo, ` +
+      `sem lotação de pessoas`
+    );
+  }
+  if (visao.contratada) {
+    const pessoas = todasAsPessoas(visao);
+    return (
+      `${plural(unidades, "área", "áreas")} · ` +
+      `${plural(pessoas.length, "profissional", "profissionais")} da ${visao.topo.nome}: ` +
+      distribuicaoDeSenioridade(pessoas)
+    );
+  }
+  const efetivos = contarVinculo(visao, "Efetivo");
+  const comissionados = contarVinculo(visao, "Comissionado");
+  const tecnicos = contarTecnicos(visao);
+  const naRelacao = pessoasDaVisao(visao) - tecnicos;
+  return (
+    `${plural(unidades, "unidade", "unidades")} · ` +
+    `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
+    `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`
+  );
 }
 
 function renderizarFluxograma(visao) {
@@ -6156,13 +6246,13 @@ function renderizarPainelDeUnidade(visao) {
 
   painel.hidden = false;
   document.getElementById("estrutura-painel-natureza").textContent = u.natureza || "";
-  document.getElementById("estrutura-painel-titulo").textContent = `${u.sigla} — ${u.nome}`;
+  document.getElementById("estrutura-painel-titulo").textContent = tituloDaUnidade(u);
 
   const chefia = document.getElementById("estrutura-painel-chefia");
   const resumo = resumoDeQuadro(u);
   chefia.textContent = [
     titular
-      ? `${titular.nome} · ${papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")}`
+      ? `${titular.nome} · ${papelResumido(titular, rotuloDoTitular(titular))}`
       : minutaEmTela(visao)
       ? "Chefia a designar"
       : "Chefia a confirmar",
@@ -6210,23 +6300,12 @@ function renderizarEstrutura() {
     b.setAttribute("aria-pressed", ativo ? "true" : "false");
   });
 
-  const efetivos = contarVinculo(visao, "Efetivo");
-  const comissionados = contarVinculo(visao, "Comissionado");
-  const tecnicos = contarTecnicos(visao);
-  const naRelacao = pessoasDaVisao(visao) - tecnicos;
-
   document.getElementById("estrutura-titulo").textContent = visao.rotulo;
   // A linha de apoio resume o desenho em números, e é o único texto corrido da
   // tela: o resto é o organograma e a lista de quem está em cada unidade. Na
   // visão estrutural não há quadro nominal para somar, e o que ela resume é o
   // desenho: unidades e cargos.
-  document.getElementById("estrutura-subtitulo").textContent = visaoEstrutural(visao)
-    ? `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
-      `${plural(visao.totalDeCargos || 0, "cargo", "cargos")}: estrutura proposta por nível e cargo, ` +
-      `sem lotação de pessoas`
-    : `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
-      `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
-      `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`;
+  document.getElementById("estrutura-subtitulo").textContent = subtituloDaVisao(visao);
 
   // Com os nomes atrás de um clique, uma busca que casasse só com pessoas não
   // mostraria nada: a unidade correspondente se abre sozinha.
@@ -6333,8 +6412,8 @@ function renderizarPortalEstrutura() {
 // meio é pior do que uma lista mais longa.
 function linhaPessoaExport(pessoa) {
   const direita =
-    pessoa.papel === "tecnica"
-      ? [pessoa.nivel, pessoa.funcao].filter(Boolean).join(" · ")
+    pessoa.papel === "tecnica" || pessoa.papel === "contratada"
+      ? [pessoa.nivel, pessoa.funcao, pessoa.lider ? `líder: ${pessoa.lider}` : ""].filter(Boolean).join(" · ")
       : [pessoa.cargo, pessoa.funcao, pessoa.matricula ? `mat. ${pessoa.matricula}` : "", pessoa.vinculo]
           .filter(Boolean)
           .join(" · ");
@@ -6386,11 +6465,11 @@ function blocoUnidadeExport(u, minuta) {
 
   const cabecalho = `
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:5px;border-bottom:1.5px solid ${EXP.navy}">
-      <span style="font:700 11.5px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.navy}">${escapeHtml(`${u.sigla} — ${u.nome}`)}</span>
+      <span style="font:700 11.5px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.navy}">${escapeHtml(tituloDaUnidade(u))}</span>
       <span style="font:400 10px/1.3 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-align:right">${escapeHtml(
         [
           titular
-            ? `${titular.nome} · ${papelResumido(titular, titular.papel === "gerencia" ? "Gerência" : "Chefia")}`
+            ? `${titular.nome} · ${papelResumido(titular, rotuloDoTitular(titular))}`
             : minuta
             ? "Chefia a designar"
             : "Chefia a confirmar",
@@ -6404,7 +6483,7 @@ function blocoUnidadeExport(u, minuta) {
   const corpo = grupos.length
     ? grupos
         .map((g) => {
-          const faixas = g.id === "tecnica" ? distribuicaoDeSenioridade(g.pessoas) : "";
+          const faixas = g.id === "tecnica" || g.id === "contratada" ? distribuicaoDeSenioridade(g.pessoas) : "";
           return `
         <div style="margin-top:9px">
           <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:3px">
@@ -6427,11 +6506,10 @@ function blocoUnidadeExport(u, minuta) {
 function construirExtratoEstrutura(visao) {
   const minuta = minutaEmTela(visao);
   const estrutural = visaoEstrutural(visao);
-  const unidades = [visao.topo, ...unidadesDaVisao(visao)];
-  const efetivos = contarVinculo(visao, "Efetivo");
-  const comissionados = contarVinculo(visao, "Comissionado");
-  const tecnicos = contarTecnicos(visao);
-  const naRelacao = pessoasDaVisao(visao) - tecnicos;
+  // Topo sem quadro (a empresa contratada) não vira bloco vazio na lista.
+  const unidades = [visao.topo, ...unidadesDaVisao(visao)].filter(
+    (u) => u !== visao.topo || pessoasDaUnidade(u).length || estrutural
+  );
 
   const paper = document.createElement("div");
   paper.className = "export-paper export-paper--paisagem";
@@ -6464,13 +6542,7 @@ function construirExtratoEstrutura(visao) {
       <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
         <span style="font:700 22px/1.15 Bitter,Georgia,serif;color:${EXP.navy};letter-spacing:-.01em">${escapeHtml(visao.rotulo)}</span>
         <span style="font:400 11px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2}">${escapeHtml(
-          estrutural
-            ? `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
-              `${plural(visao.totalDeCargos || 0, "cargo", "cargos")}: estrutura proposta por nível e cargo, ` +
-              `sem lotação de pessoas`
-            : `${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} · ` +
-              `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}: ${naRelacao} na relação de lotação ` +
-              `(${efetivos} efetivos, ${comissionados} comissionados) e ${tecnicos} na equipe técnica`
+          subtituloDaVisao(visao)
         )}</span>
       </div>
       ${
@@ -6493,7 +6565,7 @@ function construirExtratoEstrutura(visao) {
 
     <div style="display:flex;flex-direction:column;flex:1">
       <div style="font:600 9.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:${EXP.texto2};padding-bottom:10px;border-bottom:1px solid ${EXP.borda};margin-bottom:14px">
-        ${estrutural ? "CARGOS POR UNIDADE" : "EQUIPE POR UNIDADE"}
+        ${estrutural ? "CARGOS POR UNIDADE" : visao.contratada ? "PROFISSIONAIS E CARGOS POR ÁREA" : "EQUIPE POR UNIDADE"}
       </div>
       ${unidades
         .map((u) => (estrutural ? blocoCargoExport(u) : blocoUnidadeExport(u, minuta)))
@@ -6505,6 +6577,8 @@ function construirExtratoEstrutura(visao) {
         ${
           estrutural
             ? "Minuta de estrutura: unidades, níveis e cargos propostos, sem lotação de pessoas. O dimensionamento em cargos foi informado pela Diretoria; a criação de unidade e a designação de chefia dependem de ato próprio do Tribunal."
+            : visao.fonte
+            ? escapeHtml(visao.fonte)
             : "Documento gerado a partir da relação de lotação e da alocação da equipe técnica da DTI. Os campos que as relações não declaram constam do arquivo de dados do módulo como pendências a confirmar."
         }
       </div>
@@ -6603,6 +6677,10 @@ function abrirDialogoExportEstrutura() {
     ? `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} e ` +
       `${plural(visao.totalDeCargos || 0, "cargo", "cargos")}. O documento sai em A4 paisagem, com o organograma ` +
       `e o cargo de cada unidade, carimbado como minuta de proposta.`
+    : visao.contratada
+    ? `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "área", "áreas")} e ` +
+      `${plural(pessoasDaVisao(visao), "profissional", "profissionais")}. O documento sai em A4 paisagem, com o ` +
+      `organograma e o cargo de cada profissional, por área.`
     : `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} e ` +
       `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}. O documento sai em A4 paisagem, com o organograma ` +
       `e a equipe de cada unidade` +
@@ -8631,7 +8709,7 @@ const SUBTITULO_MODULO = {
   agenda: "TCM-BA — compromissos sincronizados do Google Agenda",
   projetos: "TCM-BA — projetos e entregas dos próximos 100 dias",
   ramais: "TCM-BA — lista telefônica: prédio sede, prédio anexo e inspetorias regionais",
-  estrutura: "TCM-BA — organograma da DTI: estrutura atual e estrutura sugerida",
+  estrutura: "TCM-BA — organograma da DTI: estrutura atual, estrutura sugerida e estrutura Netra",
   tarefas: "TCM-BA — quadro de tarefas da DTI por status, categoria e responsável",
   equipes: "TCM-BA — alocação da equipe da DDES por célula de projeto",
 };

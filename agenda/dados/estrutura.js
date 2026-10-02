@@ -63,6 +63,19 @@
 // mesmas pessoas: repetir 37 nomes em cada uma criaria duas listas para
 // divergirem na primeira atualização.
 //
+// A ESTRUTURA NETRA é a relação que a própria Netra Tecnologia encaminhou ao
+// Tribunal no âmbito do Contrato nº 65/2022 (CON-RQ-30, ofício
+// NETRA-CON-26213, de 02/10/2026, assinado eletronicamente): 41 profissionais
+// em 7 áreas, cada uma com o gestor do Tribunal a quem respondem, e, na DDES,
+// o líder de cada profissional. Os nomes, cargos, gestores e líderes estão
+// grafados como no documento — "Sandrinha" e "Sandra" inclusive, que a
+// relação não diz se são a mesma pessoa. As áreas fora da DTI (DDP e SCE)
+// entram só pela sigla, porque o ofício não as nomeia.
+//
+// O ofício também traz o salário de cada profissional. Ele não entra aqui de
+// propósito: o site é público, e remuneração nominal de empregado de empresa
+// contratada é dado pessoal que não se publica em organograma.
+//
 // O QUE A TELA USA HOJE. O módulo ficou com o fluxograma e a lista da equipe,
 // e só lê:
 //
@@ -76,8 +89,13 @@
 //     `funcoes`/`funcoesAcumuladas` (que alimentam a métrica do portal) e
 //     `lotacao`/`observacao` (no painel de uma unidade sem equipe própria e na
 //     lista de cargos da folha);
-//   · da pessoa: `nome`, `cargo`, `matricula`, `vinculo`, `papel`, `nivel` e
-//     `funcao`.
+//   · da pessoa: `nome`, `cargo`, `matricula`, `vinculo`, `papel`, `nivel`,
+//     `funcao` e `lider`.
+//
+// A visão Netra acrescenta, na visão, `contratada` (o resumo conta
+// profissionais por cargo, e não por vínculo) e `fonte` (o rodapé do papel);
+// na unidade, `gestor` e `funcaoDoGestor` (quem responde pela área, quando ele
+// não está no quadro listado) e, no topo, `legenda` e `referencia`.
 //
 // Os demais campos — `chamada`, `resumo`, `procedencia`, `atribuicoes`,
 // `justificativa`, `origem`, `subordinacao`, `notas`, `notasTitulo` e
@@ -286,6 +304,66 @@
     tecnico("Larissa de Oliveira Pinheiro", "Sênior III", "Administração de dados"),
     tecnico("Jorge Luis Cruz Duarte", "Sênior II", "DBA"),
   ];
+
+  // Profissional da Netra: cargo do plano de cargos da empresa e, onde a
+  // relação informa, o líder a quem responde no dia a dia.
+  const netra = (nome, nivel, lider) => ({ nome, nivel, lider: lider || "", papel: "contratada" });
+
+  const NETRA_DINT = [
+    netra("Adson Alexandre Borges de Jesus", "Sênior III"),
+    netra("Diego Viana Santos", "Pleno II"),
+    netra("Edvaldo Souza dos Santos", "Pleno III"),
+  ];
+
+  const NETRA_SEATU = [
+    netra("Aislã dos Santos da Anunciação", "Técnico"),
+    netra("Caique Nascimento da Anunciação", "Técnico"),
+    netra("Eduardo Nascimento da Silva", "Pleno I"),
+    netra("Ian de Aguiar Fagundes", "Técnico"),
+    netra("Ivan de Jesus Junior", "Técnico"),
+    netra("Lucas Silva Gonçalves", "Júnior I"),
+    netra("Valmirete Paula Santos da Silva", "Técnico"),
+    netra("Vinicius Matias dos Santos Santana", "Pleno I"),
+  ];
+
+  const NETRA_DDES = [
+    netra("Aldair Silva de Araújo", "Júnior II", "Sandrinha"),
+    netra("Ana Paula Ferreira Lordelo", "Pleno II", "Ayala"),
+    netra("Caio Gabriel Cruz Amorim", "Júnior I", "Lourival"),
+    netra("Carlos Henrique Morais Cardoso", "Pleno I", "Ayala"),
+    netra("Claudia Carvalho dos Santos", "Sênior II", "Lucas"),
+    netra("Diego de Almeida Menezes", "Sênior III", "Fabrício"),
+    netra("Elaine da Anunciação Passos", "Sênior I", "Ayala"),
+    netra("Evânia Fernandes dos Santos", "Sênior I", "Fabrício"),
+    netra("Gabriel Silva de Matos", "Júnior II", "Lucas"),
+    netra("Guilherme da Silva Boaventura", "Júnior III", "Melly"),
+    netra("Jaime Valverde Silva", "Sênior II", "Lucas"),
+    netra("Jefferson Azevedo Lins", "Master II", "Ayala"),
+    netra("José Carlos Teixeira Júnior", "Sênior I", "Mauro Portugal"),
+    netra("José Daniel Machado Soares", "Sênior II", "Ayala"),
+    netra("Leonardo Oliveira da Silva Santos", "Júnior III", "Sandra"),
+    netra("Luan Santana Santos", "Pleno II", "Lourival"),
+    netra("Lucca Barbosa Nygaard", "Júnior II", "Fabrício"),
+    netra("Lucio de Castro Sacramento", "Sênior II", "Lourival"),
+    netra("Marcos Alberto Morais Assis", "Sênior IV", "Fabrício"),
+    netra("Marlon Nascimento Lopes", "Sênior III", "Ayala"),
+    netra("Maurício Machado de Oliveira Matos", "Sênior IV", "Fabrício"),
+    netra("Pablo Freire Barreto", "Sênior II", "Fabrício"),
+    netra("Pedro Martins Caires", "Júnior I", "Ayala"),
+  ];
+
+  const NETRA_DTI = [netra("Fabiana Dumiense Costa", "Sênior II")];
+
+  const NETRA_DBAD = [
+    netra("Jorge Luis Cruz Duarte", "Sênior II"),
+    netra("Cristiano Araújo Silva", "Sênior V"),
+    netra("Larissa de Oliveira Pinheiro", "Sênior III"),
+    netra("Mirella Lima Saraiva Araújo", "Sênior I"),
+  ];
+
+  const NETRA_DDP = [netra("Pollianna Cecília Fontes Castelhano", "Sênior III")];
+
+  const NETRA_SCE = [netra("Elisângela Melquiades Nascimento", "Júnior II")];
 
   // Data do levantamento em que a estrutura se baseia. Não há semente a
   // aplicar por navegador — a estrutura é lida do arquivo a cada carga —, mas
@@ -699,6 +777,81 @@
           titulo: "Chefias e quadros novos ficam declarados como decisão a tomar",
           detalhe:
             "As duas Diretorias, as duas Coordenações da Diretoria de Projetos e o Núcleo de UX/UI nascem sem titular e sem quadro na minuta. Provimento, remanejamento e criação de cargo comissionado são atos do Tribunal, e a proposta não os pressupõe.",
+        },
+      ],
+    },
+
+    // Relação da Netra Tecnologia (NETRA-CON-26213, 02/10/2026). As áreas
+    // seguem a ordem e o recorte do documento — inclusive a SEATU como área
+    // própria, com gestor próprio, e não como seção da DINT, que é como a
+    // empresa organiza a alocação.
+    netra: {
+      rotulo: "Estrutura Netra",
+      chamada: "Profissionais da Netra Tecnologia alocados no TCM-BA, por área, cargo e gestor",
+      contratada: true,
+      cargosDoQuadro: true,
+      fonte:
+        "Relação de profissionais, cargos e gestores responsáveis encaminhada pela Netra Tecnologia (CON-RQ-30, ofício NETRA-CON-26213, de 02/10/2026), no âmbito do Contrato nº 65/2022. Remuneração individual omitida.",
+      topo: {
+        sigla: "NETRA",
+        nome: "Netra Tecnologia",
+        natureza: "Empresa contratada",
+        legenda: "Contrato nº 65/2022",
+        referencia: "Ofício NETRA-CON-26213 · 02/10/2026",
+        pessoas: [],
+      },
+      unidades: [
+        {
+          sigla: "DINT",
+          nome: "Divisão de Infraestrutura Tecnológica",
+          natureza: "Área",
+          gestor: "Rafael Levita",
+          pessoas: NETRA_DINT,
+        },
+        {
+          sigla: "SEATU",
+          nome: "Seção de Atendimento ao Usuário",
+          natureza: "Área",
+          gestor: "Raul Lima",
+          pessoas: NETRA_SEATU,
+        },
+        {
+          sigla: "DDES",
+          nome: "Divisão de Desenvolvimento de Sistemas",
+          natureza: "Área",
+          gestor: "Mauro Portugal",
+          observacao:
+            "Única área em que a relação informa o líder de cada profissional. Os líderes estão grafados como no documento: \u201cSandrinha\u201d (Aldair) e \u201cSandra\u201d (Leonardo) aparecem separados, a confirmar se são a mesma pessoa.",
+          pessoas: NETRA_DDES,
+        },
+        {
+          sigla: "DTI",
+          nome: "Diretoria de Tecnologia da Informação",
+          natureza: "Área",
+          gestor: "José Roberto Era",
+          pessoas: NETRA_DTI,
+        },
+        {
+          sigla: "DBAD",
+          nome: "Divisão de Banco de Dados",
+          natureza: "Área",
+          gestor: "Servulo Lino",
+          pessoas: NETRA_DBAD,
+        },
+        {
+          sigla: "DDP",
+          nome: "",
+          natureza: "Área",
+          gestor: "Cristiane Costa",
+          funcaoDoGestor: "Chefe de Divisão de Desenvolvimento Organizacional",
+          pessoas: NETRA_DDP,
+        },
+        {
+          sigla: "SCE",
+          nome: "",
+          natureza: "Área",
+          gestor: "Ana Mendonça",
+          pessoas: NETRA_SCE,
         },
       ],
     },
