@@ -3348,179 +3348,716 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 .fluxo--export .fluxo-no__seta { display: none; }
 
 /* ==========================================================================
-   MÓDULO TAREFAS — quadro por status
+   MÓDULO TAREFAS — quadro kanban e tela de acompanhamento
 
-   Colunas lado a lado, uma por status, com os cartões que se movem entre
-   elas. As colunas rolam na horizontal quando não cabem, e cada uma rola na
-   vertical quando a pilha cresce: o cabeçalho da coluna fica visível enquanto
-   se percorre a lista, que é o que um quadro precisa para continuar legível
-   com trinta tarefas dentro.
+   Design system do quadro (Portal de Gestão DTI · TCM-BA). Os tokens --tk-*
+   são os do design system; o tema escuro redefine cada um contra a
+   superfície escura, em vez de inverter os tons claros.
+
+   Regras que o visual carrega:
+   - atraso é selo vermelho no topo do cartão, nunca borda lateral colorida;
+   - status é sempre texto e cor juntos, nunca só cor;
+   - texto secundário nunca mais claro que --tk-ink-soft (contraste AA);
+   - alvos clicáveis de 40 a 44 px, com <button> e <a> de verdade.
    ========================================================================== */
 
-.quadro {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(268px, 1fr);
-  gap: 14px;
-  align-items: start;
-  overflow-x: auto;
-  padding-bottom: 8px;
+:root {
+  --tk-navy: #0B2A55;
+  --tk-primario: #0B2A55;
+  --tk-titulo: #0B2A55;
+  --tk-ink: #0F1B2D;
+  --tk-ink-soft: #5A6577;
+  --tk-ink-mid: #3F4A5A;
+  --tk-line: #DDE3EA;
+  --tk-line-soft: #EEF1F5;
+  --tk-line-forte: #C9D1DC;
+  --tk-column: #E4E9EF;
+  --tk-surface: #FFFFFF;
+  --tk-surface-alt: #F6F8FB;
+  --tk-campo: #FAFBFC;
+  --tk-hover: #1D5FD1;
+
+  --tk-todo: #64748B;   --tk-todo-bg: #E9EDF2;   --tk-todo-fg: #334155;
+  --tk-doing: #1D5FD1;  --tk-doing-bg: #E3ECFB;  --tk-doing-fg: #174EA6;
+  --tk-review: #D97706; --tk-review-bg: #FDF0DC; --tk-review-fg: #7A3E04;
+  --tk-done: #15803D;   --tk-done-bg: #DCEFE3;   --tk-done-fg: #11632F;
+  --tk-late-bg: #FDECEC; --tk-late-fg: #8F1D1D; --tk-late-border: #F5C2C2;
+
+  --tk-pend-bg: #FFF7ED; --tk-pend-border: #F3D9B5; --tk-pend-tag-bg: #FBE3C0; --tk-pend-tag-fg: #7A3E04;
+  --tk-vago: #8A4B06; --tk-vago-borda: #B45309;
+  --tk-tag-neutra-bg: #EEF1F5; --tk-tag-neutra-fg: #3F4A5A;
+
+  --tk-hero: #0B2A55;
+  --tk-hero-borda: transparent;
+  --tk-hero-suave: #B9C7DD;
+  --tk-hero-texto: #DCE5F2;
+  --tk-hero-contorno: #4A6690;
+  --tk-hero-feita: #6FCF97;
+  --tk-hero-atual: #8DB4F0;
+  --tk-hero-futura: rgba(255, 255, 255, 0.18);
+
+  --tk-font-serif: "IBM Plex Serif", Georgia, serif;
+  --tk-font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
-.quadro-coluna {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  min-height: 190px;
-  padding: 12px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  transition: border-color 0.12s ease, background 0.12s ease;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tk-primario: #3B6FB6;
+    --tk-titulo: #E8EEF5;
+    --tk-ink: #E8EEF5;
+    --tk-ink-soft: #A3B2C6;
+    --tk-ink-mid: #CBD7E6;
+    --tk-line: #2A3746;
+    --tk-line-soft: #223040;
+    --tk-line-forte: #3A4A5C;
+    --tk-column: #111A25;
+    --tk-surface: #16212D;
+    --tk-surface-alt: #1C2836;
+    --tk-campo: #121C27;
+    --tk-hover: #8FC0F5;
+    --tk-todo: #94A3B8;   --tk-todo-bg: rgba(148, 163, 184, 0.16); --tk-todo-fg: #CBD5E1;
+    --tk-doing: #5B8FE6;  --tk-doing-bg: rgba(91, 143, 230, 0.18);  --tk-doing-fg: #A9C8FF;
+    --tk-review: #E5A04A; --tk-review-bg: rgba(229, 160, 74, 0.16); --tk-review-fg: #F2C27A;
+    --tk-done: #4FB784;   --tk-done-bg: rgba(79, 183, 132, 0.16);   --tk-done-fg: #8FD9AE;
+    --tk-late-bg: rgba(244, 120, 138, 0.16); --tk-late-fg: #FFA3AF; --tk-late-border: rgba(244, 120, 138, 0.4);
+    --tk-pend-bg: rgba(229, 160, 74, 0.1); --tk-pend-border: rgba(229, 160, 74, 0.35);
+    --tk-pend-tag-bg: rgba(229, 160, 74, 0.22); --tk-pend-tag-fg: #F2C27A;
+    --tk-vago: #E3B25B; --tk-vago-borda: #E3B25B;
+    --tk-tag-neutra-bg: #223040; --tk-tag-neutra-fg: #CBD7E6;
+    --tk-hero: #0B2A4E;
+    --tk-hero-borda: #2A3746;
+  }
 }
-/* Coluna sob o cartão arrastado: o realce diz onde ele vai cair. */
-.quadro-coluna.is-alvo {
-  border-color: var(--color-secondary);
-  background: var(--color-secondary-tint);
+:root[data-theme="dark"] {
+  --tk-primario: #3B6FB6;
+  --tk-titulo: #E8EEF5;
+  --tk-ink: #E8EEF5;
+  --tk-ink-soft: #A3B2C6;
+  --tk-ink-mid: #CBD7E6;
+  --tk-line: #2A3746;
+  --tk-line-soft: #223040;
+  --tk-line-forte: #3A4A5C;
+  --tk-column: #111A25;
+  --tk-surface: #16212D;
+  --tk-surface-alt: #1C2836;
+  --tk-campo: #121C27;
+  --tk-hover: #8FC0F5;
+  --tk-todo: #94A3B8;   --tk-todo-bg: rgba(148, 163, 184, 0.16); --tk-todo-fg: #CBD5E1;
+  --tk-doing: #5B8FE6;  --tk-doing-bg: rgba(91, 143, 230, 0.18);  --tk-doing-fg: #A9C8FF;
+  --tk-review: #E5A04A; --tk-review-bg: rgba(229, 160, 74, 0.16); --tk-review-fg: #F2C27A;
+  --tk-done: #4FB784;   --tk-done-bg: rgba(79, 183, 132, 0.16);   --tk-done-fg: #8FD9AE;
+  --tk-late-bg: rgba(244, 120, 138, 0.16); --tk-late-fg: #FFA3AF; --tk-late-border: rgba(244, 120, 138, 0.4);
+  --tk-pend-bg: rgba(229, 160, 74, 0.1); --tk-pend-border: rgba(229, 160, 74, 0.35);
+  --tk-pend-tag-bg: rgba(229, 160, 74, 0.22); --tk-pend-tag-fg: #F2C27A;
+  --tk-vago: #E3B25B; --tk-vago-borda: #E3B25B;
+  --tk-tag-neutra-bg: #223040; --tk-tag-neutra-fg: #CBD7E6;
+  --tk-hero: #0B2A4E;
+  --tk-hero-borda: #2A3746;
 }
 
-.quadro-coluna__topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.quadro-coluna__titulo {
+.tk { color: var(--tk-ink); font-family: var(--fonte, "IBM Plex Sans", system-ui, sans-serif); }
+.tk a { color: var(--tk-titulo); }
+.tk a:hover { color: var(--tk-hover); }
+
+/* --- Peças comuns -------------------------------------------------------- */
+
+.tk-eyebrow {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tk-ink-soft);
+}
+.tk-titulo-pagina {
+  margin: 4px 0 0;
+  font: 700 2.25rem/1.15 var(--tk-font-serif);
+  color: var(--tk-titulo);
+}
+.tk-subtitulo { margin-top: 6px; font-size: 0.875rem; color: var(--tk-ink-soft); }
+.tk-rotulo {
   margin: 0;
-  font: 700 0.92rem/1.2 var(--font-sans, "IBM Plex Sans", sans-serif);
-  color: var(--color-heading);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tk-ink-soft);
 }
-.quadro-coluna__conta {
+.tk-secao { margin: 0; font-size: 1.125rem; font-weight: 600; color: var(--tk-ink); }
+.tk-codigo { font: 500 0.75rem/1.3 var(--tk-font-mono); color: var(--tk-ink-soft); }
+.tk-texto-suave { color: var(--tk-ink-soft); }
+.tk-texto-atraso { color: var(--tk-late-fg); font-weight: 700; }
+
+.tk-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 6px;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: 600 0.9375rem/1 var(--fonte, "IBM Plex Sans", sans-serif);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.tk-btn:focus-visible,
+.tk-filtro:focus-visible,
+.tk-indicador:focus-visible,
+.tk-mover:focus-visible,
+.tk-segmento button:focus-visible,
+.tk-link:focus-visible { outline: 2px solid var(--tk-hover); outline-offset: 2px; }
+.tk-btn--primario { background: var(--tk-primario); color: #fff; }
+.tk-btn--primario:hover { filter: brightness(1.15); }
+.tk-btn--secundario { background: var(--tk-surface); color: var(--tk-ink); border-color: var(--tk-line); }
+.tk-btn--secundario:hover { border-color: var(--tk-ink-soft); }
+.tk-btn--compacto { height: 40px; padding: 0 16px; font-size: 0.875rem; }
+.tk-btn--mini { height: 36px; padding: 0 12px; font-size: 0.8125rem; border-radius: 6px; color: var(--tk-titulo); }
+.tk-btn--icone {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--tk-surface);
+  color: var(--tk-ink);
+  border-color: var(--tk-line);
+}
+.tk-btn--icone:hover:not(:disabled) { border-color: var(--tk-ink-soft); }
+.tk-btn:disabled { opacity: 0.4; cursor: default; }
+.tk-btn--anexar {
+  height: 40px;
+  padding: 0 14px;
+  background: var(--tk-surface);
+  color: var(--tk-ink);
+  border: 1px dashed var(--tk-line-forte);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+.tk-btn--anexar[aria-expanded="true"] { border-style: solid; border-color: var(--tk-ink-soft); }
+
+/* Pílula de filtro: 36 px de altura, ativa em marinho. */
+.tk-filtro {
+  height: 36px;
+  padding: 0 14px;
   border-radius: 999px;
-  background: var(--color-border-soft);
-  color: var(--color-text-secondary);
-  font: 700 0.72rem/1 var(--font-mono, "IBM Plex Mono", monospace);
-}
-.quadro-coluna__alerta {
-  margin-left: auto;
-  font: 700 0.68rem/1.3 var(--font-sans, "IBM Plex Sans", sans-serif);
-  color: var(--color-error-strong);
-}
-.quadro-coluna__ajuda {
-  margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: var(--color-text-tertiary);
-  text-wrap: pretty;
-}
-.quadro-coluna__pilha { display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
-.quadro-coluna__vazia {
-  margin: 0;
-  padding: 14px 4px;
-  text-align: center;
-  font-size: 0.76rem;
-  color: var(--color-text-tertiary);
-}
-
-/* Descrição de tarefa preserva as quebras do texto original: uma estratégia
-   com curto, médio e longo prazo chega estruturada, e virar parágrafo corrido
-   apagaria justamente a estrutura. */
-.tarefa-descricao { white-space: pre-line; }
-
-.quadro-vazio {
-  margin: 0 0 14px;
-  padding: 14px 16px;
-  background: var(--color-surface);
-  border: 1px dashed var(--color-border);
-  border-radius: 10px;
-  font-size: 0.86rem;
-  color: var(--color-text-secondary);
-}
-
-/* --- Cartão de tarefa ---------------------------------------------------- */
-
-.tarefa-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--cat-presencial);
-  border-radius: 8px;
-  box-shadow: var(--sombra-leve);
-}
-/* Tarefa com prazo vencido: a borda vermelha é o que faz a coluna ser lida de
-   cima para baixo com a ordem certa de urgência. */
-.tarefa-card--atrasada { border-left-color: var(--color-error); }
-.tarefa-card.is-arrastando { opacity: 0.45; }
-.tarefa-card:hover { border-color: var(--color-secondary); }
-
-.tarefa-card__corpo {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 100%;
-  padding: 10px 34px 10px 11px;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  text-align: left;
-  font: inherit;
-  color: inherit;
+  border: 1px solid var(--tk-line);
+  background: var(--tk-surface);
+  color: var(--tk-ink);
+  font: 600 0.8125rem/1 var(--fonte, "IBM Plex Sans", sans-serif);
   cursor: pointer;
 }
-.tarefa-card__corpo:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
+.tk-filtro:hover { border-color: var(--tk-ink-soft); }
+.tk-filtro.is-active { background: var(--tk-primario); border-color: var(--tk-primario); color: #fff; }
 
-.tarefa-card__etiquetas { display: flex; flex-wrap: wrap; gap: 5px; }
-.tarefa-card__titulo {
-  font: 600 0.84rem/1.35 var(--font-sans, "IBM Plex Sans", sans-serif);
-  color: var(--color-text-primary);
-  text-wrap: pretty;
-}
-.tarefa-card__responsavel,
-.tarefa-card__prazo,
-.tarefa-card__nota {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.74rem;
-  line-height: 1.35;
-  color: var(--color-text-secondary);
-}
-.tarefa-card__responsavel svg { flex: 0 0 auto; color: var(--color-text-tertiary); }
-.tarefa-card__responsavel--vago { color: var(--color-warning); }
-.tarefa-card__prazo { font-weight: 600; }
-.tarefa-card__prazo--alerta { color: var(--color-error-strong); }
-.tarefa-card__nota { color: var(--color-text-tertiary); font-size: 0.7rem; }
+.tk-ponto { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: var(--tk-todo); }
+.tk-ponto--todo { background: var(--tk-todo); }
+.tk-ponto--doing { background: var(--tk-doing); }
+.tk-ponto--review { background: var(--tk-review); }
+.tk-ponto--done { background: var(--tk-done); }
 
-/* Setas de coluna anterior e seguinte: é como se move a tarefa pelo teclado e
-   no celular, onde arrastar não funciona. */
-.tarefa-card__mover {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  padding: 0 6px 7px;
-  margin-top: -2px;
-}
-.icon-btn--mini { width: 26px; height: 26px; border-radius: 6px; }
-.icon-btn--mini:disabled { opacity: 0.3; cursor: default; }
-
-/* --- Etiqueta de categoria ----------------------------------------------- */
-
-.tarefa-categoria,
-.tarefa-prioridade {
+/* Etiqueta de categoria e unidade no cartão: sem borda, caixa alta. As
+   cores de categoria vêm das famílias .tarefa-categoria--*. */
+.tk-tag {
   display: inline-flex;
   align-items: center;
   padding: 2px 7px;
-  border: 1px solid currentColor;
   border-radius: 4px;
-  font: 700 0.62rem/1.45 var(--font-sans, "IBM Plex Sans", sans-serif);
-  letter-spacing: 0.04em;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+.tk-tag--unidade { background: var(--tk-tag-neutra-bg); color: var(--tk-tag-neutra-fg); }
+.tk-tag--alta { background: var(--tk-late-bg); color: var(--tk-late-fg); }
+
+.tk-selo-atraso {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--tk-late-bg);
+  color: var(--tk-late-fg);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tk-avatares { display: inline-flex; flex: 0 0 auto; }
+.tk-avatares .tk-avatar + .tk-avatar { margin-left: -6px; box-shadow: 0 0 0 2px var(--tk-surface); }
+.tk-avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.tk-avatar--medio { width: 28px; height: 28px; font-size: 0.6875rem; }
+.tk-avatar--grande { width: 36px; height: 36px; font-size: 0.8125rem; }
+.tk-avatar--vago { background: transparent; border: 1.5px dashed var(--tk-vago-borda); }
+
+/* --- Quadro -------------------------------------------------------------- */
+
+.tk-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.tk-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+.tk-indicador {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-line);
+  border-radius: 10px;
+  color: var(--tk-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.tk-indicador:hover { border-color: var(--tk-ink-soft); }
+.tk-indicador__rotulo { font-size: 0.8125rem; color: var(--tk-ink-soft); }
+.tk-indicador__valor { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
+.tk-indicador--alerta { background: var(--tk-late-bg); border-color: var(--tk-late-border); }
+.tk-indicador--alerta .tk-indicador__rotulo,
+.tk-indicador--alerta .tk-indicador__valor { color: var(--tk-late-fg); }
+/* Caixa que está filtrando o quadro: contorno marinho de 2 px. */
+.tk-indicador.is-active { border-color: var(--tk-primario); box-shadow: inset 0 0 0 1px var(--tk-primario); }
+
+.tk-filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 20px; }
+
+.tk-vazio {
+  margin: 20px 0 0;
+  padding: 14px 16px;
+  background: var(--tk-surface);
+  border: 1px dashed var(--tk-line-forte);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--tk-ink-soft);
+}
+
+.tk-quadro {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.tk-coluna {
+  min-width: 0;
+  padding: 12px;
+  background: var(--tk-column);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  transition: border-color 0.12s ease;
+}
+/* Coluna sob o cartão arrastado: o realce diz onde ele vai cair. */
+.tk-coluna.is-alvo { border-color: var(--tk-doing); }
+.tk-coluna__topo { display: flex; align-items: center; gap: 8px; padding: 4px 4px 12px; }
+.tk-coluna__titulo { margin: 0; font-size: 1rem; font-weight: 600; color: var(--tk-ink); }
+.tk-coluna__conta {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--tk-surface);
+  color: var(--tk-ink-mid);
+  font-size: 0.8125rem;
+}
+.tk-coluna__alerta {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tk-late-fg);
+  white-space: nowrap;
+}
+.tk-coluna__pilha { display: flex; flex-direction: column; gap: 10px; min-height: 48px; }
+.tk-coluna__vazia { margin: 0; padding: 14px 4px; text-align: center; font-size: 0.8125rem; color: var(--tk-ink-soft); }
+
+/* --- Cartão -------------------------------------------------------------- */
+
+.tk-card { border-radius: 10px; }
+.tk-card.is-arrastando { opacity: 0.45; }
+.tk-card__corpo {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-line);
+  border-radius: 10px;
+  color: var(--tk-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.tk-card__corpo:hover { border-color: var(--tk-hover); }
+.tk-card__corpo:focus-visible { outline: 2px solid var(--tk-hover); outline-offset: 2px; }
+.tk-card--concluida .tk-card__corpo { background: var(--tk-surface-alt); }
+
+.tk-card__topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.75rem; }
+.tk-card__concluida {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  color: var(--tk-done-fg);
+}
+.tk-card__titulo {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.tk-card__etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tk-card__andamento {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--tk-surface-alt);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tk-ink-mid);
+  overflow-wrap: anywhere;
+}
+.tk-card--concluida .tk-card__andamento { background: var(--tk-surface); }
+.tk-card__andamento strong { color: var(--tk-ink); }
+.tk-card__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tk-line-soft);
+  font-size: 0.8125rem;
+  color: var(--tk-ink-mid);
+}
+.tk-card__pessoa { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tk-card__nome { overflow-wrap: anywhere; line-height: 1.3; }
+.tk-card__pessoa--vago { color: var(--tk-vago); font-weight: 600; }
+.tk-card__info { flex: 0 0 auto; white-space: nowrap; }
+
+/* --- Tela da tarefa ------------------------------------------------------ */
+
+.tk-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 10px 16px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-line);
+  border-radius: 12px;
+}
+.tk-trilha { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--tk-ink-soft); }
+.tk .tk-trilha a { color: var(--tk-ink-soft); text-decoration: none; padding: 10px 0; }
+.tk .tk-trilha a:hover { color: var(--tk-hover); text-decoration: underline; }
+.tk-trilha__atual { color: var(--tk-ink); font-weight: 600; font-family: var(--tk-font-mono); }
+.tk-barra__acoes { display: flex; gap: 8px; align-items: center; }
+
+.tk-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 32px;
+  background: var(--tk-hero);
+  border: 1px solid var(--tk-hero-borda);
+  border-radius: 16px;
+  color: #fff;
+}
+.tk-hero__etiquetas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tk-codigo--hero { letter-spacing: 0.04em; color: var(--tk-hero-suave); }
+.tk-hero__titulo {
+  margin: 0;
+  font: 700 2.25rem/1.15 var(--tk-font-serif);
+  color: #fff;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.tk-hero__titulo:focus { outline: none; }
+.tk-hero__titulo:focus-visible { outline: 2px solid var(--tk-hero-atual); outline-offset: 4px; }
+
+.tk-pilula {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.tk-pilula .tk-ponto { width: 8px; height: 8px; }
+/* No hero o fundo é sempre marinho: a pílula de status usa os tons claros
+   do tema claro nos dois temas, para manter o contraste. */
+.tk-hero .tk-pilula--todo { background: #E9EDF2; color: #334155; }
+.tk-hero .tk-pilula--doing { background: #E3ECFB; color: #174EA6; }
+.tk-hero .tk-pilula--review { background: #FDF0DC; color: #7A3E04; }
+.tk-hero .tk-pilula--done { background: #DCEFE3; color: #11632F; }
+.tk-hero .tk-pilula--todo .tk-ponto { background: #64748B; }
+.tk-hero .tk-pilula--doing .tk-ponto { background: #1D5FD1; }
+.tk-hero .tk-pilula--review .tk-ponto { background: #D97706; }
+.tk-hero .tk-pilula--done .tk-ponto { background: #15803D; }
+.tk-pilula--atraso { background: #FDECEC; color: #8F1D1D; font-weight: 700; }
+.tk-pilula--alta { border: 1px solid #F5C2C2; color: #FDECEC; }
+.tk-pilula--contorno { border: 1px solid var(--tk-hero-contorno); color: var(--tk-hero-texto); }
+
+.tk-etapas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.tk-etapa { display: flex; flex-direction: column; gap: 8px; }
+.tk-etapa__barra { height: 6px; border-radius: 3px; background: var(--tk-hero-futura); }
+.tk-etapa--feita .tk-etapa__barra { background: var(--tk-hero-feita); }
+.tk-etapa--atual .tk-etapa__barra { background: var(--tk-hero-atual); }
+.tk-etapa__rotulo { font-size: 0.8125rem; color: var(--tk-hero-texto); }
+.tk-etapa--futura .tk-etapa__rotulo { color: var(--tk-hero-suave); }
+.tk-etapa--atual .tk-etapa__rotulo { color: #fff; font-weight: 600; }
+
+.tk-detalhe__grade { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 24px; align-items: flex-start; }
+.tk-detalhe__principal { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.tk-detalhe__lateral { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+
+.tk-painel {
+  padding: 24px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-line);
+  border-radius: 12px;
+}
+.tk-painel--lateral { padding: 20px; }
+.tk-painel > .tk-rotulo { margin-bottom: 12px; }
+.tk-painel__topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+
+.tk-descricao {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.tk-descricao--vazia { font-size: 0.9375rem; color: var(--tk-ink-soft); }
+
+/* Registrar andamento */
+.tk-registro { display: flex; flex-direction: column; gap: 14px; }
+.tk-registro .tk-filtros { margin-top: 0; }
+.tk-campo__rotulo { display: block; font-size: 0.8125rem; color: var(--tk-ink-soft); }
+.tk-textarea,
+.tk-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--tk-line-forte);
+  border-radius: 8px;
+  background: var(--tk-campo);
+  color: var(--tk-ink);
+  font: 0.9375rem/1.5 var(--fonte, "IBM Plex Sans", sans-serif);
+}
+.tk-textarea { padding: 12px; resize: vertical; min-height: 88px; }
+.tk-input { height: 44px; padding: 0 12px; }
+.tk-input--mono { font-family: var(--tk-font-mono); font-size: 0.875rem; }
+.tk-textarea::placeholder,
+.tk-input::placeholder { color: #6B7585; }
+.tk-textarea:focus,
+.tk-input:focus { outline: 2px solid var(--tk-hover); outline-offset: 0; border-color: transparent; }
+.tk-registro__campo { display: flex; flex-direction: column; gap: 6px; }
+.tk-registro__campo--autor { max-width: 360px; }
+.tk-registro__acoes { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.tk-erro { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--tk-late-fg); }
+
+/* Histórico */
+.tk-hist__topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.tk-hist__conta { font-weight: 500; color: var(--tk-ink-soft); }
+.tk-segmento { display: flex; gap: 4px; padding: 4px; border-radius: 8px; background: var(--tk-line-soft); }
+.tk-segmento button {
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tk-ink-mid);
+  font: 500 0.8125rem/1 var(--fonte, "IBM Plex Sans", sans-serif);
+  cursor: pointer;
+}
+.tk-segmento button.is-active { background: var(--tk-surface); color: var(--tk-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 27, 45, 0.08); }
+
+.tk-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tk-hist__item { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding-bottom: 20px; }
+.tk-hist__item:last-child { padding-bottom: 0; }
+.tk-hist__marco { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+/* Fio da linha do tempo, que liga um marco ao seguinte. */
+.tk-hist__marco::after { content: ""; flex: 1; width: 2px; background: var(--tk-line); }
+.tk-hist__item:last-child .tk-hist__marco::after { display: none; }
+.tk-hist__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.tk-hist__icone--criacao,
+.tk-hist__icone--todo { background: var(--tk-todo-bg); color: var(--tk-todo-fg); }
+.tk-hist__icone--doing { background: var(--tk-doing-bg); color: var(--tk-doing-fg); }
+.tk-hist__icone--review { background: var(--tk-review-bg); color: var(--tk-review-fg); }
+.tk-hist__icone--done { background: var(--tk-done-bg); color: var(--tk-done-fg); }
+.tk-hist__evento { padding-top: 6px; min-width: 0; }
+.tk-hist__texto { font-size: 0.9375rem; line-height: 1.45; }
+.tk-hist__origem { font-weight: 600; }
+.tk-hist__destino { font-weight: 600; }
+.tk-hist__destino--todo { color: var(--tk-todo-fg); }
+.tk-hist__destino--doing { color: var(--tk-doing-fg); }
+.tk-hist__destino--review { color: var(--tk-review-fg); }
+.tk-hist__destino--done { color: var(--tk-done-fg); }
+.tk-hist__quando { font-size: 0.8125rem; color: var(--tk-ink-soft); margin-top: 2px; white-space: nowrap; }
+.tk-hist__nota { margin: 8px 0 0; font-size: 0.9375rem; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
+.tk-hist__balao {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--tk-surface-alt);
+  border: 1px solid var(--tk-line);
+  border-radius: 10px;
+}
+.tk-hist__balao--pendencia { background: var(--tk-pend-bg); border-color: var(--tk-pend-border); }
+.tk-hist__cabeca { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.tk-hist__cabeca .tk-hist__quando { margin-top: 0; }
+.tk-hist__tipo {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+.tk-hist__tipo--andamento { background: var(--tk-tag-neutra-bg); color: var(--tk-titulo); }
+.tk-hist__tipo--documento { background: var(--tk-doing-bg); color: var(--tk-doing-fg); }
+.tk-hist__tipo--pendencia { background: var(--tk-pend-tag-bg); color: var(--tk-pend-tag-fg); }
+.tk-hist__tipo--decisao { background: var(--tk-done-bg); color: var(--tk-done-fg); }
+.tk-hist__sei {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-line);
+  font: 500 0.8125rem/1.4 var(--tk-font-mono);
+  overflow-wrap: anywhere;
+}
+.tk-hist__vazio { font-size: 0.875rem; color: var(--tk-ink-soft); }
+
+/* Mover para: grade 2×2; a etapa atual tem borda de 2 px e o fundo do status. */
+.tk-mover-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tk-mover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--tk-line);
+  background: var(--tk-surface);
+  color: var(--tk-ink);
+  font: 600 0.875rem/1.2 var(--fonte, "IBM Plex Sans", sans-serif);
+  text-align: center;
+  cursor: pointer;
+}
+.tk-mover:hover:not(.is-atual) { border-color: var(--tk-ink-soft); }
+.tk-mover .tk-ponto { width: 8px; height: 8px; }
+.tk-mover.is-atual { border-width: 2px; font-weight: 700; cursor: default; }
+.tk-mover--todo.is-atual { border-color: var(--tk-todo); background: var(--tk-todo-bg); color: var(--tk-todo-fg); }
+.tk-mover--doing.is-atual { border-color: var(--tk-doing); background: var(--tk-doing-bg); color: var(--tk-doing-fg); }
+.tk-mover--review.is-atual { border-color: var(--tk-review); background: var(--tk-review-bg); color: var(--tk-review-fg); }
+.tk-mover--done.is-atual { border-color: var(--tk-done); background: var(--tk-done-bg); color: var(--tk-done-fg); }
+
+/* Detalhes */
+.tk-dl { margin: 0; display: grid; grid-template-columns: 120px minmax(0, 1fr); }
+.tk-dl dt,
+.tk-dl dd {
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--tk-line-soft);
+  font-size: 0.875rem;
+}
+.tk-dl dt { font-size: 0.8125rem; color: var(--tk-ink-soft); }
+.tk-dl dd { overflow-wrap: anywhere; }
+.tk-dl dt:nth-last-of-type(1),
+.tk-dl dd:last-child { border-bottom: 0; }
+.tk-dd-pessoa { display: flex; align-items: center; gap: 8px; }
+.tk-prioridade { display: inline-flex; align-items: center; gap: 6px; }
+.tk-prioridade svg { color: var(--tk-review); }
+.tk-prioridade--alta svg { color: var(--tk-late-fg); }
+.tk-prioridade--baixa svg { color: var(--tk-todo); }
+.tk-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tk-titulo);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Tempo por etapa */
+.tk-tempo__barra { display: flex; height: 12px; gap: 2px; border-radius: 6px; overflow: hidden; }
+.tk-tempo__fatia--todo { background: var(--tk-todo); }
+.tk-tempo__fatia--doing { background: var(--tk-doing); }
+.tk-tempo__fatia--review { background: var(--tk-review); }
+.tk-tempo__legenda {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+}
+.tk-tempo__legenda span { display: block; }
+.tk-tempo p { margin: 0; font-size: 0.875rem; }
+
+/* Celular: o hero perde respiro, as etapas viram 2×2 e a lateral desce para
+   baixo do conteúdo principal (o flex-wrap já faz isso sozinho). */
+@media (max-width: 640px) {
+  .tk-titulo-pagina { font-size: 1.75rem; }
+  .tk-hero { padding: 20px; border-radius: 12px; }
+  .tk-hero__titulo { font-size: 1.625rem; }
+  .tk-etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+  .tk-painel { padding: 18px; }
+  .tk-dl { grid-template-columns: 104px minmax(0, 1fr); }
+  .tk-registro__acoes .tk-btn { flex: 1 1 auto; }
+  .tk-barra { padding: 8px 12px; }
+  .tk-cabecalho .tk-btn { width: 100%; }
+}
+
+/* Famílias de cor das categorias (dados/tarefas.js): vêm dos tokens que o
+   resto do sistema já usa, e por isso acompanham os dois temas. */
 .tarefa-categoria--navy { color: var(--cat-presencial); background: var(--cat-presencial-bg); }
 .tarefa-categoria--azul { color: var(--cat-online); background: var(--cat-online-bg); }
 .tarefa-categoria--verde { color: var(--cat-escola); background: var(--cat-escola-bg); }
@@ -3528,39 +4065,12 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 .tarefa-categoria--roxo { color: var(--color-recorrente-texto); background: var(--color-recorrente-tint); }
 .tarefa-categoria--vermelho { color: var(--color-error-strong); background: var(--color-error-tint); }
 .tarefa-categoria--neutra { color: var(--color-text-secondary); background: var(--color-border-soft); }
-.tarefa-prioridade--alta { color: var(--color-error-strong); background: var(--color-error-tint); }
 
-/* Ponto de cor no chip de filtro: a mesma família da etiqueta, para que o
-   filtro e o cartão se reconheçam. */
-.chip__ponto {
-  width: 8px;
-  height: 8px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.tarefa-ponto--navy { color: var(--cat-presencial); }
-.tarefa-ponto--azul { color: var(--cat-online); }
-.tarefa-ponto--verde { color: var(--cat-escola); }
-.tarefa-ponto--ambar { color: var(--cat-viagem); }
-.tarefa-ponto--roxo { color: var(--color-recorrente-texto); }
-.tarefa-ponto--vermelho { color: var(--color-error-strong); }
-.tarefa-ponto--neutra { color: var(--color-text-tertiary); }
+/* Contagem dentro do chip de filtro (Equipe e projetos). */
 .chip__conta {
   margin-left: 6px;
   font: 700 0.68rem/1 var(--font-mono, "IBM Plex Mono", monospace);
   opacity: 0.75;
-}
-
-/* No celular as colunas passam a ocupar a largura da tela e se empilham: uma
-   coluna de 268px em 390px de tela deixaria o quadro rolando nos dois eixos,
-   e ninguém arrasta cartão com o dedo em duas direções. */
-@media (max-width: 860px) {
-  .quadro {
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-  }
-  .tarefa-card__corpo { padding-right: 11px; }
 }
 
 /* ==========================================================================
@@ -4430,11 +4940,6 @@ body { background: var(--color-background); }
 
 /* ---------------------------------- Ajustes por módulo ---------------------------------- */
 
-/* Quadro de tarefas: quatro colunas cabem inteiras ao lado do menu de 256px
-   a partir de 1280px; abaixo disso a rolagem horizontal continua valendo. */
-.quadro { grid-auto-columns: minmax(236px, 1fr); gap: 16px; }
-.quadro-coluna { background: var(--coluna-fundo); border-color: transparent; border-radius: 14px; }
-
 /* Porta de entrada dos Ramais: bloco chapado verde, como no design — é a
    informação mais procurada da tela e não compete com o navy do menu. */
 .porta-entrada {
@@ -4445,11 +4950,11 @@ body { background: var(--color-background); }
   padding: 24px 28px;
 }
 
-:root { --coluna-fundo: #E9EDF4; --porta-fundo: #0B5E48; }
+:root { --porta-fundo: #0B5E48; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --coluna-fundo: #131D29; --porta-fundo: #0F4A3B; }
+  :root:not([data-theme="light"]) { --porta-fundo: #0F4A3B; }
 }
-:root[data-theme="dark"] { --coluna-fundo: #131D29; --porta-fundo: #0F4A3B; }
+:root[data-theme="dark"] { --porta-fundo: #0F4A3B; }
 
 /* ---------------------------------- Ajustes mobile (auditoria em 390px) ---------------------------------- */
 
@@ -4480,14 +4985,12 @@ body { background: var(--color-background); }
   .portal__eyebrow { font-size: 0.68rem; }
 }
 
-/* Alvos de toque: em tela sensível ao toque, chips, setas do quadro e números
+/* Alvos de toque: em tela sensível ao toque, chips e números
    de ramal ganham altura mínima de dedo. */
 @media (pointer: coarse) {
   .chip { min-height: 40px; }
-  .quadro .icon-btn { width: 36px; height: 36px; }
   .ramal-numero, .porta-entrada__numero { min-height: 40px; display: inline-flex; align-items: center; }
 }
 @media (max-width: 860px) {
   .chip { min-height: 38px; }
-  .quadro .icon-btn { width: 34px; height: 34px; }
 }

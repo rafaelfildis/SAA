@@ -26,7 +26,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Bitter:wght@600;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:wght@600;700&family=Bitter:wght@600;700&display=swap" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -237,14 +237,6 @@
             Restaurar cópia
           </label>
           <input id="input-importar-projetos" type="file" accept="application/json,.json" hidden />
-        </div>
-      </div>
-
-      <div class="sidebar__filters" id="filtros-tarefas" hidden>
-        <div class="filters__group">
-          <span class="filters__label" id="label-filtrar-categorias">Filtrar por categoria</span>
-          <div class="chip-group" id="tarefas-categorias-chips" role="group" aria-labelledby="label-filtrar-categorias"></div>
-          <button class="link-button" id="btn-limpar-categorias-tarefa" type="button">Mostrar todas</button>
         </div>
       </div>
 
@@ -859,24 +851,125 @@
         </section>
       </div><!-- /modulo-estrutura -->
 
-      <div id="modulo-tarefas" hidden>
-        <div class="page-header">
-          <div class="page-header__titles">
-            <span class="page-header__eyebrow">Tarefas</span>
-            <h2 class="page-title">Quadro de tarefas</h2>
-            <p class="page-subtitle" id="tarefas-subtitulo"></p>
-          </div>
-          <div class="page-header__acoes">
-            <button id="btn-nova-tarefa" class="btn btn--primary" type="button">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <div id="modulo-tarefas" class="tk" hidden>
+        <div id="tarefas-vista-quadro">
+          <div class="tk-cabecalho">
+            <div>
+              <span class="tk-eyebrow">Tarefas</span>
+              <h2 class="tk-titulo-pagina">Quadro de tarefas</h2>
+              <p class="tk-subtitulo" id="tarefas-subtitulo"></p>
+            </div>
+            <button id="btn-nova-tarefa" class="tk-btn tk-btn--primario" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
               <span>Nova tarefa</span>
             </button>
           </div>
+
+          <div class="tk-indicadores" id="tarefas-indicadores" role="group" aria-label="Resumo do quadro — cada caixa filtra o que conta"></div>
+
+          <div class="tk-filtros" id="tarefas-filtros" role="group" aria-label="Filtrar o quadro"></div>
+
+          <p class="tk-vazio" id="tarefas-vazio" hidden></p>
+
+          <div class="tk-quadro" id="tarefas-quadro" aria-live="polite"></div>
         </div>
 
-        <p class="quadro-vazio" id="tarefas-vazio" hidden></p>
+        <!-- Tela de acompanhamento da tarefa. Ocupa o lugar do quadro dentro do
+             módulo; o esqueleto é fixo e o script preenche cada bloco, para que
+             o texto que está sendo digitado no registro não se perca quando a
+             tarefa muda de etapa. -->
+        <div id="tarefa-detalhe" class="tk-detalhe" hidden>
+          <div class="tk-barra">
+            <nav aria-label="Trilha da tarefa" class="tk-trilha">
+              <a href="#conteudo-principal" data-ir="portal">Início</a><span aria-hidden="true">/</span>
+              <a href="#conteudo-principal" id="tk-det-trilha-tarefas">Tarefas</a><span aria-hidden="true">/</span>
+              <span class="tk-trilha__atual" id="tk-det-trilha-codigo" aria-current="page">Tarefa</span>
+            </nav>
+            <div class="tk-barra__acoes">
+              <button id="btn-tarefa-anterior" class="tk-btn tk-btn--icone" type="button" aria-label="Tarefa anterior">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button id="btn-tarefa-proxima" class="tk-btn tk-btn--icone" type="button" aria-label="Próxima tarefa">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+              <button id="btn-fechar-tarefa" class="tk-btn tk-btn--secundario tk-btn--compacto" type="button">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                Fechar
+              </button>
+            </div>
+          </div>
 
-        <div class="quadro" id="tarefas-quadro" aria-live="polite"></div>
+          <section class="tk-hero" aria-labelledby="tk-det-titulo">
+            <div class="tk-hero__etiquetas" id="tk-det-etiquetas"></div>
+            <h2 class="tk-hero__titulo" id="tk-det-titulo" tabindex="-1"></h2>
+            <ol class="tk-etapas" id="tk-det-etapas" aria-label="Etapas"></ol>
+          </section>
+
+          <div class="tk-detalhe__grade">
+            <div class="tk-detalhe__principal">
+              <section class="tk-painel">
+                <h3 class="tk-rotulo">Descrição</h3>
+                <div id="tk-det-descricao"></div>
+              </section>
+
+              <section class="tk-painel tk-registro" aria-labelledby="tk-reg-titulo">
+                <h3 class="tk-secao" id="tk-reg-titulo">Registrar andamento</h3>
+                <div class="tk-filtros" id="tk-reg-tipos" role="group" aria-label="Tipo de registro"></div>
+                <label for="tk-reg-texto" class="tk-campo__rotulo">O que mudou?</label>
+                <textarea id="tk-reg-texto" class="tk-textarea" rows="3" maxlength="800" placeholder="Ex.: aditivo instruído, aguardando parecer jurídico"></textarea>
+                <div class="tk-registro__campo" id="tk-reg-sei-campo" hidden>
+                  <label for="tk-reg-sei" class="tk-campo__rotulo">Nº SEI ou arquivo</label>
+                  <input id="tk-reg-sei" class="tk-input tk-input--mono" type="text" maxlength="160" placeholder="Ex.: SEI 000.0000/2026 ou nome/link do arquivo" />
+                </div>
+                <div class="tk-registro__campo tk-registro__campo--autor">
+                  <label for="tk-reg-autor" class="tk-campo__rotulo">Registrado por</label>
+                  <input id="tk-reg-autor" class="tk-input" type="text" maxlength="80" list="tk-reg-autores" placeholder="Seu nome — fica salvo neste navegador" />
+                  <datalist id="tk-reg-autores"></datalist>
+                </div>
+                <p id="tk-reg-erro" class="tk-erro" role="alert" hidden></p>
+                <div class="tk-registro__acoes">
+                  <button id="btn-tk-anexar" class="tk-btn tk-btn--anexar" type="button" aria-expanded="false" aria-controls="tk-reg-sei-campo">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 01-8.5-8.5l9.2-9.2a4 4 0 015.7 5.7l-9.2 9.2a2 2 0 01-2.8-2.8l8.5-8.5"/></svg>
+                    Anexar nº SEI ou arquivo
+                  </button>
+                  <button id="btn-tk-lancar" class="tk-btn tk-btn--primario" type="button">Lançar no histórico</button>
+                </div>
+              </section>
+
+              <section class="tk-painel" aria-labelledby="tk-hist-titulo">
+                <div class="tk-hist__topo">
+                  <h3 class="tk-secao" id="tk-hist-titulo">Histórico <span class="tk-hist__conta" id="tk-det-hist-conta"></span></h3>
+                  <div class="tk-segmento" id="tk-det-hist-filtro" role="group" aria-label="Filtrar histórico">
+                    <button type="button" data-filtro-historico="tudo" aria-pressed="true" class="is-active">Tudo</button>
+                    <button type="button" data-filtro-historico="andamentos" aria-pressed="false">Andamentos</button>
+                    <button type="button" data-filtro-historico="status" aria-pressed="false">Mudanças de status</button>
+                  </div>
+                </div>
+                <ol class="tk-hist" id="tk-det-historico"></ol>
+              </section>
+            </div>
+
+            <aside class="tk-detalhe__lateral" aria-label="Situação da tarefa">
+              <section class="tk-painel tk-painel--lateral">
+                <h3 class="tk-rotulo">Mover para</h3>
+                <div class="tk-mover-grade" id="tk-det-mover" role="group" aria-label="Mover para"></div>
+              </section>
+
+              <section class="tk-painel tk-painel--lateral">
+                <div class="tk-painel__topo">
+                  <h3 class="tk-rotulo">Detalhes</h3>
+                  <button class="tk-btn tk-btn--secundario tk-btn--mini" type="button" data-editar-tarefa>Editar</button>
+                </div>
+                <dl class="tk-dl" id="tk-det-lista"></dl>
+              </section>
+
+              <section class="tk-painel tk-painel--lateral">
+                <h3 class="tk-rotulo">Tempo por etapa</h3>
+                <div class="tk-tempo" id="tk-det-tempo"></div>
+              </section>
+            </aside>
+          </div>
+        </div>
       </div><!-- /modulo-tarefas -->
 
       <div class="content-signature">
@@ -1268,34 +1361,6 @@
       <button id="btn-salvar-tarefa" class="btn btn--primary" type="button">Salvar tarefa</button>
     </div>
   </div>
-
-  <div id="tarefa-painel-backdrop" class="panel-backdrop" hidden></div>
-  <aside id="tarefa-painel" class="detail-panel detail-panel--largo" aria-hidden="true" aria-label="Detalhe da tarefa">
-    <div class="detail-panel__header">
-      <h2 id="tarefa-painel-titulo">Tarefa</h2>
-      <button id="btn-fechar-tarefa-painel" class="icon-btn" type="button" aria-label="Fechar painel da tarefa">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </div>
-    <div class="detail-panel__body" id="tarefa-painel-corpo"></div>
-
-    <div class="proj-acoes">
-      <span class="filters__label" id="label-tarefa-mover">Mover para</span>
-      <div class="chip-group" id="tarefa-mover-chips" role="group" aria-labelledby="label-tarefa-mover"></div>
-    </div>
-
-    <form id="tarefa-status-form" class="proj-status-form" novalidate>
-      <span class="filters__label">Lançar andamento</span>
-      <label class="campo">
-        <span class="campo__rotulo">O que mudou</span>
-        <textarea id="tarefa-status-nota" class="input input--area" rows="2" maxlength="400" placeholder="Ex.: aditivo instruído, aguardando parecer jurídico"></textarea>
-      </label>
-      <div class="proj-status-form__acoes">
-        <button id="btn-editar-tarefa" class="btn btn--ghost" type="button">Editar tarefa</button>
-        <button id="btn-lancar-tarefa" class="btn btn--primary" type="button">Lançar no histórico</button>
-      </div>
-    </form>
-  </aside>
 
   <script src="dados/projetos.js"></script>
   <script src="dados/ramais.js"></script>

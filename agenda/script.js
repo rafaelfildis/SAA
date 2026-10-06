@@ -110,8 +110,17 @@ state.estruturaPainelPelaBusca = false;
 // o mesmo padrão do filtro de modalidade da agenda.
 state.filtroTarefas = "";
 state.filtroCategoriasTarefa = new Set();
+// Filtro rápido do topo do quadro: "abertas", "atrasadas", "sem-responsavel",
+// "concluidas" ou "minhas"; vazio mostra todas.
+state.filtroRapidoTarefa = "";
+// Nome de quem usa o navegador, digitado no "Registrado por" da tarefa.
+state.autorTarefas = "";
 state.tarefaEditando = null;
+// Tarefa aberta na tela de acompanhamento, ou null quando o quadro está à
+// vista. O filtro do histórico e o tipo de registro são da tela aberta.
 state.tarefaAberta = null;
+state.filtroHistoricoTarefa = "tudo";
+state.tipoRegistroTarefa = "andamento";
 state.projetoEditando = null;
 state.filtrosProjeto = {
   horizonte: HORIZONTE_TODAS,
@@ -7074,21 +7083,31 @@ function inicializarPortal() {
 }
 
 /* --------------------------------------------------------------------------
-   Módulo Tarefas — quadro por status
+   Módulo Tarefas — quadro por status e tela de acompanhamento
    --------------------------------------------------------------------------
-   Quadro de colunas, uma por status, com as tarefas em cartões que se movem
-   entre elas. As colunas e as categorias vêm de dados/tarefas.js, porque são
-   vocabulário institucional; as tarefas são digitadas e ficam no navegador,
-   como os projetos do Plano 100 dias.
+   Quadro de colunas, uma por status, com as tarefas em cartões. As colunas e
+   as categorias vêm de dados/tarefas.js, porque são vocabulário
+   institucional; as tarefas são digitadas e ficam no navegador, como os
+   projetos do Plano 100 dias.
 
-   Arrastar não é a única forma de mover. Cada cartão traz as setas de coluna
-   anterior e seguinte, e o painel traz os botões de destino: arrastar não
-   funciona com teclado, e no celular funciona mal. O mesmo caminho de código
-   serve aos três gestos.
+   O cartão inteiro abre a tela de acompanhamento da tarefa, e é nela que a
+   tarefa se move ("Mover para") e recebe registros. Arrastar o cartão para
+   outra coluna continua valendo no quadro, mas não é o único caminho:
+   arrastar não funciona com teclado, e no celular funciona mal. Os dois
+   gestos chamam o mesmo código.
+
+   Visual segundo o design system do quadro (tokens --tk-*, em styles.css):
+   atraso é selo no topo do cartão, nunca borda lateral; status é sempre
+   texto e cor juntos; o cartão mostra o último andamento para que a coluna
+   se acompanhe sem abrir nada.
    -------------------------------------------------------------------------- */
 
 const TAREFAS_STORAGE_KEY = "saaTcm.tarefas.v1";
 const SEMENTE_TAREFAS_KEY = "saaTcm.tarefas.semente";
+// Nome de quem usa este navegador: assina os registros do histórico e
+// alimenta o filtro "Minhas". Não é login — é o que a pessoa digitou no
+// campo "Registrado por".
+const AUTOR_TAREFAS_KEY = "saaTcm.tarefas.autor";
 
 const COLUNAS_PADRAO = [
   { id: "a-fazer", rotulo: "A fazer" },
@@ -7102,6 +7121,21 @@ const PRIORIDADES = {
   media: { rotulo: "Média", ordem: 1 },
   baixa: { rotulo: "Baixa", ordem: 2 },
 };
+
+// Tipos de registro do histórico. Todo registro tem tipo: é o que separa a
+// pendência que trava a tarefa do andamento que só informa.
+const TIPOS_REGISTRO = {
+  andamento: { rotulo: "Andamento" },
+  pendencia: { rotulo: "Pendência" },
+  decisao: { rotulo: "Decisão" },
+  documento: { rotulo: "Documento" },
+};
+
+// Tom de cada coluna no design system (ponto, fundo e texto). As colunas
+// conhecidas têm o seu; uma coluna nova no arquivo de dados herda o tom pela
+// posição, e a de encerramento é sempre verde.
+const TONS_DE_COLUNA = { "a-fazer": "todo", "em-andamento": "doing", "em-revisao": "review", concluida: "done" };
+const TONS_EM_ORDEM = ["todo", "doing", "review", "done"];
 
 // Catálogo do arquivo de dados, com o mínimo embutido como reserva: se o
 // arquivo falhar ao carregar, o quadro abre com as quatro colunas em vez de
@@ -7131,6 +7165,14 @@ function colunaDeEncerramento() {
 
 function tarefaEncerrada(t) {
   return t && t.status === colunaDeEncerramento().id;
+}
+
+function tomDaColuna(id) {
+  const col = colunaPorId(id);
+  if (col.id === colunaDeEncerramento().id) return "done";
+  if (TONS_DE_COLUNA[col.id]) return TONS_DE_COLUNA[col.id];
+  const i = colunasDeTarefa().indexOf(col);
+  return TONS_EM_ORDEM[Math.min(Math.max(i, 0), TONS_EM_ORDEM.length - 2)];
 }
 
 /* ---------------------------------------------------- Armazenamento */
@@ -7174,6 +7216,138 @@ function tarefaPorId(id) {
   return (state.tarefas || []).find((t) => t.id === id) || null;
 }
 
+function lerAutorDeTarefas() {
+  try {
+    return (localStorage.getItem(AUTOR_TAREFAS_KEY) || "").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+function gravarAutorDeTarefas(nome) {
+  try {
+    if (nome) localStorage.setItem(AUTOR_TAREFAS_KEY, nome);
+    else localStorage.removeItem(AUTOR_TAREFAS_KEY);
+  } catch (e) {
+    /* sem armazenamento: o nome vale só nesta carga */
+  }
+  state.autorTarefas = nome;
+}
+
+// Código curto de cada tarefa (TAR-001), atribuído uma vez e gravado com ela:
+// é o que se diz em reunião e se escreve no SEI. Quem ainda não tem recebe o
+// próximo número, na ordem em que a tarefa está no quadro salvo.
+function garantirCodigosDeTarefa() {
+  const tarefas = state.tarefas || [];
+  const numero = (t) => {
+    const m = /^TAR-(\d+)$/.exec(t.codigo || "");
+    return m ? Number(m[1]) : 0;
+  };
+  let proximo = tarefas.reduce((max, t) => Math.max(max, numero(t)), 0) + 1;
+  let mudou = false;
+  tarefas.forEach((t) => {
+    if (numero(t)) return;
+    t.codigo = `TAR-${String(proximo++).padStart(3, "0")}`;
+    mudou = true;
+  });
+  return mudou;
+}
+
+/* ---------------------------------------------------- Histórico */
+
+// O histórico é gravado do mais recente para o mais antigo. Registros antigos
+// não traziam o tipo; ele é deduzido aqui, sem regravar nada: o mais antigo é
+// a criação, "Movida para…" é mudança de status e o resto é andamento.
+function registrosDaTarefa(t) {
+  const lista = Array.isArray(t && t.historico) ? t.historico : [];
+  return lista.map((h, i) => {
+    let tipo = h.tipo;
+    if (!tipo) {
+      if (i === lista.length - 1) tipo = "criacao";
+      else if (/^Movida para /.test(h.nota || "")) tipo = "status";
+      else tipo = "andamento";
+    }
+    const anterior = lista[i + 1];
+    const de = h.de || (tipo === "status" && anterior ? anterior.status : "");
+    // A nota automática dos registros antigos ("Movida para…", "Tarefa
+    // lançada…") repete o que a linha do tempo já escreve.
+    const notaAutomatica = /^(Movida para .*\.|Tarefa lançada.*\.)$/.test(h.nota || "");
+    return { ...h, tipo, de, nota: notaAutomatica ? "" : h.nota || "" };
+  });
+}
+
+function ehRegistroDeAndamento(h) {
+  return Boolean(TIPOS_REGISTRO[h.tipo]);
+}
+
+function ultimoAndamento(t) {
+  return registrosDaTarefa(t).find(ehRegistroDeAndamento) || null;
+}
+
+// Quando a tarefa entrou em cada coluna pela última vez — a data que a barra
+// de etapas escreve embaixo de cada passo.
+function entradasPorColuna(t) {
+  const datas = {};
+  registrosDaTarefa(t).forEach((h) => {
+    if ((h.tipo === "status" || h.tipo === "criacao") && !datas[h.status]) datas[h.status] = h.em;
+  });
+  return datas;
+}
+
+// Tempo em cada etapa, somado ao longo de todo o histórico: uma tarefa que
+// voltou da revisão para o andamento soma os dois períodos de andamento. A
+// etapa atual conta até agora; a de encerramento não conta.
+function tempoPorEtapa(t) {
+  const mudancas = registrosDaTarefa(t)
+    .filter((h) => h.tipo === "status" || h.tipo === "criacao")
+    .slice()
+    .reverse();
+  const total = {};
+  mudancas.forEach((h, i) => {
+    const fim = mudancas[i + 1] ? new Date(mudancas[i + 1].em).getTime() : Date.now();
+    const ms = Math.max(0, fim - new Date(h.em).getTime());
+    total[h.status] = (total[h.status] || 0) + ms;
+  });
+  delete total[colunaDeEncerramento().id];
+  return total;
+}
+
+function rotuloDeDias(ms) {
+  const dias = Math.floor(ms / 86400000);
+  if (dias < 1) return "menos de 1 dia";
+  return `${dias} ${dias === 1 ? "dia" : "dias"}`;
+}
+
+// "há 2 dias" diz mais no rodapé do cartão do que a data solta.
+function rotuloRelativo(iso) {
+  if (!iso) return "";
+  const dias = diasEntreChaves(chaveDia(new Date(iso)), hojeChave());
+  if (dias <= 0) return "hoje";
+  if (dias === 1) return "ontem";
+  return `há ${dias} dias`;
+}
+
+function dataEHora(iso) {
+  return formatarCarimbo(iso).replace(/,?\s+/, " · ");
+}
+
+function dataCurtaEHora(iso) {
+  const f = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: DISPLAY_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+  return f.replace(/,?\s+/, " · ");
+}
+
+function diaEMes(iso) {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: DISPLAY_TIMEZONE, day: "2-digit", month: "2-digit" }).format(
+    new Date(iso)
+  );
+}
+
 /* ---------------------------------------------------- Cálculos */
 
 // Prazo de tarefa fala a língua da tarefa: "venceu ontem" e "vence hoje"
@@ -7186,31 +7360,70 @@ function rotuloPrazoTarefa(t) {
   if (dias === -1) return "venceu ontem";
   if (dias === 0) return "vence hoje";
   if (dias === 1) return "vence amanhã";
-  return `em ${dias} dias`;
+  return `vence em ${dias} dias`;
 }
 
 function tarefaAtrasada(t) {
   return Boolean(t && t.prazo && !tarefaEncerrada(t) && diasEntreChaves(hojeChave(), t.prazo) < 0);
 }
 
+function diasDeAtraso(t) {
+  return tarefaAtrasada(t) ? Math.abs(diasEntreChaves(hojeChave(), t.prazo)) : 0;
+}
+
+// Pessoas do campo "Responsável": a carteira da Diretoria traz duplas
+// ("Ciro e Rafael…"), e cada uma ganha o próprio avatar.
+function pessoasDoResponsavel(texto) {
+  return String(texto || "")
+    .split(/\s*,\s*|\s+e\s+/)
+    .map((n) => n.trim())
+    .filter(Boolean);
+}
+
+function tarefaEhMinha(t, nome) {
+  const quem = normalizarTexto(nome || "").trim();
+  return Boolean(quem && normalizarTexto(t.responsavel || "").includes(quem));
+}
+
 function tarefaBate(t, busca) {
   if (!busca) return true;
   const cat = categoriaPorId(t.categoria);
   const alvo = normalizarTexto(
-    [t.titulo, t.descricao, t.responsavel, t.unidade, cat && cat.rotulo, (PRIORIDADES[t.prioridade] || {}).rotulo]
+    [t.codigo, t.titulo, t.descricao, t.responsavel, t.unidade, cat && cat.rotulo, (PRIORIDADES[t.prioridade] || {}).rotulo]
       .filter(Boolean)
       .join(" ")
   );
   return alvo.includes(busca);
 }
 
-// O que o quadro mostra: a busca do módulo e o filtro de categorias, aplicados
-// na ordem em que a tela os apresenta.
+// Filtro rápido do topo do quadro — as caixas de indicador e as pílulas
+// "Todas", "Só atrasadas" e "Minhas" escrevem no mesmo lugar, e só um vale
+// por vez.
+function tarefaPassaNoFiltroRapido(t) {
+  switch (state.filtroRapidoTarefa) {
+    case "abertas":
+      return !tarefaEncerrada(t);
+    case "atrasadas":
+      return tarefaAtrasada(t);
+    case "sem-responsavel":
+      return !(t.responsavel || "").trim() && !tarefaEncerrada(t);
+    case "concluidas":
+      return tarefaEncerrada(t);
+    case "minhas":
+      return !state.autorTarefas || tarefaEhMinha(t, state.autorTarefas);
+    default:
+      return true;
+  }
+}
+
+// O que o quadro mostra: a busca do módulo, o filtro rápido e o de
+// categorias, combinados.
 function tarefasVisiveis() {
   const busca = normalizarTexto(state.filtroTarefas || "").trim();
   const cats = state.filtroCategoriasTarefa;
   return (state.tarefas || [])
     .filter((t) => tarefaBate(t, busca))
+    .filter(tarefaPassaNoFiltroRapido)
     .filter((t) => !cats.size || cats.has(t.categoria || ""))
     .sort(ordenarTarefas);
 }
@@ -7231,74 +7444,148 @@ function ordenarTarefas(a, b) {
   return String(a.criadoEm || "").localeCompare(String(b.criadoEm || ""));
 }
 
+// Ordem de leitura do quadro — coluna a coluna, de cima para baixo. É a ordem
+// que as setas de anterior e próxima seguem na tela da tarefa.
+function tarefasNaOrdemDoQuadro(lista) {
+  return colunasDeTarefa().flatMap((c) => lista.filter((t) => t.status === c.id));
+}
+
 function responsaveisDeTarefa() {
   const nomes = new Set();
   (state.tarefas || []).forEach((t) => {
-    if (t.responsavel) nomes.add(t.responsavel.trim());
+    pessoasDoResponsavel(t.responsavel).forEach((n) => nomes.add(n));
   });
   return [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
-/* ---------------------------------------------------- Cartão e quadro */
+/* ---------------------------------------------------- Peças visuais */
 
-function etiquetaDeCategoria(t) {
-  const cat = categoriaPorId(t.categoria);
-  if (!cat) return "";
-  return `<span class="tarefa-categoria tarefa-categoria--${escapeAttr(
-    cat.familia || "neutra"
-  )}">${escapeHtml(cat.rotulo)}</span>`;
+const ICONE_TK_MAIS = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`;
+const ICONE_TK_SETA = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
+const ICONE_TK_CHECK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>`;
+const ICONE_TK_CHECK_MINI = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>`;
+const ICONE_TK_PESSOA = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+
+// Cor do avatar derivada do nome: a mesma pessoa tem a mesma cor em todo
+// cartão, sem cadastro de cor por pessoa.
+const CORES_AVATAR = ["#0B2A55", "#3B6FB6", "#5B4BA6", "#0E5E4E", "#8A4B06", "#1F5F7A"];
+const PARTICULAS_NOME = new Set(["de", "da", "do", "das", "dos", "e"]);
+
+function iniciaisDe(nome) {
+  const partes = String(nome || "")
+    .split(/\s+/)
+    .filter((p) => p && !PARTICULAS_NOME.has(p.toLowerCase()));
+  if (!partes.length) return "?";
+  const primeira = partes[0][0];
+  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : partes[0][1] || "";
+  return (primeira + ultima).toUpperCase();
 }
 
-function cartaoDeTarefa(t, indiceColuna) {
-  const colunas = colunasDeTarefa();
-  const anterior = colunas[indiceColuna - 1];
-  const seguinte = colunas[indiceColuna + 1];
+// Nome curto para o rodapé do cartão, onde a coluna é estreita: primeiro e
+// último nome de cada pessoa ("Mauro Portugal"), ou só os primeiros nomes
+// quando há mais de uma ("Ciro e Rafael"). O nome completo fica no title e na
+// tela da tarefa.
+function nomeCurtoDoResponsavel(texto) {
+  const pessoas = pessoasDoResponsavel(texto);
+  if (pessoas.length > 1) return pessoas.map((n) => n.split(/\s+/)[0]).join(" e ");
+  const partes = (pessoas[0] || "").split(/\s+/).filter((p) => !PARTICULAS_NOME.has(p.toLowerCase()));
+  return partes.length > 2 ? `${partes[0]} ${partes[partes.length - 1]}` : partes.join(" ");
+}
+
+function avatarDe(nome, tamanho = "") {
+  let soma = 0;
+  for (const ch of normalizarTexto(nome)) soma = (soma * 31 + ch.charCodeAt(0)) >>> 0;
+  const cor = CORES_AVATAR[soma % CORES_AVATAR.length];
+  return `<span class="tk-avatar${tamanho ? ` tk-avatar--${tamanho}` : ""}" style="background:${cor}" aria-hidden="true">${escapeHtml(
+    iniciaisDe(nome)
+  )}</span>`;
+}
+
+function avataresDoResponsavel(texto, tamanho = "") {
+  const pessoas = pessoasDoResponsavel(texto).slice(0, 3);
+  return `<span class="tk-avatares">${pessoas.map((n) => avatarDe(n, tamanho)).join("")}</span>`;
+}
+
+function etiquetasDaTarefa(t, variante = "") {
+  const cat = categoriaPorId(t.categoria);
+  const etiquetas = [];
+  if (cat) {
+    etiquetas.push(
+      variante === "hero"
+        ? `<span class="tk-pilula tk-pilula--contorno">${escapeHtml(cat.rotulo)}</span>`
+        : `<span class="tk-tag tarefa-categoria--${escapeAttr(cat.familia || "neutra")}">${escapeHtml(cat.rotulo)}</span>`
+    );
+  }
+  if (t.unidade && UNIDADES_DTI[t.unidade]) {
+    etiquetas.push(
+      variante === "hero"
+        ? `<span class="tk-pilula tk-pilula--contorno" title="${escapeAttr(UNIDADES_DTI[t.unidade].nome)}">${escapeHtml(t.unidade)}</span>`
+        : `<span class="tk-tag tk-tag--unidade" title="${escapeAttr(UNIDADES_DTI[t.unidade].nome)}">${escapeHtml(t.unidade)}</span>`
+    );
+  }
+  if (t.prioridade === "alta" && !tarefaEncerrada(t)) {
+    etiquetas.push(
+      variante === "hero"
+        ? `<span class="tk-pilula tk-pilula--alta">Prioridade alta</span>`
+        : `<span class="tk-tag tk-tag--alta">Prioridade alta</span>`
+    );
+  }
+  return etiquetas.join("");
+}
+
+/* ---------------------------------------------------- Cartão e quadro */
+
+// Informação secundária do rodapé: prazo quando ainda corre, senão quando foi
+// o último movimento. Concluída mostra o tamanho do histórico.
+function infoDoRodape(t) {
+  const registros = registrosDaTarefa(t);
+  if (tarefaEncerrada(t)) return plural(registros.length, "registro", "registros");
+  if (t.prazo && !tarefaAtrasada(t)) return rotuloPrazoTarefa(t);
+  if (registros.length > 1) return rotuloRelativo(registros[0].em);
+  return "Sem registros";
+}
+
+function cartaoDeTarefa(t) {
   const atrasada = tarefaAtrasada(t);
-  const prazo = rotuloPrazoTarefa(t);
-  const prioridade = PRIORIDADES[t.prioridade] || PRIORIDADES.media;
-  const historico = t.historico || [];
-  const ultima = historico.length > 1 ? historico[0] : null;
+  const encerrada = tarefaEncerrada(t);
+  const ultimo = encerrada ? null : ultimoAndamento(t);
+  const conclusao = encerrada ? entradasPorColuna(t)[t.status] : "";
+  const etiquetas = etiquetasDaTarefa(t);
+
+  const selo = atrasada
+    ? `<span class="tk-selo-atraso">Atrasada ${diasDeAtraso(t)}d</span>`
+    : encerrada && conclusao
+    ? `<span class="tk-card__concluida">${ICONE_TK_CHECK_MINI}<span class="sr-only">Concluída em</span> ${escapeHtml(diaEMes(conclusao))}</span>`
+    : "";
+
+  const responsavel = (t.responsavel || "").trim()
+    ? `<span class="tk-card__pessoa">${avataresDoResponsavel(t.responsavel)}<span class="tk-card__nome" title="${escapeAttr(
+        t.responsavel
+      )}">${escapeHtml(nomeCurtoDoResponsavel(t.responsavel))}</span></span>`
+    : `<span class="tk-card__pessoa tk-card__pessoa--vago"><span class="tk-avatar tk-avatar--vago" aria-hidden="true"></span>Sem responsável</span>`;
 
   return `
-    <article class="tarefa-card${atrasada ? " tarefa-card--atrasada" : ""}" draggable="true"
-             data-tarefa="${escapeAttr(t.id)}" aria-label="${escapeAttr(t.titulo)}">
-      <button class="tarefa-card__corpo" type="button" data-abrir="${escapeAttr(t.id)}">
-        <span class="tarefa-card__etiquetas">
-          ${etiquetaDeCategoria(t)}
-          ${etiquetasDeUnidade({ unidades: t.unidade ? [t.unidade] : [] })}
-          ${
-            t.prioridade === "alta"
-              ? `<span class="tarefa-prioridade tarefa-prioridade--alta">Prioridade alta</span>`
-              : ""
-          }
+    <article class="tk-card${encerrada ? " tk-card--concluida" : ""}" draggable="true" data-tarefa="${escapeAttr(t.id)}">
+      <button class="tk-card__corpo" type="button" data-abrir="${escapeAttr(t.id)}"
+              aria-label="${escapeAttr(`${t.codigo || ""} ${t.titulo}${atrasada ? `, atrasada ${diasDeAtraso(t)} dias` : ""}`)}">
+        <span class="tk-card__topo">
+          <span class="tk-codigo">${escapeHtml(t.codigo || "")}</span>
+          ${selo}
         </span>
-        <span class="tarefa-card__titulo">${escapeHtml(t.titulo)}</span>
+        <span class="tk-card__titulo">${escapeHtml(t.titulo)}</span>
+        ${etiquetas ? `<span class="tk-card__etiquetas">${etiquetas}</span>` : ""}
         ${
-          t.responsavel
-            ? `<span class="tarefa-card__responsavel">${ICONE_PESSOA}<span>${escapeHtml(t.responsavel)}</span></span>`
-            : `<span class="tarefa-card__responsavel tarefa-card__responsavel--vago">${ICONE_PESSOA}<span>sem responsável</span></span>`
-        }
-        ${
-          prazo
-            ? `<span class="tarefa-card__prazo${atrasada ? " tarefa-card__prazo--alerta" : ""}">${escapeHtml(prazo)}</span>`
+          ultimo
+            ? `<span class="tk-card__andamento"><strong>Último andamento:</strong> ${escapeHtml(
+                ultimo.nota.length > 140 ? `${ultimo.nota.slice(0, 139)}…` : ultimo.nota
+              )}</span>`
             : ""
         }
-        ${ultima && ultima.nota ? `<span class="tarefa-card__nota">${escapeHtml(ultima.nota.slice(0, 90))}</span>` : ""}
+        <span class="tk-card__rodape">
+          ${responsavel}
+          <span class="tk-card__info">${escapeHtml(infoDoRodape(t))}</span>
+        </span>
       </button>
-      <div class="tarefa-card__mover">
-        <button class="icon-btn icon-btn--mini" type="button" data-mover="${escapeAttr(t.id)}"
-                data-destino="${escapeAttr(anterior ? anterior.id : "")}" ${anterior ? "" : "disabled"}
-                aria-label="${escapeAttr(anterior ? `Mover para ${anterior.rotulo}` : "Já está na primeira coluna")}"
-                title="${escapeAttr(anterior ? `Mover para ${anterior.rotulo}` : "")}">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        </button>
-        <button class="icon-btn icon-btn--mini" type="button" data-mover="${escapeAttr(t.id)}"
-                data-destino="${escapeAttr(seguinte ? seguinte.id : "")}" ${seguinte ? "" : "disabled"}
-                aria-label="${escapeAttr(seguinte ? `Mover para ${seguinte.rotulo}` : "Já está na última coluna")}"
-                title="${escapeAttr(seguinte ? `Mover para ${seguinte.rotulo}` : "")}">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-      </div>
     </article>`;
 }
 
@@ -7311,20 +7598,20 @@ function renderizarQuadro() {
   const total = (state.tarefas || []).length;
 
   alvo.innerHTML = colunas
-    .map((col, i) => {
+    .map((col) => {
       const daColuna = lista.filter((t) => t.status === col.id);
-      const cartoes = daColuna.map((t) => cartaoDeTarefa(t, i)).join("");
+      const cartoes = daColuna.map(cartaoDeTarefa).join("");
       const atrasadas = daColuna.filter(tarefaAtrasada).length;
       return `
-        <section class="quadro-coluna" data-coluna="${escapeAttr(col.id)}" aria-label="${escapeAttr(col.rotulo)}">
-          <header class="quadro-coluna__topo">
-            <h3 class="quadro-coluna__titulo">${escapeHtml(col.rotulo)}</h3>
-            <span class="quadro-coluna__conta">${daColuna.length}</span>
-            ${atrasadas ? `<span class="quadro-coluna__alerta">${atrasadas} atrasada${atrasadas > 1 ? "s" : ""}</span>` : ""}
+        <section class="tk-coluna" data-coluna="${escapeAttr(col.id)}" aria-labelledby="tk-col-${escapeAttr(col.id)}">
+          <header class="tk-coluna__topo"${col.descricao ? ` title="${escapeAttr(col.descricao)}"` : ""}>
+            <span class="tk-ponto tk-ponto--${tomDaColuna(col.id)}" aria-hidden="true"></span>
+            <h3 class="tk-coluna__titulo" id="tk-col-${escapeAttr(col.id)}">${escapeHtml(col.rotulo)}</h3>
+            <span class="tk-coluna__conta" aria-label="${escapeAttr(plural(daColuna.length, "tarefa", "tarefas"))}">${daColuna.length}</span>
+            ${atrasadas ? `<span class="tk-coluna__alerta">${plural(atrasadas, "atrasada", "atrasadas")}</span>` : ""}
           </header>
-          ${col.descricao ? `<p class="quadro-coluna__ajuda">${escapeHtml(col.descricao)}</p>` : ""}
-          <div class="quadro-coluna__pilha" data-pilha="${escapeAttr(col.id)}">
-            ${cartoes || `<p class="quadro-coluna__vazia">Nada aqui</p>`}
+          <div class="tk-coluna__pilha" data-pilha="${escapeAttr(col.id)}">
+            ${cartoes || `<p class="tk-coluna__vazia">Nada aqui</p>`}
           </div>
         </section>`;
     })
@@ -7332,17 +7619,17 @@ function renderizarQuadro() {
 
   const vazio = document.getElementById("tarefas-vazio");
   if (vazio) {
-    const semFiltro = !state.filtroTarefas && !state.filtroCategoriasTarefa.size;
-    vazio.hidden = Boolean(lista.length) || (!total && !semFiltro);
+    vazio.hidden = Boolean(lista.length);
     if (!lista.length) {
       vazio.innerHTML = total
-        ? 'Nenhuma tarefa corresponde à busca ou às categorias selecionadas.'
-        : 'Nenhuma tarefa lançada ainda. Use <strong>Nova tarefa</strong> para registrar a primeira.';
+        ? "Nenhuma tarefa corresponde à busca ou aos filtros selecionados."
+        : "Nenhuma tarefa lançada ainda. Use <strong>Nova tarefa</strong> para registrar a primeira.";
     }
   }
 
   renderizarSubtituloTarefas();
-  renderizarFiltrosDeCategoria();
+  renderizarIndicadoresDeTarefa();
+  renderizarFiltrosDeTarefa();
   ligarArrastarTarefas();
   atualizarBadgeTarefas();
 }
@@ -7351,56 +7638,86 @@ function renderizarSubtituloTarefas() {
   const sub = document.getElementById("tarefas-subtitulo");
   if (!sub) return;
   const tarefas = state.tarefas || [];
-  const encerrada = colunaDeEncerramento().id;
-  const abertas = tarefas.filter((t) => t.status !== encerrada).length;
-  const atrasadas = tarefas.filter(tarefaAtrasada).length;
   if (!tarefas.length) {
     sub.textContent = "O quadro começa vazio: cada tarefa entra com categoria, responsável, prazo e status.";
     return;
   }
-  sub.textContent =
-    `${plural(tarefas.length, "tarefa", "tarefas")} · ${abertas} em aberto e ` +
-    `${tarefas.length - abertas} concluída${tarefas.length - abertas === 1 ? "" : "s"}` +
-    (atrasadas ? ` · ${plural(atrasadas, "atrasada", "atrasadas")}` : "");
+  sub.textContent = "Clique no cartão para acompanhar a tarefa, registrar andamento e mudar de etapa.";
 }
 
-function renderizarFiltrosDeCategoria() {
-  const alvo = document.getElementById("tarefas-categorias-chips");
+// Caixas de indicador: contam o quadro inteiro, não o filtrado, e cada uma é
+// também o filtro do que conta — clicar de novo desfaz.
+function renderizarIndicadoresDeTarefa() {
+  const alvo = document.getElementById("tarefas-indicadores");
   if (!alvo) return;
   const tarefas = state.tarefas || [];
-  const usadas = categoriasDeTarefa().filter((c) => tarefas.some((t) => t.categoria === c.id));
-  const semCategoria = tarefas.some((t) => !t.categoria);
+  const abertas = tarefas.filter((t) => !tarefaEncerrada(t));
+  const caixas = [
+    { id: "abertas", rotulo: "Em aberto", valor: abertas.length },
+    { id: "atrasadas", rotulo: "Atrasadas", valor: tarefas.filter(tarefaAtrasada).length, alerta: true },
+    { id: "sem-responsavel", rotulo: "Sem responsável", valor: abertas.filter((t) => !(t.responsavel || "").trim()).length },
+    { id: "concluidas", rotulo: "Concluídas", valor: tarefas.length - abertas.length },
+  ];
+  alvo.innerHTML = caixas
+    .map((c) => {
+      const ativo = state.filtroRapidoTarefa === c.id;
+      return `
+        <button class="tk-indicador${c.alerta && c.valor ? " tk-indicador--alerta" : ""}${ativo ? " is-active" : ""}" type="button"
+                data-filtro-rapido="${c.id}" aria-pressed="${ativo ? "true" : "false"}">
+          <span class="tk-indicador__rotulo">${escapeHtml(c.rotulo)}</span>
+          <span class="tk-indicador__valor">${c.valor}</span>
+        </button>`;
+    })
+    .join("");
+}
 
-  const chips = usadas.map((c) => {
-    const ativo = state.filtroCategoriasTarefa.has(c.id);
-    const quantos = tarefas.filter((t) => t.categoria === c.id).length;
-    return `
-      <button class="chip${ativo ? " is-active" : ""}" type="button" data-categoria="${escapeAttr(c.id)}"
-              aria-pressed="${ativo ? "true" : "false"}">
-        <span class="chip__ponto tarefa-ponto--${escapeAttr(c.familia || "neutra")}" aria-hidden="true"></span>
-        ${escapeHtml(c.rotulo)}<span class="chip__conta">${quantos}</span>
-      </button>`;
-  });
+function renderizarFiltrosDeTarefa() {
+  const alvo = document.getElementById("tarefas-filtros");
+  if (!alvo) return;
+  const tarefas = state.tarefas || [];
+  const pilula = (atributos, rotulo, ativo) =>
+    `<button class="tk-filtro${ativo ? " is-active" : ""}" type="button" ${atributos} aria-pressed="${ativo ? "true" : "false"}">${rotulo}</button>`;
 
-  if (semCategoria) {
-    const ativo = state.filtroCategoriasTarefa.has("");
-    chips.push(`
-      <button class="chip${ativo ? " is-active" : ""}" type="button" data-categoria=""
-              aria-pressed="${ativo ? "true" : "false"}">
-        Sem categoria<span class="chip__conta">${tarefas.filter((t) => !t.categoria).length}</span>
-      </button>`);
+  const rapido = state.filtroRapidoTarefa;
+  const pilulas = [
+    pilula('data-filtro-rapido="todas"', "Todas", !rapido && !state.filtroCategoriasTarefa.size),
+    pilula('data-filtro-rapido="atrasadas"', "Só atrasadas", rapido === "atrasadas"),
+  ];
+  // "Minhas" depende de saber quem usa o navegador; sem nome registrado, a
+  // pílula some em vez de filtrar por ninguém.
+  if (state.autorTarefas) {
+    pilulas.push(
+      `<button class="tk-filtro${rapido === "minhas" ? " is-active" : ""}" type="button" data-filtro-rapido="minhas"
+               aria-pressed="${rapido === "minhas" ? "true" : "false"}" title="${escapeAttr(
+        `Tarefas com ${state.autorTarefas} como responsável`
+      )}">Minhas</button>`
+    );
   }
 
-  alvo.innerHTML = chips.join("");
-  const bloco = document.getElementById("filtros-tarefas");
-  if (bloco) bloco.hidden = state.modulo !== "tarefas" || !chips.length;
+  categoriasDeTarefa()
+    .filter((c) => tarefas.some((t) => t.categoria === c.id))
+    .forEach((c) => {
+      const quantos = tarefas.filter((t) => t.categoria === c.id).length;
+      pilulas.push(
+        pilula(
+          `data-categoria="${escapeAttr(c.id)}"`,
+          `${escapeHtml(c.rotulo)} · ${quantos}`,
+          state.filtroCategoriasTarefa.has(c.id)
+        )
+      );
+    });
+  if (tarefas.some((t) => !t.categoria)) {
+    pilulas.push(
+      pilula('data-categoria=""', `Sem categoria · ${tarefas.filter((t) => !t.categoria).length}`, state.filtroCategoriasTarefa.has(""))
+    );
+  }
+  alvo.innerHTML = pilulas.join("");
 }
 
 function atualizarBadgeTarefas() {
   const badge = document.getElementById("nav-badge-tarefas");
   if (!badge) return;
-  const encerrada = colunaDeEncerramento().id;
-  const abertas = (state.tarefas || []).filter((t) => t.status !== encerrada).length;
+  const abertas = (state.tarefas || []).filter((t) => !tarefaEncerrada(t)).length;
   badge.textContent = String(abertas);
   badge.hidden = !abertas;
 }
@@ -7412,12 +7729,16 @@ function moverTarefa(id, destino) {
   const col = colunasDeTarefa().find((c) => c.id === destino);
   if (!t || !col || t.status === destino) return;
   const agora = new Date().toISOString();
+  const de = t.status;
   t.status = destino;
   t.atualizadoEm = agora;
-  t.historico = [{ em: agora, status: destino, nota: `Movida para ${col.rotulo}.` }, ...(t.historico || [])];
+  t.historico = [
+    { em: agora, tipo: "status", de, status: destino, nota: "", autor: state.autorTarefas || "" },
+    ...(t.historico || []),
+  ];
   if (!gravarTarefas(state.tarefas)) return;
   renderizarQuadro();
-  if (state.tarefaAberta === id) renderizarPainelDeTarefa();
+  if (state.tarefaAberta === id) renderizarDetalheDeTarefa();
 }
 
 // Arrastar: o cartão leva o id, a coluna recebe. O realce de destino sai no
@@ -7428,7 +7749,7 @@ function ligarArrastarTarefas() {
   quadro.dataset.arrastarLigado = "1";
 
   quadro.addEventListener("dragstart", (ev) => {
-    const card = ev.target.closest(".tarefa-card");
+    const card = ev.target.closest(".tk-card");
     if (!card) return;
     ev.dataTransfer.setData("text/plain", card.dataset.tarefa);
     ev.dataTransfer.effectAllowed = "move";
@@ -7441,7 +7762,7 @@ function ligarArrastarTarefas() {
   });
 
   quadro.addEventListener("dragover", (ev) => {
-    const coluna = ev.target.closest(".quadro-coluna");
+    const coluna = ev.target.closest(".tk-coluna");
     if (!coluna) return;
     ev.preventDefault();
     ev.dataTransfer.dropEffect = "move";
@@ -7450,12 +7771,12 @@ function ligarArrastarTarefas() {
   });
 
   quadro.addEventListener("dragleave", (ev) => {
-    const coluna = ev.target.closest(".quadro-coluna");
+    const coluna = ev.target.closest(".tk-coluna");
     if (coluna && !coluna.contains(ev.relatedTarget)) coluna.classList.remove("is-alvo");
   });
 
   quadro.addEventListener("drop", (ev) => {
-    const coluna = ev.target.closest(".quadro-coluna");
+    const coluna = ev.target.closest(".tk-coluna");
     if (!coluna) return;
     ev.preventDefault();
     coluna.classList.remove("is-alvo");
@@ -7464,106 +7785,332 @@ function ligarArrastarTarefas() {
   });
 }
 
-/* ---------------------------------------------------- Painel da tarefa */
+/* ---------------------------------------------------- Tela da tarefa */
 
+// A tela da tarefa ocupa o lugar do quadro dentro do módulo: o quadro sai de
+// cena e volta no mesmo ponto da rolagem ao fechar.
 function abrirTarefa(id) {
   const t = tarefaPorId(id);
   if (!t) return;
+  const principal = document.getElementById("conteudo-principal");
+  if (!state.tarefaAberta) {
+    state.tarefasRolagem = principal ? principal.scrollTop : 0;
+    state.tarefasRolagemJanela = window.scrollY;
+  }
   state.tarefaAberta = id;
-  renderizarPainelDeTarefa();
-  const painel = document.getElementById("tarefa-painel");
-  painel.classList.add("is-aberto");
-  painel.setAttribute("aria-hidden", "false");
-  document.getElementById("tarefa-painel-backdrop").hidden = false;
-  document.getElementById("btn-fechar-tarefa-painel").focus();
+  state.filtroHistoricoTarefa = "tudo";
+  state.tipoRegistroTarefa = "andamento";
+  limparRegistroDeTarefa();
+  document.getElementById("tarefas-vista-quadro").hidden = true;
+  document.getElementById("tarefa-detalhe").hidden = false;
+  renderizarDetalheDeTarefa();
+  if (principal) principal.scrollTop = 0;
+  window.scrollTo({ top: 0, behavior: "auto" });
+  const titulo = document.getElementById("tk-det-titulo");
+  if (titulo) titulo.focus({ preventScroll: true });
 }
 
-function fecharPainelDeTarefa() {
+function fecharDetalheDeTarefa(restaurar = true) {
+  const id = state.tarefaAberta;
   state.tarefaAberta = null;
-  const painel = document.getElementById("tarefa-painel");
-  if (!painel) return;
-  painel.classList.remove("is-aberto");
-  painel.setAttribute("aria-hidden", "true");
-  document.getElementById("tarefa-painel-backdrop").hidden = true;
+  const detalhe = document.getElementById("tarefa-detalhe");
+  const quadro = document.getElementById("tarefas-vista-quadro");
+  if (detalhe) detalhe.hidden = true;
+  if (quadro) quadro.hidden = false;
+  if (!restaurar) return;
+  renderizarQuadro();
+  const principal = document.getElementById("conteudo-principal");
+  if (principal) principal.scrollTop = state.tarefasRolagem || 0;
+  window.scrollTo({ top: state.tarefasRolagemJanela || 0, behavior: "auto" });
+  // O foco volta ao cartão de onde a pessoa saiu, e não ao topo da página.
+  const cartao = id && document.querySelector(`[data-abrir="${CSS.escape(id)}"]`);
+  if (cartao) cartao.focus({ preventScroll: true });
 }
 
-function renderizarPainelDeTarefa() {
+function vizinhasDaTarefa(id) {
+  const visiveis = tarefasNaOrdemDoQuadro(tarefasVisiveis());
+  // Aberta por um filtro que já não a mostra: as setas andam pelo quadro
+  // inteiro, para não deixarem a tarefa sem anterior nem próxima.
+  const lista = visiveis.some((t) => t.id === id)
+    ? visiveis
+    : tarefasNaOrdemDoQuadro([...(state.tarefas || [])].sort(ordenarTarefas));
+  const i = lista.findIndex((t) => t.id === id);
+  return { anterior: lista[i - 1] || null, proxima: lista[i + 1] || null };
+}
+
+function renderizarDetalheDeTarefa() {
   const t = tarefaPorId(state.tarefaAberta);
-  if (!t) return fecharPainelDeTarefa();
+  if (!t) return fecharDetalheDeTarefa();
 
+  const definir = (id, html) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  };
+
+  // Barra superior: trilha e setas.
+  document.getElementById("tk-det-trilha-codigo").textContent = t.codigo || "Tarefa";
+  const { anterior, proxima } = vizinhasDaTarefa(t.id);
+  const btnAnterior = document.getElementById("btn-tarefa-anterior");
+  const btnProxima = document.getElementById("btn-tarefa-proxima");
+  btnAnterior.disabled = !anterior;
+  btnProxima.disabled = !proxima;
+  btnAnterior.dataset.alvo = anterior ? anterior.id : "";
+  btnProxima.dataset.alvo = proxima ? proxima.id : "";
+  btnAnterior.title = anterior ? `${anterior.codigo} — ${anterior.titulo}` : "";
+  btnProxima.title = proxima ? `${proxima.codigo} — ${proxima.titulo}` : "";
+
+  // Hero.
+  const col = colunaPorId(t.status);
+  const tom = tomDaColuna(t.status);
+  definir(
+    "tk-det-etiquetas",
+    `<span class="tk-codigo tk-codigo--hero">${escapeHtml(t.codigo || "")}</span>
+     <span class="tk-pilula tk-pilula--${tom}"><span class="tk-ponto tk-ponto--${tom}" aria-hidden="true"></span>${escapeHtml(col.rotulo)}</span>
+     ${tarefaAtrasada(t) ? `<span class="tk-pilula tk-pilula--atraso">Atrasada ${diasDeAtraso(t)}d</span>` : ""}
+     ${etiquetasDaTarefa(t, "hero")}`
+  );
+  document.getElementById("tk-det-titulo").textContent = t.titulo;
+
+  const colunas = colunasDeTarefa();
+  const indiceAtual = colunas.findIndex((c) => c.id === t.status);
+  const entradas = entradasPorColuna(t);
+  definir(
+    "tk-det-etapas",
+    colunas
+      .map((c, i) => {
+        const estado = tarefaEncerrada(t) || i < indiceAtual ? "feita" : i === indiceAtual ? "atual" : "futura";
+        const quando = entradas[c.id] && estado !== "futura" ? ` · ${diaEMes(entradas[c.id])}` : "";
+        return `
+          <li class="tk-etapa tk-etapa--${estado}"${i === indiceAtual ? ' aria-current="step"' : ""}>
+            <span class="tk-etapa__barra" aria-hidden="true"></span>
+            <span class="tk-etapa__rotulo">${escapeHtml(c.rotulo)}${escapeHtml(quando)}</span>
+          </li>`;
+      })
+      .join("")
+  );
+
+  // Descrição. As quebras de linha do texto original são preservadas: uma
+  // estratégia com curto, médio e longo prazo chega estruturada.
+  definir(
+    "tk-det-descricao",
+    t.descricao
+      ? `<p class="tk-descricao">${escapeHtml(t.descricao)}</p>`
+      : `<p class="tk-descricao tk-descricao--vazia">Sem descrição. Use <strong>Editar</strong> em Detalhes para registrar o que precisa ser feito.</p>`
+  );
+
+  renderizarTiposDeRegistro();
+  renderizarHistoricoDeTarefa(t);
+
+  // Mover para.
+  definir(
+    "tk-det-mover",
+    colunas
+      .map((c) => {
+        const atual = c.id === t.status;
+        return `
+          <button class="tk-mover tk-mover--${tomDaColuna(c.id)}${atual ? " is-atual" : ""}" type="button"
+                  data-destino-tarefa="${escapeAttr(c.id)}" aria-pressed="${atual ? "true" : "false"}">
+            <span class="tk-ponto tk-ponto--${tomDaColuna(c.id)}" aria-hidden="true"></span>${escapeHtml(c.rotulo)}
+          </button>`;
+      })
+      .join("")
+  );
+
+  // Detalhes.
   const cat = categoriaPorId(t.categoria);
-  const dataLegivel = (chave) =>
-    chave ? formatarDataLonga(new Date(`${chave}T12:00:00${offsetBahia()}`)) : "";
-  const linha = (rotulo, valor) =>
-    valor
-      ? `<div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">${escapeHtml(
-          rotulo
-        )}</span><span class="detail-panel__linha-valor">${escapeHtml(valor)}</span></div>`
-      : "";
+  const prioridade = PRIORIDADES[t.prioridade] || PRIORIDADES.media;
+  const prazoTexto = t.prazo
+    ? `${escapeHtml(formatarDataLonga(new Date(`${t.prazo}T12:00:00${offsetBahia()}`)))}${
+        tarefaEncerrada(t) ? "" : ` · <span class="${tarefaAtrasada(t) ? "tk-texto-atraso" : ""}">${escapeHtml(rotuloPrazoTarefa(t))}</span>`
+      }`
+    : `<span class="tk-texto-suave">Sem prazo definido ·</span> <button class="tk-link" type="button" data-editar-tarefa>definir</button>`;
+  const desdeEtapa = entradas[t.status];
+  const linha = (rotulo, valor) => `<dt>${escapeHtml(rotulo)}</dt><dd>${valor}</dd>`;
+  definir(
+    "tk-det-lista",
+    [
+      linha(
+        "Responsável",
+        (t.responsavel || "").trim()
+          ? `<span class="tk-dd-pessoa">${avataresDoResponsavel(t.responsavel, "medio")}<strong>${escapeHtml(t.responsavel)}</strong></span>`
+          : `<span class="tk-card__pessoa tk-card__pessoa--vago"><span class="tk-avatar tk-avatar--vago tk-avatar--medio" aria-hidden="true"></span>Sem responsável</span>`
+      ),
+      linha(
+        "Unidade",
+        t.unidade && UNIDADES_DTI[t.unidade]
+          ? `<strong>${escapeHtml(t.unidade)}</strong> · ${escapeHtml(UNIDADES_DTI[t.unidade].nome)}`
+          : `<span class="tk-texto-suave">Sem unidade</span>`
+      ),
+      linha("Categoria", cat ? escapeHtml(cat.rotulo) : `<span class="tk-texto-suave">Sem categoria</span>`),
+      linha(
+        "Prioridade",
+        `<span class="tk-prioridade tk-prioridade--${escapeAttr(t.prioridade || "media")}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">${
+          t.prioridade === "alta" ? '<path d="M5 18h14M5 12h10M5 6h6"/>' : t.prioridade === "baixa" ? '<path d="M5 18h14"/>' : '<path d="M5 18h14M5 12h10"/>'
+        }</svg>${escapeHtml(prioridade.rotulo)}</span>`
+      ),
+      linha("Prazo", prazoTexto),
+      tarefaEncerrada(t)
+        ? linha("Concluída em", desdeEtapa ? escapeHtml(formatarCarimbo(desdeEtapa).split(/,?\s+/)[0]) : "—")
+        : linha("Na etapa atual", desdeEtapa ? escapeHtml(rotuloDeDias(Date.now() - new Date(desdeEtapa).getTime())) : "—"),
+    ].join("")
+  );
 
-  const historico = (t.historico || []).length
-    ? `<div class="historico">${(t.historico || [])
-        .map((h) => {
-          const col = colunaPorId(h.status);
-          return `
-            <div class="historico__item">
-              <span class="historico__quando">${formatarCarimbo(h.em)}</span>
-              <span class="historico__situacao">${escapeHtml(col ? col.rotulo : "")}</span>
-              ${h.nota ? `<p class="historico__nota">${escapeHtml(h.nota)}</p>` : ""}
-            </div>`;
-        })
-        .join("")}</div>`
-    : `<p class="historico__nota" style="color:var(--color-text-secondary)">Nenhum lançamento ainda.</p>`;
-
-  document.getElementById("tarefa-painel-titulo").textContent = t.titulo;
-  document.getElementById("tarefa-painel-corpo").innerHTML = `
-    ${
-      // A descrição de tarefa pode vir estruturada — uma estratégia com curto,
-      // médio e longo prazo chega assim. As quebras de linha do texto original
-      // são preservadas em tela em vez de virarem um parágrafo corrido.
-      t.descricao
-        ? `<p class="detail-panel__descricao tarefa-descricao">${escapeHtml(t.descricao)}</p>`
-        : ""
-    }
-    ${linha("Status", colunaPorId(t.status).rotulo)}
-    ${linha("Categoria", cat ? cat.rotulo : "")}
-    ${linha(
-      "Unidade responsável",
-      t.unidade && UNIDADES_DTI[t.unidade] ? `${t.unidade} — ${UNIDADES_DTI[t.unidade].nome}` : ""
-    )}
-    ${linha("Responsável", t.responsavel)}
-    ${linha("Prioridade", (PRIORIDADES[t.prioridade] || PRIORIDADES.media).rotulo)}
-    ${
-      t.prazo
-        ? linha("Prazo", `${dataLegivel(t.prazo)} — ${rotuloPrazoTarefa(t)}`)
-        : linha("Prazo", "sem prazo definido")
-    }
-    <div class="detail-panel__linha"><span class="detail-panel__linha-rotulo">Histórico</span></div>
-    ${historico}`;
-
-  // Destinos possíveis, menos a coluna onde a tarefa já está.
-  document.getElementById("tarefa-mover-chips").innerHTML = colunasDeTarefa()
-    .map(
-      (c) => `
-      <button class="chip${c.id === t.status ? " is-active" : ""}" type="button"
-              data-destino-tarefa="${escapeAttr(c.id)}" ${c.id === t.status ? "disabled" : ""}
-              aria-pressed="${c.id === t.status ? "true" : "false"}">${escapeHtml(c.rotulo)}</button>`
-    )
-    .join("");
-  document.getElementById("tarefa-status-nota").value = "";
+  // Tempo por etapa.
+  const tempos = tempoPorEtapa(t);
+  const etapas = colunas.filter((c) => tempos[c.id] > 0);
+  const soma = etapas.reduce((s, c) => s + tempos[c.id], 0);
+  definir(
+    "tk-det-tempo",
+    etapas.length
+      ? `<div class="tk-tempo__barra" role="img" aria-label="${escapeAttr(
+          etapas.map((c) => `${c.rotulo}: ${rotuloDeDias(tempos[c.id])}`).join("; ")
+        )}">${etapas
+          .map(
+            (c) =>
+              `<span class="tk-tempo__fatia tk-tempo__fatia--${tomDaColuna(c.id)}" style="flex:${Math.max(
+                tempos[c.id] / soma,
+                0.03
+              ).toFixed(3)}"></span>`
+          )
+          .join("")}</div>
+         <div class="tk-tempo__legenda">${etapas
+           .map(
+             (c) =>
+               `<div><span class="tk-texto-suave">${escapeHtml(c.rotulo)}</span><strong>${escapeHtml(rotuloDeDias(tempos[c.id]))}</strong></div>`
+           )
+           .join("")}</div>`
+      : `<p class="tk-texto-suave">Sem tempo registrado em etapa.</p>`
+  );
 }
 
-function lancarAndamentoDeTarefa() {
+function renderizarTiposDeRegistro() {
+  const alvo = document.getElementById("tk-reg-tipos");
+  if (!alvo) return;
+  alvo.innerHTML = Object.entries(TIPOS_REGISTRO)
+    .map(([id, tipo]) => {
+      const ativo = state.tipoRegistroTarefa === id;
+      return `<button class="tk-filtro${ativo ? " is-active" : ""}" type="button" data-tipo-registro="${id}" aria-pressed="${
+        ativo ? "true" : "false"
+      }">${escapeHtml(tipo.rotulo)}</button>`;
+    })
+    .join("");
+}
+
+function itemDoHistorico(h) {
+  const autor = h.autor ? `<strong>${escapeHtml(h.autor)}</strong> ` : "";
+  const quando = escapeHtml(dataEHora(h.em));
+  const nota = h.nota ? `<p class="tk-hist__nota">${escapeHtml(h.nota)}</p>` : "";
+
+  if (h.tipo === "status" || h.tipo === "criacao") {
+    const destino = colunaPorId(h.status);
+    const tom = tomDaColuna(h.status);
+    const nomeDestino = `<span class="tk-hist__destino tk-hist__destino--${tom}">${escapeHtml(destino.rotulo)}</span>`;
+    let texto;
+    if (h.tipo === "criacao") {
+      texto = h.autor ? `${autor}criou a tarefa em ${nomeDestino}` : `Tarefa criada em ${nomeDestino}`;
+    } else {
+      const origem = h.de ? ` de <span class="tk-hist__origem">${escapeHtml(colunaPorId(h.de).rotulo)}</span>` : "";
+      texto = h.autor ? `${autor}moveu${origem} para ${nomeDestino}` : `Movida${origem} para ${nomeDestino}`;
+    }
+    const icone = h.tipo === "criacao" ? ICONE_TK_MAIS : tom === "done" ? ICONE_TK_CHECK : ICONE_TK_SETA;
+    return `
+      <li class="tk-hist__item">
+        <span class="tk-hist__marco"><span class="tk-hist__icone tk-hist__icone--${h.tipo === "criacao" ? "criacao" : tom}">${icone}</span></span>
+        <div class="tk-hist__evento">
+          <div class="tk-hist__texto">${texto}</div>
+          <div class="tk-hist__quando">${quando}</div>
+          ${nota}
+        </div>
+      </li>`;
+  }
+
+  const tipo = TIPOS_REGISTRO[h.tipo] || TIPOS_REGISTRO.andamento;
+  return `
+    <li class="tk-hist__item">
+      <span class="tk-hist__marco">${
+        h.autor ? avatarDe(h.autor, "grande") : `<span class="tk-hist__icone tk-hist__icone--criacao">${ICONE_TK_PESSOA}</span>`
+      }</span>
+      <div class="tk-hist__balao tk-hist__balao--${escapeAttr(h.tipo)}">
+        <div class="tk-hist__cabeca">
+          <div class="tk-hist__texto">${h.autor ? `${autor}<span class="tk-texto-suave">registrou</span>` : `<span class="tk-texto-suave">Registro</span>`}
+            <span class="tk-hist__tipo tk-hist__tipo--${escapeAttr(h.tipo)}">${escapeHtml(tipo.rotulo)}</span></div>
+          <span class="tk-hist__quando">${escapeHtml(dataCurtaEHora(h.em))}</span>
+        </div>
+        ${nota}
+        ${h.sei ? `<div class="tk-hist__sei">${escapeHtml(h.sei)}</div>` : ""}
+      </div>
+    </li>`;
+}
+
+function renderizarHistoricoDeTarefa(t) {
+  const registros = registrosDaTarefa(t);
+  document.getElementById("tk-det-hist-conta").textContent = `· ${plural(registros.length, "registro", "registros")}`;
+
+  const filtro = state.filtroHistoricoTarefa || "tudo";
+  document.querySelectorAll("#tk-det-hist-filtro [data-filtro-historico]").forEach((b) => {
+    const ativo = b.dataset.filtroHistorico === filtro;
+    b.classList.toggle("is-active", ativo);
+    b.setAttribute("aria-pressed", ativo ? "true" : "false");
+  });
+
+  const mostrados = registros.filter((h) =>
+    filtro === "andamentos" ? ehRegistroDeAndamento(h) : filtro === "status" ? !ehRegistroDeAndamento(h) : true
+  );
+  document.getElementById("tk-det-historico").innerHTML = mostrados.length
+    ? mostrados.map(itemDoHistorico).join("")
+    : `<li class="tk-hist__vazio">${
+        filtro === "andamentos" ? "Nenhum andamento registrado ainda." : "Nenhum registro neste filtro."
+      }</li>`;
+}
+
+function limparRegistroDeTarefa() {
+  const texto = document.getElementById("tk-reg-texto");
+  const sei = document.getElementById("tk-reg-sei");
+  const campoSei = document.getElementById("tk-reg-sei-campo");
+  const erro = document.getElementById("tk-reg-erro");
+  const autor = document.getElementById("tk-reg-autor");
+  if (texto) texto.value = "";
+  if (sei) sei.value = "";
+  if (campoSei) campoSei.hidden = true;
+  if (erro) erro.hidden = true;
+  if (autor) autor.value = state.autorTarefas || "";
+  const btnSei = document.getElementById("btn-tk-anexar");
+  if (btnSei) btnSei.setAttribute("aria-expanded", "false");
+  const lista = document.getElementById("tk-reg-autores");
+  if (lista) {
+    lista.innerHTML = responsaveisDeTarefa()
+      .map((n) => `<option value="${escapeAttr(n)}"></option>`)
+      .join("");
+  }
+}
+
+function lancarRegistroDeTarefa() {
   const t = tarefaPorId(state.tarefaAberta);
   if (!t) return;
-  const nota = document.getElementById("tarefa-status-nota").value.trim();
-  if (!nota) return;
+  const nota = document.getElementById("tk-reg-texto").value.trim();
+  const sei = document.getElementById("tk-reg-sei").value.trim();
+  const autor = document.getElementById("tk-reg-autor").value.trim();
+  const erro = document.getElementById("tk-reg-erro");
+  if (!nota) {
+    erro.textContent = "Escreva o que mudou antes de lançar no histórico.";
+    erro.hidden = false;
+    document.getElementById("tk-reg-texto").focus();
+    return;
+  }
+  erro.hidden = true;
+  if (autor !== state.autorTarefas) gravarAutorDeTarefas(autor);
+
   const agora = new Date().toISOString();
   t.atualizadoEm = agora;
-  t.historico = [{ em: agora, status: t.status, nota }, ...(t.historico || [])];
+  t.historico = [
+    { em: agora, tipo: state.tipoRegistroTarefa || "andamento", status: t.status, nota, sei, autor },
+    ...(t.historico || []),
+  ];
   if (!gravarTarefas(state.tarefas)) return;
+  state.tipoRegistroTarefa = "andamento";
+  limparRegistroDeTarefa();
   renderizarQuadro();
-  renderizarPainelDeTarefa();
+  renderizarDetalheDeTarefa();
 }
 
 /* ---------------------------------------------------- Formulário */
@@ -7603,7 +8150,7 @@ function abrirFormTarefa(id) {
   state.tarefaEditando = t ? t.id : null;
   esconderErroTarefa();
 
-  document.getElementById("tarefa-form-titulo").textContent = t ? "Editar tarefa" : "Nova tarefa";
+  document.getElementById("tarefa-form-titulo").textContent = t ? `Editar ${t.codigo || "tarefa"}` : "Nova tarefa";
   document.getElementById("tarefa-titulo").value = t ? t.titulo : "";
   document.getElementById("tarefa-descricao").value = t ? t.descricao || "" : "";
   document.getElementById("tarefa-responsavel").value = t ? t.responsavel || "" : "";
@@ -7643,6 +8190,7 @@ function salvarTarefa() {
   const status = document.getElementById("tarefa-status").value;
   const nota = document.getElementById("tarefa-nota").value.trim();
   const agora = new Date().toISOString();
+  const autor = state.autorTarefas || "";
   const campos = {
     titulo,
     descricao: document.getElementById("tarefa-descricao").value.trim(),
@@ -7656,40 +8204,46 @@ function salvarTarefa() {
   };
 
   const existente = tarefaPorId(state.tarefaEditando);
+  let nova = null;
   if (existente) {
     // Editar o cadastro não inventa lançamento: só entra no histórico quando o
     // status muda ou quando há nota escrita.
-    const mudouStatus = existente.status !== status;
+    const de = existente.status;
+    const mudouStatus = de !== status;
     Object.assign(existente, campos);
     if (mudouStatus || nota) {
       existente.historico = [
-        { em: agora, status, nota: nota || `Movida para ${colunaPorId(status).rotulo}.` },
+        mudouStatus
+          ? { em: agora, tipo: "status", de, status, nota, autor }
+          : { em: agora, tipo: "andamento", status, nota, autor },
         ...(existente.historico || []),
       ];
     }
   } else {
-    state.tarefas.push({
+    nova = {
       id: `tar-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
       ...campos,
       criadoEm: agora,
-      historico: [{ em: agora, status, nota: nota || "Tarefa lançada." }],
-    });
+      historico: [{ em: agora, tipo: "criacao", status, nota, autor }],
+    };
+    state.tarefas.push(nova);
+    garantirCodigosDeTarefa();
   }
 
   if (!gravarTarefas(state.tarefas)) return;
   fecharFormTarefa();
   renderizarQuadro();
-  if (state.tarefaAberta) renderizarPainelDeTarefa();
+  if (state.tarefaAberta) renderizarDetalheDeTarefa();
 }
 
 function excluirTarefa() {
   const t = tarefaPorId(state.tarefaEditando);
   if (!t) return;
-  if (!window.confirm(`Excluir a tarefa "${t.titulo}"? O histórico dela vai embora com ela.`)) return;
+  if (!window.confirm(`Excluir a tarefa ${t.codigo || ""} "${t.titulo}"? O histórico dela vai embora com ela.`)) return;
   state.tarefas = state.tarefas.filter((x) => x.id !== t.id);
   if (!gravarTarefas(state.tarefas)) return;
   fecharFormTarefa();
-  if (state.tarefaAberta === t.id) fecharPainelDeTarefa();
+  if (state.tarefaAberta === t.id) fecharDetalheDeTarefa();
   renderizarQuadro();
 }
 
@@ -7759,6 +8313,7 @@ function semearTarefas() {
   const porId = new Map((state.tarefas || []).map((t) => [t.id, t]));
   let mudou = 0;
   semente.filter(tarefaValida).forEach((t) => {
+    const status = t.status || colunasDeTarefa()[0].id;
     const marcado = {
       prioridade: "media",
       status: colunasDeTarefa()[0].id,
@@ -7767,7 +8322,7 @@ function semearTarefas() {
       semeadoEm: carimbo,
       criadoEm: carimbo,
       atualizadoEm: carimbo,
-      historico: [{ em: new Date().toISOString(), status: t.status || colunasDeTarefa()[0].id, nota: "Tarefa lançada pela Diretoria." }],
+      historico: [{ em: new Date().toISOString(), tipo: "criacao", status, nota: "", autor: "" }],
     };
     const existente = porId.get(t.id);
     if (!existente) {
@@ -7777,9 +8332,11 @@ function semearTarefas() {
     }
     // Corrigir o texto de uma tarefa no arquivo precisa alcançar quem já abriu
     // o sistema, mas sem atropelar quem a editou ou moveu: só substitui a que
-    // veio da semente e continua exatamente como foi semeada.
+    // veio da semente e continua exatamente como foi semeada. O código TAR
+    // já atribuído acompanha a tarefa.
     const intocada = existente.origem === "semente" && existente.semeadoEm === existente.atualizadoEm;
     if (intocada && existente.semeadoEm !== carimbo) {
+      if (existente.codigo) marcado.codigo = existente.codigo;
       porId.set(t.id, marcado);
       mudou++;
     }
@@ -7797,7 +8354,9 @@ function semearTarefas() {
 
 function inicializarModuloTarefas() {
   state.tarefas = lerTarefas();
+  state.autorTarefas = lerAutorDeTarefas();
   semearTarefas();
+  if (garantirCodigosDeTarefa()) gravarTarefas(state.tarefas);
 
   document.getElementById("btn-nova-tarefa").addEventListener("click", () => abrirFormTarefa(null));
   document.getElementById("btn-salvar-tarefa").addEventListener("click", salvarTarefa);
@@ -7805,20 +8364,14 @@ function inicializarModuloTarefas() {
   document.getElementById("btn-fechar-tarefa-form").addEventListener("click", fecharFormTarefa);
   document.getElementById("tarefa-form-backdrop").addEventListener("click", fecharFormTarefa);
   document.getElementById("btn-excluir-tarefa").addEventListener("click", excluirTarefa);
-  document.getElementById("btn-fechar-tarefa-painel").addEventListener("click", fecharPainelDeTarefa);
   document.addEventListener("keydown", (ev) => {
     if (ev.key !== "Escape" || state.modulo !== "tarefas") return;
     if (!document.getElementById("tarefa-form").hidden) {
       fecharFormTarefa();
       return;
     }
-    if (state.tarefaAberta) fecharPainelDeTarefa();
+    if (state.tarefaAberta) fecharDetalheDeTarefa();
   });
-  document.getElementById("tarefa-painel-backdrop").addEventListener("click", fecharPainelDeTarefa);
-  document.getElementById("btn-lancar-tarefa").addEventListener("click", lancarAndamentoDeTarefa);
-  document
-    .getElementById("btn-editar-tarefa")
-    .addEventListener("click", () => abrirFormTarefa(state.tarefaAberta));
 
   // Enter no campo do título salva: em um formulário de uma linha só, exigir
   // o clique no botão é atrito sem motivo.
@@ -7833,35 +8386,72 @@ function inicializarModuloTarefas() {
   // cada mudança, e religar ouvinte por cartão vazaria memória.
   document.getElementById("tarefas-quadro").addEventListener("click", (ev) => {
     const abrir = ev.target.closest("[data-abrir]");
-    if (abrir) return abrirTarefa(abrir.dataset.abrir);
-    const mover = ev.target.closest("[data-mover]");
-    if (mover && mover.dataset.destino) moverTarefa(mover.dataset.mover, mover.dataset.destino);
+    if (abrir) abrirTarefa(abrir.dataset.abrir);
   });
 
-  document.getElementById("tarefa-mover-chips").addEventListener("click", (ev) => {
-    const chip = ev.target.closest("[data-destino-tarefa]");
-    if (chip) moverTarefa(state.tarefaAberta, chip.dataset.destinoTarefa);
+  // Indicadores e pílulas de filtro.
+  const aoFiltrar = (ev) => {
+    const rapido = ev.target.closest("[data-filtro-rapido]");
+    if (rapido) {
+      const id = rapido.dataset.filtroRapido;
+      if (id === "todas") {
+        state.filtroRapidoTarefa = "";
+        state.filtroCategoriasTarefa.clear();
+      } else {
+        state.filtroRapidoTarefa = state.filtroRapidoTarefa === id ? "" : id;
+      }
+      renderizarQuadro();
+      return;
+    }
+    const chip = ev.target.closest("[data-categoria]");
+    if (!chip) return;
+    const id = chip.dataset.categoria;
+    if (state.filtroCategoriasTarefa.has(id)) state.filtroCategoriasTarefa.delete(id);
+    else state.filtroCategoriasTarefa.add(id);
+    renderizarQuadro();
+  };
+  document.getElementById("tarefas-indicadores").addEventListener("click", aoFiltrar);
+  document.getElementById("tarefas-filtros").addEventListener("click", aoFiltrar);
+
+  // Tela da tarefa.
+  document.getElementById("btn-fechar-tarefa").addEventListener("click", () => fecharDetalheDeTarefa());
+  document.getElementById("tk-det-trilha-tarefas").addEventListener("click", (ev) => {
+    ev.preventDefault();
+    fecharDetalheDeTarefa();
   });
-
-  const chips = document.getElementById("tarefas-categorias-chips");
-  if (chips) {
-    chips.addEventListener("click", (ev) => {
-      const chip = ev.target.closest("[data-categoria]");
-      if (!chip) return;
-      const id = chip.dataset.categoria;
-      if (state.filtroCategoriasTarefa.has(id)) state.filtroCategoriasTarefa.delete(id);
-      else state.filtroCategoriasTarefa.add(id);
-      renderizarQuadro();
+  ["btn-tarefa-anterior", "btn-tarefa-proxima"].forEach((id) => {
+    document.getElementById(id).addEventListener("click", (ev) => {
+      const alvo = ev.currentTarget.dataset.alvo;
+      if (alvo) abrirTarefa(alvo);
     });
-  }
-
-  const limpar = document.getElementById("btn-limpar-categorias-tarefa");
-  if (limpar) {
-    limpar.addEventListener("click", () => {
-      state.filtroCategoriasTarefa.clear();
-      renderizarQuadro();
-    });
-  }
+  });
+  document.getElementById("tk-det-mover").addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-destino-tarefa]");
+    if (botao) moverTarefa(state.tarefaAberta, botao.dataset.destinoTarefa);
+  });
+  document.getElementById("tarefa-detalhe").addEventListener("click", (ev) => {
+    if (ev.target.closest("[data-editar-tarefa]")) abrirFormTarefa(state.tarefaAberta);
+  });
+  document.getElementById("tk-reg-tipos").addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-tipo-registro]");
+    if (!botao) return;
+    state.tipoRegistroTarefa = botao.dataset.tipoRegistro;
+    renderizarTiposDeRegistro();
+  });
+  document.getElementById("btn-tk-anexar").addEventListener("click", (ev) => {
+    const campo = document.getElementById("tk-reg-sei-campo");
+    campo.hidden = !campo.hidden;
+    ev.currentTarget.setAttribute("aria-expanded", campo.hidden ? "false" : "true");
+    if (!campo.hidden) document.getElementById("tk-reg-sei").focus();
+  });
+  document.getElementById("btn-tk-lancar").addEventListener("click", lancarRegistroDeTarefa);
+  document.getElementById("tk-det-hist-filtro").addEventListener("click", (ev) => {
+    const botao = ev.target.closest("[data-filtro-historico]");
+    if (!botao) return;
+    state.filtroHistoricoTarefa = botao.dataset.filtroHistorico;
+    const t = tarefaPorId(state.tarefaAberta);
+    if (t) renderizarHistoricoDeTarefa(t);
+  });
 
   atualizarBadgeTarefas();
 }
@@ -8757,8 +9347,6 @@ function trocarModulo(modulo) {
   document.getElementById("modulo-equipes").hidden = atual !== "equipes";
   document.getElementById("filtros-agenda").hidden = atual !== "agenda";
   document.getElementById("filtros-projetos").hidden = atual !== "projetos";
-  const filtrosTarefas = document.getElementById("filtros-tarefas");
-  if (filtrosTarefas) filtrosTarefas.hidden = atual !== "tarefas";
 
   // Busca, exportação e atualização pertencem a módulos específicos; onde não
   // teriam o que fazer, saem da tela em vez de ficarem inertes.
@@ -8827,7 +9415,12 @@ function trocarModulo(modulo) {
   if (atual === "projetos") renderizarProjetos();
   if (atual === "ramais") renderizarRamais();
   if (atual === "estrutura") renderizarEstrutura();
-  if (atual === "tarefas") renderizarQuadro();
+  if (atual === "tarefas") {
+    // Entrar no módulo pelo menu ou pelo portal abre o quadro, não a última
+    // tarefa que ficou aberta.
+    if (state.tarefaAberta) fecharDetalheDeTarefa(false);
+    renderizarQuadro();
+  }
   if (atual === "equipes") renderizarEquipes();
   if (atual === "portal") renderizarPortal();
 }

@@ -611,30 +611,63 @@ linha no arquivo de dados. A **unidade da DTI** é a mesma etiqueta do Plano 100
 dias (`DDES`, `DINT`, `DBAD`), para que a mesma pergunta — "de quem é isto?" —
 se responda igual nos dois módulos.
 
-**Mover a tarefa tem três caminhos, e os três chamam o mesmo código.** Arrastar
+**Visual do design system do quadro** (Portal de Gestão DTI). Tokens próprios
+(`--tk-*` em `styles.css`), com versão para o tema escuro: IBM Plex Sans na
+interface, IBM Plex Serif nos títulos de exibição e IBM Plex Mono nos códigos e
+números do SEI. Status é sempre texto e cor juntos, nunca só cor; texto
+secundário nunca fica mais claro que `#5A6577`; alvos clicáveis de 40 a 44 px.
+
+**O quadro.** No topo, quatro **caixas de indicador** — em aberto, atrasadas,
+sem responsável e concluídas — que contam o quadro inteiro e também filtram o
+que contam (clicar de novo desfaz). Abaixo, as **pílulas de filtro**: Todas,
+Só atrasadas, Minhas (aparece quando o navegador sabe quem o usa) e uma por
+categoria com a contagem. As colunas usam `repeat(auto-fit, minmax(240px,
+1fr))`: quatro lado a lado em tela larga, empilhadas no celular. O cabeçalho da
+coluna traz o ponto do status, o nome, a contagem e quantas estão atrasadas.
+
+**O cartão** tem, de cima para baixo: o **código** (`TAR-001`, atribuído uma
+vez e gravado com a tarefa — é o que se diz em reunião e se escreve no SEI) e
+o **selo de atraso** ("Atrasada 15d"), que substitui a antiga borda vermelha
+lateral; o título; as etiquetas de categoria, unidade e prioridade alta; o
+**último andamento** registrado, para acompanhar a tarefa sem abri-la; e o
+rodapé com o avatar de iniciais do responsável (tracejado âmbar quando não há
+responsável) e a informação secundária — o prazo que ainda corre, quando foi o
+último movimento ou "Sem registros". A concluída mostra a data de conclusão e
+o tamanho do histórico.
+
+**O cartão inteiro abre a tela da tarefa**, que ocupa o lugar do quadro dentro
+do módulo: barra com trilha (Início / Tarefas / TAR-xxx), setas de tarefa
+anterior e próxima — na ordem de leitura do quadro, respeitando os filtros — e
+Fechar (ou Esc), que devolve o quadro no mesmo ponto da rolagem. Abaixo, o
+**hero marinho** com código, status, etiquetas, título e a **barra das quatro
+etapas** com a data de entrada em cada uma; à esquerda, descrição, **registrar
+andamento** e **histórico**; à direita, **Mover para** (grade 2×2 com a etapa
+atual destacada), **Detalhes** (responsável, unidade, categoria, prioridade,
+prazo e há quanto tempo está na etapa, com o botão Editar) e **Tempo por
+etapa** (barra empilhada, somando idas e voltas).
+
+**Mover a tarefa tem dois caminhos, e os dois chamam o mesmo código:** arrastar
 o cartão para a coluna (com a coluna de destino realçada enquanto o cartão está
-no ar), as **setas de coluna anterior e seguinte** no pé de cada cartão, e os
-**botões de destino** no painel da tarefa. Arrastar não funciona com teclado e
-funciona mal no celular; as setas resolvem os dois casos, e por isso não são um
-extra — são o caminho principal em metade dos usos.
+no ar) e os botões de **Mover para** na tela da tarefa — que funcionam com
+teclado e no celular, onde arrastar não funciona.
 
 **Dentro da coluna, a ordem é a da cobrança:** atrasada primeiro, depois por
 prioridade, depois pelo prazo mais próximo, e o resto pela ordem de lançamento.
-Tarefa com prazo vencido ganha **borda vermelha** e o prazo em vermelho no
-cartão ("venceu há 3 dias"), e o cabeçalho da coluna diz quantas estão
-atrasadas. Concluída não recebe marca de atraso: o prazo dela já passou a ser
-histórico.
+Concluída não recebe marca de atraso: o prazo dela já passou a ser histórico.
 
-**Histórico por tarefa.** Cada movimento entre colunas entra no histórico com
-data, hora e a coluna de destino, e o painel tem um campo para lançar o que
-mudou sem mexer no status. A nota do último lançamento aparece no cartão — mas
-só depois do primeiro andamento, porque a nota de lançamento repetida em todo
-cartão diria apenas o que a coluna já diz.
+**Histórico com tipo.** Todo registro tem tipo — **Andamento, Pendência,
+Decisão ou Documento** — e pode levar o **nº do SEI** ou a referência de um
+arquivo. A pendência aparece em balão âmbar, para não se confundir com o
+andamento que só informa. Mudanças de etapa entram sozinhas ("moveu de Em
+andamento para Em revisão"), e o filtro do histórico separa Tudo, Andamentos e
+Mudanças de status. O campo **Registrado por** assina os registros e fica salvo
+no navegador (não é login); é ele que alimenta o filtro "Minhas". Registros
+gravados antes desta versão, sem tipo, são lidos como criação, mudança de status
+ou andamento, sem regravar nada.
 
-**Filtro por categoria** na barra lateral, com a contagem de cada uma e a opção
-de mostrar todas; e a busca do módulo alcança título, descrição, responsável,
-categoria e unidade. As duas se combinam, e o vazio explica qual das duas
-deixou o quadro sem nada.
+A **busca do módulo** alcança código, título, descrição, responsável,
+categoria e unidade, e se combina com as caixas e as pílulas; o vazio explica
+que foram os filtros que deixaram o quadro sem nada.
 
 **A carteira inicial vem da Diretoria.** As primeiras tarefas foram informadas
 em 14/09/2026 e entram por semente, aplicada uma vez por navegador e mesclada
