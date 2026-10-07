@@ -5571,9 +5571,11 @@ const SELO_MUDANCA = {
 // caixa própria.
 const PAPEIS_UNIDADE = [
   { id: "gerencia", rotulo: "Gerências (DAS-3)" },
+  { id: "lider", rotulo: "Liderança" },
   { id: "equipe", rotulo: "Relação de lotação" },
   { id: "tecnica", rotulo: "Equipe técnica" },
   { id: "contratada", rotulo: "Profissionais Netra" },
+  { id: "organograma", rotulo: "Equipe" },
 ];
 
 // Faixas de senioridade da equipe técnica, do topo para a base. A distribuição
@@ -5603,6 +5605,27 @@ function visaoDeEstrutura(chave) {
 
 function pessoasDaUnidade(u) {
   return Array.isArray(u.pessoas) ? u.pessoas : [];
+}
+
+// Posto que o organograma desenha sem nome — "Tec 1", "Dev 2". É cargo da
+// estrutura, e não pessoa: conta no balão de cargos, mas não no quadro de
+// gente, para que vaga não se passe por servidor lotado.
+function postosDaUnidade(u) {
+  return Array.isArray(u.postos) ? u.postos : [];
+}
+
+function quantidadeDePostos(u) {
+  return postosDaUnidade(u).reduce((a, p) => a + (p.quantidade || 0), 0);
+}
+
+function postosDaVisao(visao) {
+  return [visao.topo, ...unidadesDaVisao(visao)].reduce((a, u) => a + quantidadeDePostos(u), 0);
+}
+
+function textoDePostos(u) {
+  return postosDaUnidade(u)
+    .map((p) => `${plural(p.quantidade, "posto", "postos")} de ${p.cargo}`)
+    .join(" · ");
 }
 
 function subunidadesDe(u) {
@@ -5670,7 +5693,10 @@ function titularDaUnidade(u) {
   // Núcleo cujas frentes têm líder declarado, mas cuja chefia depende de ato.
   // Sem a marca, a primeira gerência seria promovida a chefe pelo desenho.
   if (u.titularADesignar) return null;
-  const chefia = pessoas.find((p) => p.papel === "chefia") || pessoas.find((p) => p.papel === "gerencia");
+  const chefia =
+    pessoas.find((p) => p.papel === "chefia") ||
+    pessoas.find((p) => p.papel === "gerencia") ||
+    pessoas.find((p) => p.papel === "lider");
   if (chefia) return chefia;
   // Na relação da contratada, quem responde pela área é o gestor do Tribunal,
   // que não está no quadro listado: entra como titular, sem contar como
@@ -5682,13 +5708,22 @@ function titularDaUnidade(u) {
 function rotuloDoTitular(titular) {
   if (titular.papel === "gerencia") return "Gerência";
   if (titular.papel === "gestor") return "Gestor da área";
+  if (titular.papel === "lider") return "Líder";
   return "Chefia";
 }
 
 // Título da unidade: sigla e nome, ou só a sigla quando a fonte não nomeia a
 // unidade — melhor do que inventar o nome por extenso.
 function tituloDaUnidade(u) {
+  if (!siglaExibida(u)) return u.nome;
   return u.nome ? `${u.sigla} — ${u.nome}` : u.sigla;
+}
+
+// Sigla que a tela mostra. A unidade cuja fonte não declara sigla traz
+// `exibirSigla: false`: a sigla segue como chave interna do painel, e o
+// desenho mostra só o nome, em vez de uma sigla inventada pelo sistema.
+function siglaExibida(u) {
+  return u.exibirSigla === false ? "" : u.sigla;
 }
 
 // Texto pesquisável da unidade: nome, sigla, natureza, subordinação, o que
@@ -5698,7 +5733,7 @@ function tituloDaUnidade(u) {
 function textoDaUnidade(u) {
   return normalizarTexto(
     [u.nome, u.sigla, u.natureza, u.subordinacao, u.origem, u.observacao, u.lotacao, u.justificativa]
-      .concat(u.atribuicoes || [])
+      .concat(u.atribuicoes || [], u.escopo || [], postosDaUnidade(u).map((p) => p.cargo))
       .join(" ")
   );
 }
@@ -5760,9 +5795,14 @@ function linhaDePessoa(pessoa, destacada, liderNoTitulo) {
     pessoa.matricula ? `matrícula ${pessoa.matricula}` : "",
     pessoa.vinculo || "",
   ].filter(Boolean);
+  // Cargo ausente só é pendência na relação de lotação, que declara cargo de
+  // todo mundo. O organograma nomeia a pessoa pela posição que ela ocupa, e ali
+  // a falta do cargo é o próprio documento, não lacuna de preenchimento.
   const cargo = pessoa.cargo
     ? `<span class="org-pessoa__cargo">${escapeHtml(pessoa.cargo)}</span>`
-    : `<span class="org-pessoa__cargo org-pessoa__cargo--vago">cargo não consta na relação</span>`;
+    : (pessoa.papel || "equipe") === "equipe"
+    ? `<span class="org-pessoa__cargo org-pessoa__cargo--vago">cargo não consta na relação</span>`
+    : "";
   return `
     <li class="org-pessoa${destacada ? " is-destacada" : ""}">
       <span class="org-pessoa__nome">${escapeHtml(pessoa.nome)}</span>
@@ -5779,7 +5819,8 @@ function linhaDePessoa(pessoa, destacada, liderNoTitulo) {
 // estrutura, não curiosidade.
 function resumoDeQuadro(u) {
   const pessoas = pessoasDoQuadro(u);
-  if (!pessoas.length) return "";
+  const postos = quantidadeDePostos(u);
+  if (!pessoas.length) return postos ? plural(postos, "posto sem nome", "postos sem nome") : "";
   // Quadro de contratada não tem vínculo a separar: o que o distingue é o
   // cargo, e o resumo diz quantos há de cada faixa.
   if (pessoas.every((p) => p.papel === "contratada")) {
@@ -5789,11 +5830,16 @@ function resumoDeQuadro(u) {
   const efetivos = pessoas.filter((p) => p.vinculo === "Efetivo").length;
   const comissionados = pessoas.filter((p) => p.vinculo === "Comissionado").length;
   const tecnicos = pessoas.filter((p) => p.papel === "tecnica").length;
+  const terceirizados = pessoas.filter((p) => p.vinculo === "Terceirizado").length;
   const partes = [];
   if (efetivos) partes.push(plural(efetivos, "efetivo", "efetivos"));
   if (comissionados) partes.push(plural(comissionados, "comissionado", "comissionados"));
+  if (terceirizados) partes.push(plural(terceirizados, "terceirizado", "terceirizados"));
   if (tecnicos) partes.push(plural(tecnicos, "técnico", "técnicos"));
-  return `${plural(pessoas.length, "pessoa", "pessoas")}${partes.length ? ` · ${partes.join(", ")}` : ""}`;
+  return (
+    `${plural(pessoas.length, "pessoa", "pessoas")}${partes.length ? ` · ${partes.join(", ")}` : ""}` +
+    (postos ? ` + ${plural(postos, "posto sem nome", "postos sem nome")}` : "")
+  );
 }
 
 // Painel de equipe da unidade: é o que abre ao clicar na caixa do fluxograma.
@@ -5823,9 +5869,34 @@ function gruposDeEquipe(u) {
   return [...porPapel(u, rotuloDe(u)), ...subunidadesDe(u).flatMap(daSubunidade)];
 }
 
+// Postos sem nome entram no painel como bloco próprio, depois da equipe: é
+// cargo desenhado no organograma, e a lista precisa mostrá-lo sem fazê-lo
+// passar por pessoa.
+function blocoDePostos(u) {
+  const postos = postosDaUnidade(u);
+  if (!postos.length) return "";
+  return `
+      <div class="unidade-painel__grupo">
+        <h5 class="unidade-painel__grupo-titulo">Postos sem nome no organograma · ${quantidadeDePostos(u)}</h5>
+        <ul class="org-pessoas unidade-painel__lista">
+          ${postos
+            .map(
+              (p) => `
+            <li class="org-pessoa">
+              <span class="org-pessoa__nome">${escapeHtml(`${p.quantidade} × ${p.cargo}`)}</span>
+              ${p.nota ? `<span class="org-pessoa__detalhe"><span class="org-pessoa__funcao">${escapeHtml(p.nota)}</span></span>` : ""}
+            </li>`
+            )
+            .join("")}
+        </ul>
+      </div>`;
+}
+
 function painelDeEquipe(u, busca) {
   const grupos = gruposDeEquipe(u);
+  const postos = blocoDePostos(u);
 
+  if (!grupos.length && postos) return postos;
   if (!grupos.length) {
     return `<p class="unidade-painel__vazio">${escapeHtml(
       u.lotacao || u.observacao || "A unidade não registra equipe além da chefia."
@@ -5864,7 +5935,7 @@ function painelDeEquipe(u, busca) {
         </ul>
       </div>`;
     })
-    .join("");
+    .join("") + postos;
 }
 
 /* --------------------------------------------------------------------------
@@ -5984,7 +6055,7 @@ function noDoFluxo({
 // Chamada de ação da caixa: quantas pessoas há para ver, ou que não há.
 function chamadaDeEquipe(u, aberta) {
   const titular = titularDaUnidade(u);
-  const equipe = pessoasDoQuadro(u).filter((p) => p !== titular).length;
+  const equipe = pessoasDoQuadro(u).filter((p) => p !== titular).length + quantidadeDePostos(u);
   if (!equipe) {
     // Unidade proposta sem quadro nenhum não tem chefia de quem se excetuar, e
     // a caixa desenhada como posição não nomeia nenhuma: o que a chamada tem a
@@ -5992,7 +6063,8 @@ function chamadaDeEquipe(u, aberta) {
     if (!pessoasDaUnidade(u).length) return "quadro a definir";
     return desenhadaComoPosicao(u) ? "sem equipe além do titular" : "sem equipe além da chefia";
   }
-  if (pessoasDoQuadro(u).every((p) => p.papel === "contratada")) {
+  const quadro = pessoasDoQuadro(u);
+  if (quadro.length && quadro.every((p) => p.papel === "contratada")) {
     return aberta ? `ocultar profissionais (${equipe})` : `ver profissionais e cargos (${equipe})`;
   }
   return aberta
@@ -6041,6 +6113,27 @@ function noDeFrenteProposta(rotulo, busca) {
   });
 }
 
+// Nome que a caixa traz como responsável, ou a pendência no lugar dele. A
+// unidade pode declarar a pendência com as palavras da fonte — "líder a
+// definir", quando o organograma desenha "?" — ou declarar que não tem
+// titular nenhum (`semTitular`), caso de uma frente que responde direto à
+// unidade de cima: ali "chefia a confirmar" seria pendência que a fonte não
+// tem.
+function responsavelDaCaixa(u, titular, visao) {
+  if (desenhadaComoPosicao(u)) return { texto: "", vago: false };
+  if (titular) return { texto: titular.nome, vago: false };
+  if (u.semTitular) return { texto: "", vago: false };
+  if (u.titularPendente) return { texto: u.titularPendente, vago: true };
+  return { texto: minutaEmTela(visao) ? "chefia a designar" : "chefia a confirmar", vago: true };
+}
+
+// Linhas de escopo da unidade: o que o organograma pendura abaixo dela sem
+// ser pessoa nem unidade — os sistemas que uma frente sustenta, as entregas
+// de uma coordenação. Cabem na caixa, em vez de virar uma caixa cada.
+function linhasDeEscopo(u) {
+  return Array.isArray(u.escopo) ? u.escopo : [];
+}
+
 // A visão em montagem fica acessível às funções da árvore: só ela diz se uma
 // chefia vaga é dado a confirmar (estrutura vigente) ou designação a fazer
 // (minuta).
@@ -6061,24 +6154,20 @@ function filhosDoFluxo(u, busca, paraPapel) {
         pessoasDaUnidade(su).some((p) => pessoaBate(p, busca)));
     const aberta = !paraPapel && state.estruturaUnidadeAberta === su.sigla;
     const posicao = desenhadaComoPosicao(su);
+    const responsavel = responsavelDaCaixa(su, titular, visaoEmMontagem);
     const no = noDoFluxo({
       classe: classeDaUnidade(su),
       selo: seloDaUnidade(su),
-      titulo: paraPapel ? su.sigla : tituloDaUnidade(su),
-      subtitulo: paraPapel ? su.nome : "",
-      responsavel: posicao
-        ? ""
-        : titular
-        ? titular.nome
-        : minutaEmTela(visaoEmMontagem) && su.estado === "nova"
-        ? "chefia a designar"
-        : "chefia a confirmar",
-      vago: !titular,
+      titulo: paraPapel && siglaExibida(su) ? su.sigla : tituloDaUnidade(su),
+      subtitulo: paraPapel && siglaExibida(su) ? su.nome : "",
+      responsavel: responsavel.texto,
+      vago: responsavel.vago,
       linhas: [
         !posicao && titular
           ? papelResumido(titular, rotuloDoTitular(titular))
           : "",
         su.ramal ? `Porta de entrada · ramal ${su.ramal}` : "",
+        ...linhasDeEscopo(su),
         visaoEstrutural() ? "" : resumoDeQuadro(su),
       ],
       destacado,
@@ -6109,8 +6198,8 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
   const noTopo = noDoFluxo({
     classe: "diretoria",
     selo: topo.natureza || "",
-    titulo: paraPapel ? topo.sigla : tituloDaUnidade(topo),
-    subtitulo: paraPapel ? topo.nome : "",
+    titulo: paraPapel && siglaExibida(topo) ? topo.sigla : tituloDaUnidade(topo),
+    subtitulo: paraPapel && siglaExibida(topo) ? topo.nome : "",
     responsavel: diretor ? diretor.nome : topo.legenda || "chefia a confirmar",
     vago: !diretor && !topo.legenda,
     linhas: [diretor && diretor.cargo ? diretor.cargo : "", topo.referencia || ""],
@@ -6133,23 +6222,19 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
         Boolean(busca) &&
         (textoDaUnidade(u).includes(busca) || pessoasDaUnidade(u).some((p) => pessoaBate(p, busca)));
       const posicao = desenhadaComoPosicao(u);
+      const responsavel = responsavelDaCaixa(u, titular, visao);
       const no = noDoFluxo({
         classe: classeDaUnidade(u),
         selo: seloDaUnidade(u),
-        titulo: paraPapel ? u.sigla : tituloDaUnidade(u),
-        subtitulo: paraPapel ? u.nome : "",
-        responsavel: posicao
-          ? ""
-          : titular
-          ? titular.nome
-          : minutaEmTela(visao)
-          ? "chefia a designar"
-          : "chefia a confirmar",
-        vago: !titular,
+        titulo: paraPapel && siglaExibida(u) ? u.sigla : tituloDaUnidade(u),
+        subtitulo: paraPapel && siglaExibida(u) ? u.nome : "",
+        responsavel: responsavel.texto,
+        vago: responsavel.vago,
         linhas: [
           !posicao && titular
             ? papelResumido(titular, rotuloDoTitular(titular))
             : "",
+          ...linhasDeEscopo(u),
           visaoEstrutural(visao) ? "" : resumoDeQuadro(u),
         ],
         destacado,
@@ -6169,7 +6254,9 @@ function montarFluxograma(visao, { busca = "", paraPapel = false } = {}) {
   // posição absoluta dentro de um invólucro da largura da caixa, para não
   // deslocar o topo do eixo vertical da árvore.
   const doQuadro = Boolean(visao.cargosDoQuadro);
-  const cargos = doQuadro ? pessoasDaVisao(visao) : visao.totalDeCargos;
+  // Posto sem nome também é cargo do desenho: entra no balão, que conta
+  // cargos, e fica fora do total de pessoas da linha de apoio.
+  const cargos = doQuadro ? pessoasDaVisao(visao) + postosDaVisao(visao) : visao.totalDeCargos;
   const balao = cargos
     ? `<span class="fluxo-balao fluxo-balao--${doQuadro ? "vigente" : "proposto"}">
          ${
@@ -6209,6 +6296,18 @@ function subtituloDaVisao(visao) {
       `${plural(unidades, "área", "áreas")} · ` +
       `${plural(pessoas.length, "profissional", "profissionais")} da ${visao.topo.nome}: ` +
       distribuicaoDeSenioridade(pessoas)
+    );
+  }
+  // Visão lida do organograma da Superintendência: o que ela distingue é quem
+  // está nomeado e quem é posto ainda sem nome, e não vínculo — o documento
+  // só o declara para parte das pessoas.
+  if (visao.organograma) {
+    const postos = postosDaVisao(visao);
+    return (
+      `${plural(unidades, "unidade", "unidades")} · ` +
+      `${plural(pessoasDaVisao(visao), "pessoa nomeada", "pessoas nomeadas")}` +
+      (postos ? ` e ${plural(postos, "posto sem nome", "postos sem nome")}` : "") +
+      ` no organograma`
     );
   }
   const efetivos = contarVinculo(visao, "Efetivo");
@@ -6290,9 +6389,7 @@ function renderizarPainelDeUnidade(visao) {
   chefia.textContent = [
     titular
       ? `${titular.nome} · ${papelResumido(titular, rotuloDoTitular(titular))}`
-      : minutaEmTela(visao)
-      ? "Chefia a designar"
-      : "Chefia a confirmar",
+      : capitalizar(responsavelDaCaixa(u, null, visao).texto),
     resumo,
   ]
     .filter(Boolean)
@@ -6503,9 +6600,7 @@ function blocoUnidadeExport(u, minuta) {
         [
           titular
             ? `${titular.nome} · ${papelResumido(titular, rotuloDoTitular(titular))}`
-            : minuta
-            ? "Chefia a designar"
-            : "Chefia a confirmar",
+            : capitalizar(responsavelDaCaixa(u, null, minuta ? { minuta: true } : null).texto),
           resumoDeQuadro(u),
         ]
           .filter(Boolean)
@@ -6529,11 +6624,26 @@ function blocoUnidadeExport(u, minuta) {
         </div>`;
         })
         .join("")
+    : postosDaUnidade(u).length || linhasDeEscopo(u).length
+    ? ""
     : `<div style="margin-top:8px;font:400 10px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-wrap:pretty">${escapeHtml(
         u.lotacao || u.observacao || "A unidade não registra equipe além da chefia."
       )}</div>`;
 
-  return `<div style="margin-bottom:16px;break-inside:avoid">${cabecalho}${corpo}</div>`;
+  // Escopo e postos sem nome saem em linha corrida abaixo da equipe: são o que
+  // o organograma diz da unidade além das pessoas.
+  const complemento = [
+    ...linhasDeEscopo(u),
+    textoDePostos(u) ? `Sem nome no organograma: ${textoDePostos(u)}` : "",
+  ]
+    .filter(Boolean)
+    .map(
+      (l) =>
+        `<div style="margin-top:5px;font:400 9.5px/1.5 'IBM Plex Sans',sans-serif;color:${EXP.texto2};text-wrap:pretty">${escapeHtml(l)}</div>`
+    )
+    .join("");
+
+  return `<div style="margin-bottom:16px;break-inside:avoid">${cabecalho}${corpo}${complemento}</div>`;
 }
 
 function construirExtratoEstrutura(visao) {

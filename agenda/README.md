@@ -136,7 +136,7 @@ e vira ruído.
 **Cartão da Estrutura DTI:** unidades abaixo da Diretoria hoje, unidades
 previstas na minuta e quantas funções de TI seguem sem unidade própria — a cela
 de alerta só acende quando existe alguma. O destaque nomeia as unidades que a
-minuta cria, e o selo traz o total de pessoas no organograma (59, hoje) com a
+minuta cria, e o selo traz o total de pessoas nomeadas no organograma com a
 ressalva de que a proposta está em discussão.
 
 **Cartão de Tarefas:** quantas estão a fazer, quantas em andamento e quantas
@@ -375,10 +375,17 @@ A tela tem duas coisas e só: **o fluxograma** e **a lista de quem está em cada
 unidade**. Nenhum texto corrido, nenhum comparativo, nenhuma nota — a leitura é
 o desenho.
 
-**Esqueleto fixo.** Na estrutura atual, de cima para baixo: **Diretor → chefes
-de divisão (DAS-4) → Gerentes de TI (DAS-3)**, com a **Seção de Atendimento ao
-Usuário** dentro da Divisão de Infraestrutura Tecnológica, porque é onde ela
-está e quem a chefia é um gerente.
+**Esqueleto fixo.** A estrutura atual segue o **organograma da Superintendência
+de Tecnologia da Informação** (Organograma_TCM, outubro de 2026), de cima para
+baixo: **Superintendência (DAS-5) → Diretoria de Tecnologia da Informação e
+Diretoria de Projetos e Planejamento (DAS-4) → Coordenações → equipes e
+frentes**. Os nomes vão como grafados no documento; o que ele desenha sem nome
+("Tec 1", "Dev 2", o Scrum Master) entra como **posto sem nome**, que conta no
+balão de cargos e não no total de pessoas, e a liderança marcada com "?" aparece
+como pendência em cor de aviso. Coordenações e equipes não têm sigla no
+documento, e a tela mostra só o nome delas (`exibirSigla: false`). Sistemas e
+entregas pendurados abaixo de uma equipe vão em linhas da própria caixa
+(`escopo`), em vez de virar uma caixa cada.
 
 **Cada gerência tem a sua caixa**, com o selo do cargo comissionado e o nome de
 quem responde em azul no título. Na estrutura atual os três DAS-3 da Divisão de

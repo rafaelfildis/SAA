@@ -5,42 +5,33 @@
 // de estrutura se decide em ato do Tribunal, não no localStorage de quem
 // abriu a tela.
 //
-// A ESTRUTURA ATUAL reúne duas relações, e a tela não as mistura:
+// A ESTRUTURA ATUAL é o organograma da Superintendência de Tecnologia da
+// Informação (arquivo Organograma_TCM, outubro de 2026): a STI, vinculada ao
+// Gabinete da Presidência, com duas Diretorias abaixo — Tecnologia da
+// Informação e Projetos e Planejamento —, as Coordenações de cada uma e as
+// equipes das Coordenações.
 //
-//   · a RELAÇÃO DE LOTAÇÃO — 16 pessoas com matrícula, vínculo e cargo, do
-//     Diretor aos analistas e técnicos de nível médio;
-//   · a EQUIPE TÉCNICA — 43 pessoas alocadas por unidade com perfil de
-//     senioridade (Júnior, Pleno, Sênior, Master, Estagiário), sem matrícula
-//     nem vínculo declarados. As 27 primeiras vieram da alocação da Diretoria;
-//     as 16 restantes, das respostas da DINT (13) e da DBAD (3) de agosto de
-//     2026, que trouxeram o quadro que a alocação inicial não contemplava.
+// Os nomes estão grafados como no documento, que em geral traz só o primeiro
+// nome. O nome completo entra em `nomeNaRelacao` — que serve à busca e não
+// aparece em tela — só onde a pessoa é identificável sem ambiguidade na
+// relação de lotação ou na relação Netra, na mesma unidade. "Ana" (PO),
+// "Diego" (Automações), "Daniel", "Barbosa" e os três nomes do Squad de Elite
+// ficam sem ele: cruzar pelo primeiro nome poria o nome errado ao lado da
+// pessoa certa. Cargo e vínculo também só entram onde o documento os declara
+// — "(DAS 3)", "(Terc.)", "(Efetiva)".
 //
-// Somá-las em um número só apagaria a diferença entre quadro próprio e equipe
-// alocada por perfil, que é justamente o que uma discussão de estrutura precisa
-// ver. Por isso cada unidade mostra as duas contagens, e o rodapé do módulo
-// registra que os perfis da equipe técnica são os de contrato de serviços — a
-// confirmar junto à Diretoria.
+// O que o documento desenha sem nome não é preenchido: "Tec 1", "Dev 2" e o
+// "SM" vazio entram em `postos`, que contam no balão de cargos mas não no
+// total de pessoas; a liderança marcada com "?" e a "Novo (Terc.)" entram em
+// `titularPendente`, com as palavras da pendência. As Coordenações e equipes
+// não têm sigla no documento e por isso trazem `exibirSigla: false`: a sigla
+// fica como chave interna do painel, e a tela mostra só o nome.
 //
-// A hierarquia segue a regra da própria Diretoria — abaixo do Diretor vêm os
-// chefes de divisão (DAS-4), depois os gerentes (DAS-3), depois a equipe —, e a
-// Seção de Atendimento ao Usuário entra em `subunidades` da DINT, que é onde
-// ela está: o organograma desenha o nível em que a unidade se encontra, em vez
-// de exibir como par de uma divisão o que lhe é subordinado.
+// O Gabinete da Presidência (Chefia de Gabinete, Assessoria e Secretária
+// Executiva) está no documento acima da STI e fica fora do desenho, que é o
+// da área de TI: entra só como subordinação do topo e nas notas.
 //
-// O que as relações NÃO declaram fica marcado como "a confirmar", em vez de ser
-// preenchido por conta própria: o escopo de cada uma das três gerências da
-// DDES e o cargo do Diretor. Cada gerência tem a sua caixa no fluxograma, com
-// o nome de quem responde; o escopo aparece na linha de apoio só onde está
-// declarado, que hoje é a minuta.
-//
-// As respostas das Divisões ao levantamento da Presidência (agosto de 2026)
-// fecharam três pendências que a relação de lotação deixava abertas: o quadro
-// da DINT, o quadro da DBAD e o cargo do Chefe da DBAD, que o documento
-// declara como DAS-4.
-//
-// Ramal não entra aqui de propósito. As relações não trazem ramal, e cruzar
-// nome com a lista de ramais pelo primeiro nome produziria número errado ao
-// lado de pessoa certa. Quem procura número usa o módulo Ramais.
+// Ramal não entra aqui de propósito. Quem procura número usa o módulo Ramais.
 //
 // A ESTRUTURA SUGERIDA é minuta de trabalho, e a tela diz isso em todo lugar
 // onde ela aparece. Ela desenha ESTRUTURA, e não pessoas: nenhuma unidade dela
@@ -59,10 +50,6 @@
 // porque provimento, remanejamento e criação de cargo comissionado são atos do
 // Tribunal, e as siglas propostas ficam declaradas como propostas.
 //
-// Os quadros ficam em constantes compartilhadas porque as duas visões usam as
-// mesmas pessoas: repetir 37 nomes em cada uma criaria duas listas para
-// divergirem na primeira atualização.
-//
 // A ESTRUTURA NETRA é a relação que a própria Netra Tecnologia encaminhou ao
 // Tribunal no âmbito do Contrato nº 65/2022 (CON-RQ-30, ofício
 // NETRA-CON-26213, de 02/10/2026, assinado eletronicamente): 41 profissionais
@@ -79,13 +66,17 @@
 // O QUE A TELA USA HOJE. O módulo ficou com o fluxograma e a lista da equipe,
 // e só lê:
 //
-//   · da visão: `rotulo`, `minuta`, `estrutural` (desenha só a estrutura: sem
+//   · da visão: `rotulo`, `minuta`, `organograma` (linha de apoio em pessoas
+//     nomeadas e postos sem nome), `estrutural` (desenha só a estrutura: sem
 //     contagem de pessoas, sem lista de equipe e sem caixa clicável) e
 //     `totalDeCargos` (o balão ao lado do topo);
-//   · da unidade: `sigla`, `nome`, `natureza`, `cargo` (o par nível-cargo no
-//     selo, que também tira o nome de responsável da caixa), `ramal`,
-//     `portaDeEntrada`, `estado`, `titularADesignar`, `frentes` (caixas de
-//     frente abaixo da unidade, sem pessoa), `pessoas`, `subunidades`,
+//   · da unidade: `sigla`, `exibirSigla`, `nome`, `natureza`, `cargo` (o par
+//     nível-cargo no selo, que também tira o nome de responsável da caixa),
+//     `ramal`,
+//     `portaDeEntrada`, `estado`, `titularADesignar`, `titularPendente` e
+//     `semTitular` (o que a caixa diz quando não há titular), `frentes`
+//     (caixas de frente abaixo da unidade, sem pessoa), `escopo` (linhas na
+//     própria caixa), `postos` (cargos sem nome), `pessoas`, `subunidades`,
 //     `funcoes`/`funcoesAcumuladas` (que alimentam a métrica do portal) e
 //     `lotacao`/`observacao` (no painel de uma unidade sem equipe própria e na
 //     lista de cargos da folha);
@@ -105,22 +96,10 @@
 // quebrar nada.
 
 (function () {
-  // Perfil de senioridade, sem matrícula nem vínculo: é como a alocação da
-  // equipe técnica chega, e inventar os campos que faltam seria pior do que
-  // deixá-los vazios.
-  const tecnico = (nome, nivel, funcao) => ({ nome, nivel, funcao: funcao || "", papel: "tecnica" });
-
-  const QUADRO_DIRETORIA = [
-    {
-      nome: "Diego Daltro",
-      nomeNaRelacao: "Diego Cavalcante Teixeira",
-      matricula: "217796",
-      vinculo: "Efetivo",
-      cargo: "Diretor de Tecnologia da Informação",
-      papel: "chefia",
-    },
-    tecnico("Fabiana Dumiense Costa", "Sênior II"),
-  ];
+  // Pessoa do organograma da STI: nome como grafado no documento e, só onde
+  // ele declara, cargo e vínculo. O que o documento não diz fica vazio, em vez
+  // de ser completado por conta própria.
+  const pessoa = (nome, campos) => ({ nome, papel: "organograma", ...(campos || {}) });
 
   // Na minuta o titular de hoje passa a Superintendente. O quadro é separado
   // do da estrutura atual de propósito: compartilhá-lo faria o cargo proposto
@@ -135,174 +114,6 @@
       cargo: "Superintendente de Tecnologia da Informação",
       papel: "chefia",
     },
-  ];
-
-  const QUADRO_DDES = [
-    {
-      nome: "Mauro de Castro Portugal",
-      matricula: "217719",
-      vinculo: "Comissionado",
-      cargo: "Chefe da Divisão de Desenvolvimento de Sistemas, DAS-4",
-      papel: "chefia",
-    },
-    {
-      nome: "Ayala Bezerra Leal",
-      matricula: "217832",
-      vinculo: "Comissionado",
-      cargo: "Gerente de Tecnologia da Informação, DAS-3",
-      papel: "gerencia",
-    },
-    {
-      nome: "Fabrício André de Souza Muniz",
-      matricula: "217831",
-      vinculo: "Comissionado",
-      cargo: "Gerente de Tecnologia da Informação, DAS-3",
-      papel: "gerencia",
-    },
-    {
-      nome: "Lucas Juan Nogueira Novaes",
-      matricula: "217833",
-      vinculo: "Comissionado",
-      cargo: "Gerente de Tecnologia da Informação, DAS-3",
-      papel: "gerencia",
-    },
-    {
-      nome: "Ana Amélia Dias Lima Gramacho",
-      matricula: "217406",
-      vinculo: "Efetivo",
-      cargo: "Analista de Sistemas",
-      papel: "equipe",
-    },
-    {
-      nome: "Elizete Paula Sanson",
-      matricula: "217409",
-      vinculo: "Efetivo",
-      cargo: "Analista de Sistemas",
-      papel: "equipe",
-    },
-    {
-      nome: "José Ribamar Santos Cartaxo",
-      matricula: "940",
-      vinculo: "Efetivo",
-      cargo: "Analista de Sistema",
-      papel: "equipe",
-    },
-    {
-      nome: "Melly Pedra Lordello",
-      matricula: "217402",
-      vinculo: "Efetivo",
-      cargo: "Analista de Sistemas",
-      papel: "equipe",
-    },
-    {
-      nome: "Sandra Araújo Vasconcelos Silva",
-      matricula: "217525",
-      vinculo: "Efetivo",
-      cargo: "Analista de Sistemas",
-      papel: "equipe",
-    },
-    {
-      nome: "Ari Ramos de Andrade",
-      matricula: "217675",
-      vinculo: "Efetivo",
-      cargo: "Técnico de Nível Médio",
-      papel: "equipe",
-    },
-    {
-      nome: "Lourival Magalhães Nascimento Neto",
-      matricula: "217401",
-      vinculo: "Efetivo",
-      cargo: "Assistente Administrativo",
-      papel: "equipe",
-    },
-    tecnico("Jefferson Azevedo Lins", "Master II"),
-    tecnico("Marcos Alberto Morais Assis", "Sênior IV"),
-    tecnico("Maurício Machado de Oliveira Matos", "Sênior IV"),
-    tecnico("Diego de Almeida Menezes", "Sênior III"),
-    tecnico("Marlon Nascimento Lopes", "Sênior III"),
-    tecnico("Claudia Carvalho dos Santos", "Sênior II"),
-    tecnico("Jaime Valverde Silva", "Sênior II"),
-    tecnico("José Daniel Machado Soares", "Sênior II"),
-    tecnico("Lúcio de Castro Sacramento", "Sênior II"),
-    tecnico("Pablo Freire Barretto", "Sênior II"),
-    tecnico("Elaine da Anunciação Passos", "Sênior I"),
-    tecnico("Evania Fernandes dos Santos", "Sênior I"),
-    tecnico("José Carlos Teixeira Junior", "Sênior I"),
-    tecnico("Ana Paula Ferreira Lordelo", "Pleno II"),
-    tecnico("Luan Santana Santos", "Pleno II"),
-    tecnico("Carlos Henrique Morais Cardoso", "Pleno I"),
-    tecnico("Guilherme da Silva Boaventura", "Júnior III"),
-    tecnico("Leonardo Oliveira da Silva Santos", "Júnior III"),
-    tecnico("Aldair Silva de Araújo", "Júnior II"),
-    tecnico("Gabriel Silva de Matos", "Júnior II"),
-    tecnico("Lucca Barbosa Nygaard", "Júnior II"),
-    tecnico("Caio Gabriel Cruz Amorim", "Júnior I"),
-    tecnico("Pedro Martins Caires", "Júnior I"),
-    tecnico("Fabrício Maicon Félix Santos", "Estagiário"),
-    tecnico("Rian Uchoa Assunção", "Estagiário"),
-    tecnico("Yuri Figueiredo Ribeiro", "Estagiário", "QA e Analista de Requisitos"),
-  ];
-
-  // A equipe da DINT vem do Quadro do Bloco 5 da resposta da Divisão
-  // (03/08/2026): duas pessoas do quadro próprio — o Chefe da Divisão e o
-  // Gerente de Tecnologia da Informação, este lotado na Seção —, onze postos
-  // do Contrato 65/2022 e dois estagiários. A resposta organiza os postos em
-  // três frentes: infraestrutura, apoio aos sistemas e transmissão e eventos.
-  const QUADRO_DINT = [
-    {
-      nome: "Rafael José Levita de Almeida",
-      matricula: "217600",
-      vinculo: "Comissionado",
-      cargo: "Chefe da Divisão de Infraestrutura Tecnológica, DAS-4",
-      papel: "chefia",
-    },
-    tecnico("Adson Alexandre Borges de Jesus", "Sênior III", "Infraestrutura"),
-    tecnico("Edvaldo Souza dos Santos", "Pleno III", "Infraestrutura"),
-    tecnico("Diego Viana Santos", "Pleno II", "Infraestrutura"),
-    tecnico("Vinícius Matias dos Santos Santana", "Pleno I", "Apoio aos sistemas"),
-    tecnico("Lucas Silva Gonçalves", "Júnior I", "Apoio aos sistemas"),
-    tecnico("Valmirete Paula Santos da Silva", "Técnico", "Apoio aos sistemas"),
-    tecnico("Aisla dos Santos da Anunciação", "Técnico", "Apoio aos sistemas"),
-    tecnico("Eduardo Nascimento da Silva", "Pleno I", "Transmissão e eventos"),
-    tecnico("Ivan de Jesus Júnior", "Técnico", "Transmissão e eventos"),
-    tecnico("Ian de Aguiar Fagundes", "Técnico", "Transmissão e eventos"),
-    tecnico("Caique Nascimento da Anunciação", "Técnico", "Transmissão e eventos"),
-    tecnico("Albert Erico Santos Portela", "Estagiário", "Atendimento de 1º nível"),
-    tecnico("Doglas Matos de Sousa", "Estagiário", "Atendimento de 1º nível"),
-  ];
-
-  const QUADRO_SEATU = [
-    {
-      nome: "Raul César Monferdini Dourado Lima",
-      matricula: "217771",
-      vinculo: "Comissionado",
-      cargo: "Gerente de Tecnologia da Informação, DAS-3",
-      papel: "gerencia",
-    },
-  ];
-
-  // A equipe da DBAD vem do Bloco 5 da resposta da Divisão: o Chefe, uma
-  // servidora e três postos terceirizados de administração de banco de dados.
-  // O documento declara o Chefe como "DAS-4, Chefe da Divisão", o que resolve
-  // a pendência que a relação de lotação deixava aberta.
-  const QUADRO_DADOS = [
-    {
-      nome: "Sérvulo Dourado Cruz Lino",
-      matricula: "217410",
-      vinculo: "Efetivo",
-      cargo: "Chefe da Divisão de Banco de Dados, DAS-4",
-      papel: "chefia",
-    },
-    {
-      nome: "Ana Beatriz Sarno de Santana",
-      matricula: "217530",
-      vinculo: "Efetivo",
-      cargo: "Analista de Sistemas",
-      papel: "equipe",
-    },
-    tecnico("Cristiano Araujo Silva", "Sênior V", "DBA"),
-    tecnico("Larissa de Oliveira Pinheiro", "Sênior III", "Administração de dados"),
-    tecnico("Jorge Luis Cruz Duarte", "Sênior II", "DBA"),
   ];
 
   // Profissional da Netra: cargo do plano de cargos da empresa e, onde a
@@ -368,7 +179,7 @@
   // Data do levantamento em que a estrutura se baseia. Não há semente a
   // aplicar por navegador — a estrutura é lida do arquivo a cada carga —, mas
   // a marca serve de registro de qual versão do levantamento está em tela.
-  window.SAA_ESTRUTURA_VERSAO = "2026-09-14";
+  window.SAA_ESTRUTURA_VERSAO = "2026-10-07";
 
   window.SAA_ESTRUTURA = {
     // Funções de TI usadas na comparação entre as duas visões. A pergunta que
@@ -384,107 +195,293 @@
       { id: "informacao", rotulo: "Informação gerencial e painéis" },
     ],
 
+    // Organograma da Superintendência de Tecnologia da Informação (arquivo
+    // Organograma_TCM, outubro de 2026). A árvore segue o documento nó a nó:
+    // STI → duas Diretorias → Coordenações → equipes. O que o documento
+    // pendura abaixo de uma equipe sem ser pessoa — sistemas sustentados,
+    // entregas de uma coordenação — vai em `escopo`, e os postos sem nome
+    // ("Tec 1", "Dev 2") vão em `postos`.
     atual: {
       rotulo: "Estrutura atual",
-      chamada: "Como a DTI está lotada hoje",
-      // O balão ao lado do topo conta o quadro que está em tela, em vez de
-      // trazer um número gravado: acrescentar ou remover uma pessoa move o
-      // balão junto, e um total à mão envelheceria na primeira atualização.
+      chamada: "Organograma da Superintendência de Tecnologia da Informação",
+      organograma: true,
+      // O balão ao lado do topo conta o que está em tela — pessoas nomeadas e
+      // postos sem nome —, em vez de trazer um número gravado.
       cargosDoQuadro: true,
+      fonte:
+        "Organograma da Superintendência de Tecnologia da Informação do TCM-BA (Organograma_TCM, outubro de 2026). Nomes grafados como no documento; postos sem nome e lideranças marcadas com “?” constam como pendências.",
       resumo:
-        "Três divisões sob a Diretoria e uma seção subordinada à Infraestrutura, com 43 pessoas: 16 na relação de lotação e 27 na equipe técnica alocada por perfil. As quatro unidades cobrem desenvolvimento, infraestrutura, banco de dados e atendimento — quatro das sete funções de TI. Governança, segurança da informação e informação gerencial não têm unidade própria: são exercidas por acúmulo ou não têm dono declarado.",
+        "A Superintendência de Tecnologia da Informação, vinculada ao Gabinete da Presidência, dirige duas Diretorias. A de Tecnologia da Informação reúne três Coordenações — Infraestrutura, Suporte Técnico e Sistemas e Automações — e a de Projetos e Planejamento, duas — Projetos e Planejamento Estratégico.",
       procedencia:
-        "Montada a partir de duas relações da DTI: a de lotação (matrícula, vínculo e cargo) e a da equipe técnica alocada por unidade (perfil de senioridade, sem vínculo declarado). O que as relações não declaram aparece como “a confirmar”, não preenchido por conta própria. Ramais ficam no módulo Ramais.",
+        "Montada a partir do organograma da STI. Os nomes seguem a grafia do documento, que traz em geral só o primeiro nome; o nome completo entra em `nomeNaRelacao` apenas onde a pessoa é identificável sem ambiguidade na relação de lotação ou na relação Netra, na mesma unidade.",
       notasTitulo: "Leitura da estrutura atual",
       notas: [
-        "O desenvolvimento concentra 37 das 59 pessoas do organograma, e 26 dos 43 postos alocados. A estrutura está desenhada para produzir sistema; as demais funções de TI se sustentam com o que sobra.",
-        "O quadro próprio do Tribunal é de 16 pessoas em toda a Diretoria, e a operação contínua é contratada: 43 das 59 pessoas do organograma vêm da alocação por perfil, quase todas do Contrato 65/2022. Na Infraestrutura a proporção é de 2 servidores para 13 postos e estagiários.",
-        "Segurança da informação não tem unidade responsável: o papel recai sobre a Divisão de Infraestrutura Tecnológica, que opera o ambiente — quem opera acaba avaliando a própria operação.",
-        "Governança de TI — plano diretor, portfólio, indicadores, gestão de contratos e de fornecedores — não tem unidade própria, embora um único contrato de serviços especializados passe de R$ 9 milhões por ano.",
-        "Informação gerencial não tem dono declarado: painéis e indicadores nascem por demanda, sem unidade que responda pela fonte e pelo número.",
-        "A equipe da Infraestrutura e a do Banco de Dados vêm das respostas das próprias Divisões, de agosto de 2026, e não da alocação inicial de técnicos, que não as contemplava. A DINT registra 14 pessoas — o Chefe, três postos de infraestrutura, quatro de apoio aos sistemas, quatro de transmissão e eventos e dois estagiários — e a DBAD, cinco.",
-        "A Seção de Atendimento ao Usuário segue como porta de entrada e registra apenas a gerência: a resposta da DINT lota a equipe de atendimento na própria Divisão, porque, desde a última reorganização, infraestrutura e atendimento operam como unidade única — a Seção deixou de constituir chefia autônoma e o Gerente passou a integrar a DINT.",
-        "Nenhum servidor do quadro atua exclusivamente em cibersegurança: a cobertura contínua é prestada 24 horas por dia, sete dias por semana, pelo centro de operações contratado.",
-        "As três gerências (DAS-3) da Divisão de Desenvolvimento de Sistemas estão lotadas na própria Divisão, sem seção nomeada: nem a relação de lotação nem a alocação dizem o escopo de cada gerência ou a qual delas cada técnico responde. No fluxograma, por isso, a equipe aparece ligada à Divisão, e não distribuída entre as três.",
-        "A relação da equipe técnica não declara vínculo. Os perfis — Júnior, Pleno, Sênior, Master e Estagiário — são os de contrato de serviços especializados, a confirmar junto à Diretoria.",
+        "A Diretoria de Tecnologia da Informação deixa de ser o topo: acima dela fica a Superintendência (DAS-5), e ao lado dela nasce a Diretoria de Projetos e Planejamento (DAS-4).",
+        "A Seção de Atendimento ao Usuário dá lugar à Coordenação de Suporte Técnico, no mesmo nível das Coordenações de Infraestrutura e de Sistemas e Automações.",
+        "O Banco de Dados passa a equipe da Coordenação de Infraestrutura, com o mesmo líder e a mesma equipe, acrescida de uma terceirizada.",
+        "A Coordenação de Sistemas e Automações concentra a maior parte da estrutura: análise de requisitos, painéis de BI e portais, automações e sistemas e plataformas, esta com as frentes de desenvolvimento, sustentação interna e sustentação do legado.",
+        "Governança passa a ter unidade própria na Diretoria de Projetos e Planejamento: processos e contratos, plano estratégico, normativas, planejamento de equipamentos e serviços e fiscalizações.",
+        "Segurança da informação segue sem unidade própria: aparece no organograma como normativa do Plano Estratégico de TI, sob a Coordenação de Planejamento Estratégico.",
+        "Postos sem nome no organograma — técnicos de infraestrutura e de suporte, desenvolvedores das fábricas e de automações, o Scrum Master — entram como postos, e não como pessoas.",
+        "O documento traz “Processos e Contatos” sob a Coordenação de Projetos; como os itens são ordens de serviço e termos de referência, a tela grafa “Processos e Contratos”.",
+        "O Gabinete da Presidência, acima da STI, aparece no documento com a Chefia de Gabinete (Aristides), a Assessoria (sem titular declarado) e a Secretária Executiva (Carmem). Fica fora do desenho, que é da área de TI.",
       ],
       topo: {
-        sigla: "DTI",
-        nome: "Diretoria de Tecnologia da Informação",
-        natureza: "Diretoria",
-        funcoesAcumuladas: ["governanca"],
+        sigla: "STI",
+        nome: "Superintendência de Tecnologia da Informação",
+        natureza: "Superintendência",
+        subordinacao: "Gabinete da Presidência",
+        referencia: "Vinculada ao Gabinete da Presidência",
         atribuicoes: [
-          "Direção, planejamento e representação institucional da área de tecnologia",
-          "Decisão sobre portfólio, prioridades e alocação de recursos entre as unidades",
-          "Gestão dos contratos de TI, entre eles o Contrato 65/2022 de serviços especializados",
+          "Direção superior da área de tecnologia, com as duas Diretorias subordinadas",
+          "Planejamento, portfólio e prioridades de TI do Tribunal",
         ],
         observacao:
-          "A relação de lotação registra, para a matrícula 217796 lotada na Diretoria, o nome Diego Cavalcante Teixeira, sem cargo declarado. O organograma segue a designação informada pela Diretoria — a confirmar se é a mesma pessoa.",
-        pessoas: QUADRO_DIRETORIA,
+          "A relação de lotação registra, para a matrícula 217796, o nome Diego Cavalcante Teixeira. O organograma segue a designação informada pela Diretoria.",
+        pessoas: [
+          {
+            nome: "Diego Daltro",
+            nomeNaRelacao: "Diego Cavalcante Teixeira",
+            matricula: "217796",
+            vinculo: "Efetivo",
+            cargo: "Superintendente de Tecnologia da Informação, DAS-5",
+            papel: "chefia",
+          },
+        ],
       },
       unidades: [
         {
-          sigla: "DDES",
-          nome: "Divisão de Desenvolvimento de Sistemas",
-          natureza: "Divisão",
-          subordinacao: "Diretoria de Tecnologia da Informação",
-          funcoes: ["sistemas"],
+          sigla: "DTI",
+          nome: "Diretoria de Tecnologia da Informação",
+          natureza: "Diretoria",
+          subordinacao: "Superintendência de Tecnologia da Informação",
+          funcoes: [],
           atribuicoes: [
-            "Desenvolvimento, evolução e sustentação dos sistemas do Tribunal",
-            "Três gerências de TI (DAS-3) lotadas na própria Divisão, sem seção nomeada na relação",
-            "Maior quadro da Diretoria: 37 das 43 pessoas do organograma",
+            "Direção das Coordenações de Infraestrutura, de Suporte Técnico e de Sistemas e Automações",
+            "Entrega e sustentação dos serviços de TI do Tribunal",
           ],
-          pessoas: QUADRO_DDES,
-        },
-        {
-          sigla: "DINT",
-          nome: "Divisão de Infraestrutura Tecnológica",
-          natureza: "Divisão",
-          subordinacao: "Diretoria de Tecnologia da Informação",
-          funcoes: ["infraestrutura"],
-          funcoesAcumuladas: ["seguranca"],
-          atribuicoes: [
-            "Nuvem, contêineres, servidores, redes, telefonia, datacenter, energia e estações de trabalho",
-            "Backup, monitoramento e continuidade dos serviços, com suporte de nível 3 às demais equipes",
-            "Atendimento ao usuário pela Seção subordinada (SEATU), no ramal 4631, e transmissão das sessões",
-            "Gestão e fiscalização dos contratos de tecnologia: 15 instrumentos vigentes",
-            "Segurança da informação exercida por acúmulo, sem unidade própria",
+          pessoas: [
+            pessoa("Felipe Alabi", { cargo: "Diretor de Tecnologia da Informação, DAS-4", papel: "chefia" }),
           ],
-          observacao:
-            "Quadro da resposta da Divisão de 03/08/2026: 14 pessoas aqui e a gerência na Seção, 15 no total. Duas são do quadro próprio — o Chefe e o Gerente —, onze são postos do Contrato 65/2022, em três frentes (infraestrutura, apoio aos sistemas e transmissão e eventos), e duas são estagiárias. A resposta lota o atendimento na Divisão porque, desde a última reorganização, infraestrutura e atendimento operam como unidade única.",
-          pessoas: QUADRO_DINT,
           subunidades: [
             {
-              sigla: "SEATU",
-              nome: "Seção de Atendimento ao Usuário",
-              natureza: "Seção",
-              ramal: "4631",
-              portaDeEntrada: true,
-              funcoes: ["atendimento"],
-              atribuicoes: [
-                "Porta de entrada da operação pelo ramal 4631: chamado, incidente e solicitação de rotina",
-                "Atendimento ao usuário interno e apoio às sessões do Plenário",
+              sigla: "CINFRA",
+              exibirSigla: false,
+              nome: "Coordenação de Infraestrutura",
+              natureza: "Coordenação",
+              funcoes: ["infraestrutura"],
+              pessoas: [
+                pessoa("Rafael Levita", {
+                  nomeNaRelacao: "Rafael José Levita de Almeida",
+                  cargo: "Coordenador de Infraestrutura, DAS-3",
+                  papel: "chefia",
+                }),
               ],
-              observacao:
-                "Registra apenas a gerência: a resposta da DINT informa que a Seção deixou de constituir chefia autônoma e que o Gerente de Tecnologia da Informação passou a integrar a Divisão, com a equipe de atendimento lotada nela — quatro postos de apoio aos sistemas, quatro de transmissão e eventos e dois estagiários. O organograma mantém a Seção enquanto não houver ato que a extinga.",
-              pessoas: QUADRO_SEATU,
+              subunidades: [
+                {
+                  sigla: "INFRA-TI",
+                  exibirSigla: false,
+                  nome: "Infraestrutura de TI",
+                  natureza: "Equipe",
+                  titularPendente: "líder a definir",
+                  observacao: "O organograma desenha a liderança da equipe com “?”: ainda sem nome.",
+                  postos: [{ cargo: "técnico", quantidade: 4 }],
+                },
+                {
+                  sigla: "BD",
+                  exibirSigla: false,
+                  nome: "Banco de Dados",
+                  natureza: "Equipe",
+                  funcoes: ["dados"],
+                  pessoas: [
+                    pessoa("Servulo", { nomeNaRelacao: "Sérvulo Dourado Cruz Lino", papel: "lider" }),
+                    pessoa("Cristiano", { nomeNaRelacao: "Cristiano Araujo Silva" }),
+                    pessoa("Bia", { nomeNaRelacao: "Ana Beatriz Sarno de Santana" }),
+                    pessoa("Jorge", { nomeNaRelacao: "Jorge Luis Cruz Duarte" }),
+                    pessoa("Mirella", { nomeNaRelacao: "Mirella Lima Saraiva Araújo", vinculo: "Terceirizado" }),
+                  ],
+                },
+              ],
+            },
+            {
+              sigla: "CSUPORTE",
+              exibirSigla: false,
+              nome: "Coordenação de Suporte Técnico",
+              natureza: "Coordenação",
+              funcoes: ["atendimento"],
+              escopo: ["Suporte técnico: sistemas, hardware, SEI e TCM Digital"],
+              pessoas: [
+                pessoa("Raul", {
+                  nomeNaRelacao: "Raul César Monferdini Dourado Lima",
+                  cargo: "Coordenador de Suporte Técnico, DAS-3",
+                  papel: "chefia",
+                }),
+              ],
+              postos: [{ cargo: "técnico", quantidade: 3 }],
+            },
+            {
+              sigla: "CSISTEMAS",
+              exibirSigla: false,
+              nome: "Coordenação de Sistemas e Automações",
+              natureza: "Coordenação",
+              funcoes: ["sistemas"],
+              pessoas: [
+                pessoa("Lucas", {
+                  nomeNaRelacao: "Lucas Juan Nogueira Novaes",
+                  cargo: "Coordenador de Sistemas e Automações, DAS-3",
+                  papel: "chefia",
+                }),
+              ],
+              subunidades: [
+                {
+                  sigla: "REQUISITOS",
+                  exibirSigla: false,
+                  nome: "Análise de Requisitos",
+                  natureza: "Equipe",
+                  pessoas: [
+                    pessoa("Melly", { nomeNaRelacao: "Melly Pedra Lordello", vinculo: "Efetivo", papel: "lider" }),
+                    pessoa("Ana", { funcao: "Product Owner (PO)" }),
+                  ],
+                  postos: [{ cargo: "Scrum Master (SM)", quantidade: 1 }],
+                },
+                {
+                  sigla: "BI-PORTAIS",
+                  exibirSigla: false,
+                  nome: "Painéis de BI e Portais",
+                  natureza: "Equipe",
+                  funcoes: ["informacao"],
+                  pessoas: [
+                    pessoa("Lourival", { nomeNaRelacao: "Lourival Magalhães Nascimento Neto", papel: "lider" }),
+                    pessoa("Luan", {
+                      nomeNaRelacao: "Luan Santana Santos",
+                      vinculo: "Terceirizado",
+                      funcao: "BI · anotado “Nov” no organograma",
+                    }),
+                  ],
+                  postos: [
+                    { cargo: "desenvolvedor de BI", quantidade: 1 },
+                    { cargo: "desenvolvedor do Portal", quantidade: 1 },
+                  ],
+                },
+                {
+                  sigla: "AUTOMACOES",
+                  exibirSigla: false,
+                  nome: "Automações",
+                  natureza: "Equipe",
+                  pessoas: [pessoa("Diego", { vinculo: "Terceirizado", papel: "lider" })],
+                  postos: [{ cargo: "desenvolvedor", quantidade: 3 }],
+                },
+                {
+                  sigla: "PLATAFORMAS",
+                  exibirSigla: false,
+                  nome: "Sistemas e Plataformas",
+                  natureza: "Equipe",
+                  pessoas: [
+                    pessoa("Marcos", {
+                      nomeNaRelacao: "Marcos Alberto Morais Assis",
+                      vinculo: "Terceirizado",
+                      papel: "lider",
+                    }),
+                  ],
+                  subunidades: [
+                    {
+                      sigla: "DESENVOLVIMENTO",
+                      exibirSigla: false,
+                      nome: "Desenvolvimento",
+                      natureza: "Frente",
+                      semTitular: true,
+                      escopo: ["Squad de Elite (novo contrato) e Fábrica DEV"],
+                      pessoas: [
+                        pessoa("Yves", { funcao: "Squad de Elite · novo contrato" }),
+                        pessoa("João", { funcao: "Squad de Elite · novo contrato" }),
+                        pessoa("Letícia", { funcao: "Squad de Elite · novo contrato" }),
+                      ],
+                      postos: [{ cargo: "desenvolvedor da Fábrica DEV", quantidade: 3 }],
+                    },
+                    {
+                      sigla: "SUST-INTERNA",
+                      exibirSigla: false,
+                      nome: "Sustentação Interna",
+                      natureza: "Frente",
+                      titularPendente: "líder a contratar (terceirizado)",
+                      observacao:
+                        "O organograma desenha a liderança como “Novo (Terc.)”: terceirizado ainda sem nome. As três frentes são atendidas pela Fábrica DEV.",
+                      escopo: ["SEI · TCM Digital · Projetos, pela Fábrica DEV"],
+                    },
+                    {
+                      sigla: "SUST-LEGADO",
+                      exibirSigla: false,
+                      nome: "Sustentação Legado",
+                      natureza: "Frente",
+                      escopo: ["eTCM Legado · SIGAA (Analisador e Captura)", "SiCCO (FoxPro e novo) · Farol"],
+                      pessoas: [
+                        pessoa("Fabricio", {
+                          nomeNaRelacao: "Fabrício André de Souza Muniz",
+                          cargo: "DAS-3",
+                          papel: "lider",
+                        }),
+                        pessoa("Barbosa", { funcao: "Consulta · sistemas legados" }),
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
           ],
         },
         {
-          sigla: "DBAD",
-          nome: "Divisão de Banco de Dados",
-          natureza: "Divisão",
-          subordinacao: "Diretoria de Tecnologia da Informação",
-          funcoes: ["dados"],
+          sigla: "DPP",
+          nome: "Diretoria de Projetos e Planejamento",
+          natureza: "Diretoria",
+          subordinacao: "Superintendência de Tecnologia da Informação",
+          funcoes: ["governanca"],
           atribuicoes: [
-            "Administração dos bancos de dados corporativos: 10 SGBDs, 340 bancos, 194 TB",
-            "Desempenho, integridade e recuperação das bases, com 38 rotinas automáticas",
-            "Extrações e correções de dados: cerca de 15 por mês",
+            "Direção das Coordenações de Projetos e de Planejamento Estratégico",
+            "Portfólio de projetos, contratos e planejamento de TI",
           ],
-          observacao:
-            "Quadro da resposta da Divisão: cinco pessoas — o Chefe, uma analista do quadro e três postos terceirizados de administração de banco de dados. A resposta declara o Chefe como DAS-4, Chefe da Divisão, o que resolve a pendência que a relação de lotação deixava aberta. A equipe administra 10 SGBDs e 340 bancos, com 38 rotinas automáticas acompanhadas.",
-          pessoas: QUADRO_DADOS,
+          pessoas: [
+            pessoa("Rafael Freitas", { cargo: "Diretor de Projetos e Planejamento, DAS-4", papel: "chefia" }),
+          ],
+          subunidades: [
+            {
+              sigla: "CPROJETOS",
+              exibirSigla: false,
+              nome: "Coordenação de Projetos",
+              natureza: "Coordenação",
+              escopo: [
+                "Projetos estruturantes: Administração do SEI, TCM Digital, IHM e Inovações",
+                "Processos e contratos: ordens de serviço e termos de referência",
+              ],
+              pessoas: [
+                pessoa("Daniel", {
+                  cargo: "Coordenador de Projetos",
+                  vinculo: "Terceirizado",
+                  funcao: "anotado “Nov” no organograma",
+                  papel: "chefia",
+                }),
+              ],
+            },
+            {
+              sigla: "CPLANEJAMENTO",
+              exibirSigla: false,
+              nome: "Coordenação de Planejamento Estratégico",
+              natureza: "Coordenação",
+              funcoesAcumuladas: ["seguranca"],
+              escopo: [
+                "Assessoramento de TI",
+                "Plano Estratégico de TI: normativas de IA e de segurança e Regimento da STI",
+                "Planejamento de equipamentos e serviços",
+                "Fiscalizações",
+              ],
+              pessoas: [
+                pessoa("Mauro", {
+                  nomeNaRelacao: "Mauro de Castro Portugal",
+                  cargo: "Coordenador de Planejamento Estratégico, DAS-4",
+                  papel: "chefia",
+                }),
+              ],
+            },
+          ],
         },
       ],
     },
