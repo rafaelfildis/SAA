@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-10-08.2";
+window.SAA_TAREFAS_VERSAO = "2026-10-08.3";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -517,7 +517,7 @@ window.SAA_TAREFAS = [
   {
     "id": "tarefa-netra-aditivo-11",
     "titulo": "Revisar o Aditivo 11 da Netra (processo 10498e26) e organizar o quadro de cargos",
-    "descricao": "Revisar aditivo 11 proc da netra 10498e26.\nOrganizar quadro de cargos.",
+    "descricao": "Revisar aditivo 11 proc da netra 10498e26.\nOrganizar quadro de cargos.\n\n1) Diego Menezes - 13k\n2) Ayala - 17k\n4) Posto Comunicação",
     "categoria": "contratos",
     "unidade": "",
     "responsavel": "",
