@@ -72,7 +72,7 @@ publicar a marca do Tribunal cortada.
 ## Interface
 
 - **Topbar** institucional (gradiente navy `#0B3163 → #071C38`) com a marca, busca global e ações rápidas.
-- **Sidebar** de navegação/filtros: filtro de data, período, **rota do dia** ("onde estar hoje"), modalidade com contagem e estado da sincronização. Drawer com backdrop no mobile (botão ☰), recolhível no desktop (preferência salva em `localStorage`).
+- **Sidebar** de navegação/filtros: filtro de data, período (Todos, Hoje, Amanhã, Semana, Mês), **rota do dia** ("onde estar hoje" ou "amanhã"), modalidade com contagem e estado da sincronização. Drawer com backdrop no mobile (botão ☰), recolhível no desktop (preferência salva em `localStorage`).
 - **Cartão "agora / a seguir"**: compromisso em andamento com barra de progresso e tempo restante, e o próximo com contagem regressiva.
 - **Resumo do dia** em quatro números derivados — quantos compromissos ainda faltam, ocupação sobre 10h úteis, total livre e número de sobreposições. Em janelas de vários dias (semana, mês, "todos") a mesma faixa troca de leitura para contagem por situação.
 - **Linha do tempo em escala real de horas** (07:30–18:30 por padrão, 96px/hora) para a agenda de um único dia: um compromisso de 3h30 ocupa três vezes e meia o espaço de um de 1h. Inclui régua de horas, linha vermelha do "agora", **janelas livres** desenhadas no lugar e no tamanho reais e **sobreposições** dividindo a pista em colunas.
@@ -677,6 +677,14 @@ a Diretoria o escreveu** — reescrever a demanda sem deixar o original em algum
 lugar transformaria a interpretação de quem lançou em registro. A descrição
 **preserva as quebras de linha**: uma estratégia com curto, médio e longo prazo
 chega estruturada, e virar parágrafo corrido apagaria justamente a estrutura.
+
+**Quadro zerado em 08/10/2026.** A pedido da Diretoria, a carteira inicial foi
+retirada (`window.SAA_TAREFAS = []`) e cada navegador apaga, uma única vez, as
+tarefas que tinha salvas. A limpeza é comandada por `SAA_TAREFAS_ZERADO_EM` em
+`dados/tarefas.js`: quando a marca muda, o navegador esvazia o quadro e grava a
+marca em `saaTcm.tarefas.zerado`, de modo que as tarefas criadas depois não somem
+no carregamento seguinte. Trocar a marca repete a limpeza; deixá-la vazia
+desliga o mecanismo.
 
 ### Equipe e projetos
 

@@ -53,7 +53,7 @@ const state = {
   ultimaAtualizacao: null,
   carregando: false,
   filtros: {
-    periodo: "dia", // todos | dia | semana | mes — sem filtro explícito, mostra a agenda de hoje
+    periodo: "dia", // todos | dia | amanha | semana | mes — sem filtro explícito, mostra a agenda de hoje
     categorias: new Set(),
     busca: "",
     mostrarConcluidos: true,
@@ -396,6 +396,14 @@ function segundaDaSemana(date) {
   const distanciaSegunda = (diaSemana + 6) % 7;
   d.setUTCDate(d.getUTCDate() - distanciaSegunda);
   return inicioDoDia(d);
+}
+
+// Meio-dia do dia seguinte no fuso da Bahia — base segura para inicioDoDia e
+// fimDoDia, sem risco de a soma de 24h cair na virada errada.
+function diaSeguinte(date) {
+  const d = new Date(`${chaveDia(date)}T12:00:00${offsetBahia()}`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d;
 }
 
 function domingoDaSemana(date) {
@@ -916,6 +924,10 @@ function janelaDoPeriodo(periodo) {
 
   const agora = new Date();
   if (periodo === "dia") return { inicio: inicioDoDia(agora), fim: fimDoDia(agora) };
+  if (periodo === "amanha") {
+    const amanha = diaSeguinte(agora);
+    return { inicio: inicioDoDia(amanha), fim: fimDoDia(amanha) };
+  }
   if (periodo === "semana") return { inicio: segundaDaSemana(agora), fim: domingoDaSemana(agora) };
   if (periodo === "mes") return { inicio: inicioDoMes(agora), fim: fimDoMes(agora) };
   return null;
@@ -1649,6 +1661,19 @@ function renderizarRotaDoDia(analise) {
     return;
   }
 
+  // O rótulo acompanha o dia em tela: "hoje", "amanhã" ou a data escolhida.
+  const rotulo = document.getElementById("rota-rotulo");
+  if (rotulo) {
+    const agora = new Date();
+    const diaChave = diaUnicoVisivel();
+    rotulo.textContent =
+      !diaChave || diaChave === chaveDia(agora)
+        ? "Onde estar hoje"
+        : diaChave === chaveDia(diaSeguinte(agora))
+        ? "Onde estar amanhã"
+        : `Onde estar em ${formatarDataCurta(new Date(`${diaChave}T12:00:00${offsetBahia()}`))}`;
+  }
+
   // Sequência cronológica de locais, sem repetir o mesmo local duas vezes
   // seguidas — quem lê quer o deslocamento, não a lista de compromissos.
   const paradas = [];
@@ -1900,8 +1925,8 @@ function renderizarDashboard(filtrados) {
    FILTROS ATIVOS REMOVÍVEIS
    ========================================================================== */
 
-const PERIODO_LABEL = { todos: "Todos", dia: "Hoje", semana: "Esta semana", mes: "Este mês" };
-const PERIODO_TITULO = { todos: "Agenda — todos os compromissos", dia: "Agenda de Hoje", semana: "Agenda da Semana", mes: "Agenda do Mês" };
+const PERIODO_LABEL = { todos: "Todos", dia: "Hoje", amanha: "Amanhã", semana: "Esta semana", mes: "Este mês" };
+const PERIODO_TITULO = { todos: "Agenda — todos os compromissos", dia: "Agenda de Hoje", amanha: "Agenda de Amanhã", semana: "Agenda da Semana", mes: "Agenda do Mês" };
 
 // Pontos coloridos por categoria (mesmas cores dos badges), usados na lista
 // de categorias da sidebar.
@@ -1911,12 +1936,12 @@ const CATEGORIA_COR = {
   "pauta-presencial": "#0B3163",
 };
 
-// Verdadeiro quando a tela mostra um único dia — seja por "Hoje", seja por um
+// Verdadeiro quando a tela mostra um único dia — seja por "Hoje"/"Amanhã", seja por um
 // intervalo digitado que começa e termina no mesmo dia.
 function ehAgendaDeUmDiaSo() {
   const { periodo, dataInicio, dataFim } = state.filtros;
   if (filtroDeDataAtivo()) return Boolean(dataInicio && dataFim && dataInicio === dataFim);
-  return periodo === "dia";
+  return periodo === "dia" || periodo === "amanha";
 }
 
 // Com um intervalo digitado, o título passa a nomear a data escolhida. Dizer
@@ -1944,6 +1969,7 @@ function subtituloDaPagina() {
   }
   const agora = new Date();
   if (periodo === "dia") return capitalizar(formatarDataLonga(agora));
+  if (periodo === "amanha") return capitalizar(formatarDataLonga(diaSeguinte(agora)));
   if (periodo === "semana") {
     return `${formatarDataCurta(segundaDaSemana(agora))} a ${formatarDataCurta(domingoDaSemana(agora))} · semana atual`;
   }
@@ -3785,7 +3811,7 @@ function inicializarInterface() {
 //
 //   ?data=2026-09-08              um dia
 //   ?de=2026-09-08&ate=2026-09-12 um intervalo
-//   ?periodo=dia|semana|mes|todos quando não há data explícita
+//   ?periodo=dia|amanha|semana|mes|todos quando não há data explícita
 //
 // Datas fora do formato YYYY-MM-DD são ignoradas em silêncio: um link torto
 // deve abrir a agenda de hoje, não uma tela de erro.
@@ -3845,7 +3871,7 @@ function aplicarFiltrosDaURL() {
   }
 
   const periodo = params.get("periodo");
-  if (["dia", "semana", "mes", "todos"].includes(periodo)) {
+  if (["dia", "amanha", "semana", "mes", "todos"].includes(periodo)) {
     state.filtros.periodo = periodo;
     sincronizarChipsPeriodo();
     trocarModulo(moduloPedido || "agenda");
@@ -7104,6 +7130,7 @@ function inicializarPortal() {
 
 const TAREFAS_STORAGE_KEY = "saaTcm.tarefas.v1";
 const SEMENTE_TAREFAS_KEY = "saaTcm.tarefas.semente";
+const ZERAGEM_TAREFAS_KEY = "saaTcm.tarefas.zerado";
 // Nome de quem usa este navegador: assina os registros do histórico e
 // alimenta o filtro "Minhas". Não é login — é o que a pessoa digitou no
 // campo "Registrado por".
@@ -8352,8 +8379,32 @@ function semearTarefas() {
   return mudou > 0;
 }
 
+// Limpeza do quadro pedida em dados/tarefas.js (SAA_TAREFAS_ZERADO_EM):
+// apaga as tarefas salvas neste navegador uma única vez por marca, para que
+// as criadas depois da limpeza não sumam a cada carregamento.
+function zerarTarefasSePedido() {
+  const marca = window.SAA_TAREFAS_ZERADO_EM || "";
+  if (!marca) return;
+  let aplicada = "";
+  try {
+    aplicada = localStorage.getItem(ZERAGEM_TAREFAS_KEY) || "";
+  } catch (e) {
+    /* sem armazenamento: não há o que apagar */
+  }
+  if (aplicada === marca) return;
+  state.tarefas = [];
+  if (gravarTarefas(state.tarefas)) {
+    try {
+      localStorage.setItem(ZERAGEM_TAREFAS_KEY, marca);
+    } catch (e) {
+      /* sem armazenamento: segue sem marcar */
+    }
+  }
+}
+
 function inicializarModuloTarefas() {
   state.tarefas = lerTarefas();
+  zerarTarefasSePedido();
   state.autorTarefas = lerAutorDeTarefas();
   semearTarefas();
   if (garantirCodigosDeTarefa()) gravarTarefas(state.tarefas);

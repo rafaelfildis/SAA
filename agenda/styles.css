@@ -4403,7 +4403,7 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 :root {
   --color-background: #F3F5F9;
   --topbar-altura: 68px;
-  --sidebar-largura: 256px;
+  --sidebar-largura: 288px;
 
   --sb-fundo: #0A1A33;
   --sb-texto: #C3CDE0;
