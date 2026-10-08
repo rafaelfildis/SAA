@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-09-14.4";
+window.SAA_TAREFAS_VERSAO = "2026-10-08.1";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -154,6 +154,362 @@ window.SAA_TAREFAS = [
     "prazo": "",
     "prioridade": "media",
     "status": "a-fazer"
+  },
+  // Entregas concluídas do Plano 100 dias (dados/projetos.js), lançadas em
+  // 08/10/2026 direto na coluna Concluída. O histórico traz a data e a nota
+  // de conclusão registradas no Plano, para que o cartão e a tela da tarefa
+  // mostrem quando cada uma foi entregue — e não o dia em que entrou no
+  // quadro. Responsável e prazo não constam do Plano e ficam em branco.
+  {
+    "id": "tarefa-plano-processo-tcm-tceba-ia",
+    "titulo": "Termo de Cooperação TCM × TCE-BA — Inteligência Artificial",
+    "descricao": "Termo de cooperação técnica entre o TCM-BA e o TCE-BA para soluções de Inteligência Artificial.\n\nEntrega do Plano 100 dias (Processos).",
+    "categoria": "governanca",
+    "unidade": "",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Entregue.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-processo-tcm-saeb-sei",
+    "titulo": "Ofício de Cooperação TCM × SAEB — SEI",
+    "descricao": "Ofício de cooperação com a SAEB para o Sistema Eletrônico de Informações (SEI).\n\nEntrega do Plano 100 dias (Processos).",
+    "categoria": "governanca",
+    "unidade": "",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Entregue.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-processo-tcm-saeb-simpas",
+    "titulo": "Ofício de Cooperação TCM × SAEB — SIMPAS",
+    "descricao": "Ofício de cooperação com a SAEB para o SIMPAS.\n\nEntrega do Plano 100 dias (Processos).",
+    "categoria": "governanca",
+    "unidade": "",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Entregue.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-processo-tcm-tcerr-modulos-sei",
+    "titulo": "Ofício de Cooperação TCM × TCE-RR — Módulos SEI",
+    "descricao": "Ofício de cooperação com o TCE-RR para cessão dos módulos do SEI.\n\nEntrega do Plano 100 dias (Processos).",
+    "categoria": "governanca",
+    "unidade": "",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Entregue.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-processo-tcm-defensoria-rh",
+    "titulo": "Ofício de Cooperação TCM × Defensoria — Sistema de RH",
+    "descricao": "Ofício de cooperação com a Defensoria Pública para o sistema de Recursos Humanos.\n\nEntrega do Plano 100 dias (Processos).",
+    "categoria": "governanca",
+    "unidade": "",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Entregue.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-solucao-agenda-presidencia",
+    "titulo": "Agenda Presidência/Gabinetes",
+    "descricao": "Agenda institucional da Presidência e dos Gabinetes.\n\nEntrega do Plano 100 dias (Soluções).",
+    "categoria": "sistemas",
+    "unidade": "DDES",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Em produção.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-solucao-sicco-novo",
+    "titulo": "SICCO NOVO",
+    "descricao": "Nova versão do SICCO.\n\nEntrega do Plano 100 dias (Soluções).",
+    "categoria": "sistemas",
+    "unidade": "DDES",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Em produção.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-solucao-gestao-financeira",
+    "titulo": "Sistema de Gestão Financeira",
+    "descricao": "Sistema de gestão financeira.\n\nEntrega do Plano 100 dias (Soluções).",
+    "categoria": "sistemas",
+    "unidade": "DDES",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Em produção.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-solucao-emenda-pix",
+    "titulo": "Sistema Emenda PIX",
+    "descricao": "Sistema de acompanhamento das Emendas PIX.\n\nEntrega do Plano 100 dias (Soluções).",
+    "categoria": "sistemas",
+    "unidade": "DDES",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Entregue; novas modificações em desenvolvimento.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-solucao-radar-previdencia",
+    "titulo": "Sistema Radar Previdência",
+    "descricao": "Sistema Radar Previdência.\n\nEntrega do Plano 100 dias (Soluções).",
+    "categoria": "sistemas",
+    "unidade": "DDES",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Entregue; novas modificações em desenvolvimento.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-contrato-prodeb-1",
+    "titulo": "PRODEB — Contrato 1",
+    "descricao": "Renovação do contrato 1 com a PRODEB, com cláusula resolutiva.\n\nEntrega do Plano 100 dias (Contratos).",
+    "categoria": "contratos",
+    "unidade": "DINT",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Renovado com cláusula resolutiva.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-contrato-simpress-reequilibrio",
+    "titulo": "SIMPRESS — Reequilíbrio",
+    "descricao": "Pedido de reequilíbrio econômico-financeiro do contrato SIMPRESS.\n\nEntrega do Plano 100 dias (Contratos).",
+    "categoria": "contratos",
+    "unidade": "DINT",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Reequilíbrio reduzido; processo em tramitação.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-02T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
+  },
+  {
+    "id": "tarefa-plano-continuidade-prodeb",
+    "titulo": "Contrato PRODEB — Rede de segurança operacional",
+    "descricao": "Funciona como importante rede de segurança operacional para contingências e apoio em incidentes.\n\nEntrega do Plano 100 dias (Continuidade estratégica).",
+    "categoria": "contratos",
+    "unidade": "DINT",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "concluida",
+    "historico": [
+      {
+        "em": "2026-10-01T12:00:00-03:00",
+        "tipo": "andamento",
+        "status": "concluida",
+        "nota": "Contrato concluído em 01/10/2026. Rede de segurança operacional para contingências e apoio em incidentes.",
+        "autor": ""
+      },
+      {
+        "em": "2026-10-01T12:00:00-03:00",
+        "tipo": "criacao",
+        "status": "concluida",
+        "nota": "",
+        "autor": ""
+      }
+    ]
   }
 ];
 
