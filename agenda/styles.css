@@ -607,12 +607,21 @@ button, input {
 }
 .input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 
-.date-range { display: flex; gap: 8px; }
-/* min-width:0 é o que permite a coluna encolher: o seletor de data nativo
-   tem largura intrínseca maior que a metade da barra lateral e, sem isso,
-   o campo "Até" fica com o ícone de calendário cortado na borda. */
-.date-range__field { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 600; }
-.date-range__field .input { width: 100%; min-width: 0; padding: 7px 8px; font-size: 0.78rem; }
+/* Um campo por linha, com o rótulo ao lado. Lado a lado, cada seletor de data
+   nativo ficava com metade da barra lateral, menos do que "dd/mm/aaaa" e o
+   ícone de calendário ocupam: o texto saía cortado. Na largura inteira a data
+   cabe por extenso. */
+.date-range { display: flex; flex-direction: column; gap: 6px; }
+.date-range__field {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.date-range__field .input { width: 100%; min-width: 0; padding: 7px 10px; font-size: 0.82rem; }
 
 .form-error {
   margin: 6px 0 0;

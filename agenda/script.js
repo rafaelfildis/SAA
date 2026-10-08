@@ -53,7 +53,7 @@ const state = {
   ultimaAtualizacao: null,
   carregando: false,
   filtros: {
-    periodo: "dia", // todos | dia | semana | mes — sem filtro explícito, mostra a agenda de hoje
+    periodo: "dia", // todos | dia | amanha | semana | mes — sem filtro explícito, mostra a agenda de hoje
     categorias: new Set(),
     busca: "",
     mostrarConcluidos: true,
@@ -382,6 +382,15 @@ function inicioDoDia(date) {
 function fimDoDia(date) {
   const chave = chaveDia(date);
   return new Date(`${chave}T23:59:59.999${offsetBahia()}`);
+}
+
+// Meio-dia do dia seguinte no fuso da Bahia. Partir do meio-dia, e não de
+// "agora + 24h", mantém a conta no dia certo perto da meia-noite: às 23h30 de
+// hoje, somar 24h ainda cai amanhã, mas a chave do dia sai do fuso da Bahia e
+// não do relógio de quem abriu a tela.
+function diaSeguinte(date) {
+  const meioDia = new Date(`${chaveDia(date)}T12:00:00${offsetBahia()}`);
+  return new Date(meioDia.getTime() + 24 * 60 * 60 * 1000);
 }
 
 // America/Bahia não observa horário de verão desde 2019: offset fixo -03:00.
@@ -916,6 +925,10 @@ function janelaDoPeriodo(periodo) {
 
   const agora = new Date();
   if (periodo === "dia") return { inicio: inicioDoDia(agora), fim: fimDoDia(agora) };
+  if (periodo === "amanha") {
+    const amanha = diaSeguinte(agora);
+    return { inicio: inicioDoDia(amanha), fim: fimDoDia(amanha) };
+  }
   if (periodo === "semana") return { inicio: segundaDaSemana(agora), fim: domingoDaSemana(agora) };
   if (periodo === "mes") return { inicio: inicioDoMes(agora), fim: fimDoMes(agora) };
   return null;
@@ -1660,6 +1673,17 @@ function renderizarRotaDoDia(analise) {
       paradas.push({ hora: hhmmDeMinutos(b.ini), local: b.evento.local, categoria: b.evento.categoria });
     });
 
+  // O título acompanha o dia em tela: com "Amanhã" a rota é a de amanhã, e
+  // "Onde estar hoje" diria o contrário do que a lista mostra.
+  const titulo = document.getElementById("rota-titulo");
+  if (titulo) {
+    titulo.textContent = analise.ehHoje
+      ? "Onde estar hoje"
+      : analise.diaChave === chaveDia(diaSeguinte(new Date()))
+      ? "Onde estar amanhã"
+      : "Onde estar no dia";
+  }
+
   grupo.hidden = false;
   if (paradas.length === 0) {
     lista.innerHTML = `<li class="rota-vazia">Nenhum local informado nos compromissos do dia.</li>`;
@@ -1900,8 +1924,14 @@ function renderizarDashboard(filtrados) {
    FILTROS ATIVOS REMOVÍVEIS
    ========================================================================== */
 
-const PERIODO_LABEL = { todos: "Todos", dia: "Hoje", semana: "Esta semana", mes: "Este mês" };
-const PERIODO_TITULO = { todos: "Agenda — todos os compromissos", dia: "Agenda de Hoje", semana: "Agenda da Semana", mes: "Agenda do Mês" };
+const PERIODO_LABEL = { todos: "Todos", dia: "Hoje", amanha: "Amanhã", semana: "Esta semana", mes: "Este mês" };
+const PERIODO_TITULO = {
+  todos: "Agenda — todos os compromissos",
+  dia: "Agenda de Hoje",
+  amanha: "Agenda de Amanhã",
+  semana: "Agenda da Semana",
+  mes: "Agenda do Mês",
+};
 
 // Pontos coloridos por categoria (mesmas cores dos badges), usados na lista
 // de categorias da sidebar.
@@ -1916,7 +1946,7 @@ const CATEGORIA_COR = {
 function ehAgendaDeUmDiaSo() {
   const { periodo, dataInicio, dataFim } = state.filtros;
   if (filtroDeDataAtivo()) return Boolean(dataInicio && dataFim && dataInicio === dataFim);
-  return periodo === "dia";
+  return periodo === "dia" || periodo === "amanha";
 }
 
 // Com um intervalo digitado, o título passa a nomear a data escolhida. Dizer
@@ -1944,6 +1974,7 @@ function subtituloDaPagina() {
   }
   const agora = new Date();
   if (periodo === "dia") return capitalizar(formatarDataLonga(agora));
+  if (periodo === "amanha") return capitalizar(formatarDataLonga(diaSeguinte(agora)));
   if (periodo === "semana") {
     return `${formatarDataCurta(segundaDaSemana(agora))} a ${formatarDataCurta(domingoDaSemana(agora))} · semana atual`;
   }
@@ -3845,7 +3876,7 @@ function aplicarFiltrosDaURL() {
   }
 
   const periodo = params.get("periodo");
-  if (["dia", "semana", "mes", "todos"].includes(periodo)) {
+  if (["dia", "amanha", "semana", "mes", "todos"].includes(periodo)) {
     state.filtros.periodo = periodo;
     sincronizarChipsPeriodo();
     trocarModulo(moduloPedido || "agenda");

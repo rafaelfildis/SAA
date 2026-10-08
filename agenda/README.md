@@ -72,7 +72,7 @@ publicar a marca do Tribunal cortada.
 ## Interface
 
 - **Topbar** institucional (gradiente navy `#0B3163 → #071C38`) com a marca, busca global e ações rápidas.
-- **Sidebar** de navegação/filtros: filtro de data, período, **rota do dia** ("onde estar hoje"), modalidade com contagem e estado da sincronização. Drawer com backdrop no mobile (botão ☰), recolhível no desktop (preferência salva em `localStorage`).
+- **Sidebar** de navegação/filtros: filtro de data, período, **rota do dia** ("onde estar hoje", ou "onde estar amanhã" no período Amanhã), modalidade com contagem e estado da sincronização. Drawer com backdrop no mobile (botão ☰), recolhível no desktop (preferência salva em `localStorage`).
 - **Cartão "agora / a seguir"**: compromisso em andamento com barra de progresso e tempo restante, e o próximo com contagem regressiva.
 - **Resumo do dia** em quatro números derivados — quantos compromissos ainda faltam, ocupação sobre 10h úteis, total livre e número de sobreposições. Em janelas de vários dias (semana, mês, "todos") a mesma faixa troca de leitura para contagem por situação.
 - **Linha do tempo em escala real de horas** (07:30–18:30 por padrão, 96px/hora) para a agenda de um único dia: um compromisso de 3h30 ocupa três vezes e meia o espaço de um de 1h. Inclui régua de horas, linha vermelha do "agora", **janelas livres** desenhadas no lugar e no tamanho reais e **sobreposições** dividindo a pista em colunas.
@@ -966,7 +966,12 @@ O endereço secreto **nunca é servido ao navegador**: a constante `CALENDAR_ICS
 
 ## Filtros disponíveis
 
-- Período: todos / hoje / semana (segunda a domingo) / mês.
+- Período: todos / hoje / amanhã / semana (segunda a domingo) / mês. "Amanhã"
+  é o dia seguinte no fuso da Bahia e abre na mesma visão de um dia só que
+  "Hoje" — linha do tempo, resumo do dia e rota, esta com o título "Onde estar
+  amanhã". O link `?periodo=amanha` abre a agenda direto nele.
+- Campos "De" e "Até" um por linha, com o rótulo ao lado: lado a lado, cada
+  seletor de data ficava com metade da barra lateral e a data saía cortada.
 - Intervalo de datas ("De"/"Até"). **Tem precedência sobre o período**: os dois
   controles recortam a mesma coisa — uma janela de tempo — e aplicá-los em
   conjunto produzia lista vazia sempre que a data escolhida não caísse dentro

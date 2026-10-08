@@ -151,13 +151,14 @@
           <div class="chip-group" id="periodo-group" role="group" aria-labelledby="label-periodo">
             <button class="chip" data-periodo="todos" type="button">Todos</button>
             <button class="chip is-active" data-periodo="dia" type="button">Hoje</button>
+            <button class="chip" data-periodo="amanha" type="button">Amanhã</button>
             <button class="chip" data-periodo="semana" type="button">Semana</button>
             <button class="chip" data-periodo="mes" type="button">Mês</button>
           </div>
         </div>
 
         <div class="filters__group" id="rota-grupo" hidden>
-          <span class="filters__label">Onde estar hoje</span>
+          <span class="filters__label" id="rota-titulo">Onde estar hoje</span>
           <ol class="rota" id="rota-lista"></ol>
         </div>
 
