@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-10-08.4";
+window.SAA_TAREFAS_VERSAO = "2026-10-08.5";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -521,6 +521,30 @@ window.SAA_TAREFAS = [
     "categoria": "contratos",
     "unidade": "",
     "responsavel": "Rafael e Felipe",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "a-fazer"
+  },
+  // Lançadas em 08/10/2026 — também no fim da lista, pelo mesmo motivo
+  // (TAR-025 e TAR-026 em todo navegador).
+  {
+    "id": "tarefa-etcm-proposta-caixas",
+    "titulo": "Montar a nova proposta de caixas do e-TCM, para refletir futuramente no SEI",
+    "descricao": "Montar a nova proposta de caixas do etcm para futuramente refletir no SEI.",
+    "categoria": "sistemas",
+    "unidade": "",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "a-fazer"
+  },
+  {
+    "id": "tarefa-fluxos-internos-processos",
+    "titulo": "Montar os novos fluxos internos de processos",
+    "descricao": "Vou montar os novos fluxos internos de processos.",
+    "categoria": "governanca",
+    "unidade": "",
+    "responsavel": "",
     "prazo": "",
     "prioridade": "media",
     "status": "a-fazer"
