@@ -30,7 +30,7 @@
 // carregar, o sistema continua de pé com o vocabulário mínimo embutido na
 // tela, em vez de quebrar.
 
-window.SAA_TAREFAS_VERSAO = "2026-10-08.1";
+window.SAA_TAREFAS_VERSAO = "2026-10-08.2";
 
 window.SAA_TAREFAS_COLUNAS = [
   { id: "a-fazer", rotulo: "A fazer", descricao: "Registrada, ainda não começou" },
@@ -510,6 +510,20 @@ window.SAA_TAREFAS = [
         "autor": ""
       }
     ]
+  },
+  // Lançada em 08/10/2026. Fica no fim da lista de propósito: o código TAR
+  // segue a ordem do arquivo, e acrescentar no fim mantém o mesmo número
+  // (TAR-024) em todo navegador.
+  {
+    "id": "tarefa-netra-aditivo-11",
+    "titulo": "Revisar o Aditivo 11 da Netra (processo 10498e26) e organizar o quadro de cargos",
+    "descricao": "Revisar aditivo 11 proc da netra 10498e26.\nOrganizar quadro de cargos.",
+    "categoria": "contratos",
+    "unidade": "",
+    "responsavel": "",
+    "prazo": "",
+    "prioridade": "media",
+    "status": "a-fazer"
   }
 ];
 
