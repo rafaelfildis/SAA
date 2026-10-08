@@ -247,6 +247,10 @@
       </button>
     </aside>
 
+    <!-- Conteúdo e rodapé na mesma coluna, à direita da barra lateral: com o
+         rodapé fora do app-shell, a barra terminava onde ele começava e
+         deixava a coluna da esquerda vazia no fim da página. -->
+    <div class="app-coluna">
     <main id="conteudo-principal" class="main" tabindex="-1">
 
       <section id="modulo-portal" class="portal" aria-label="Início — Portal de Gestão DTI">
@@ -980,6 +984,13 @@
       </div>
 
     </main>
+
+    <footer class="app-footer">
+      <img src="img/tcm-logo.svg" class="app-footer__logo"
+           alt="Tribunal de Contas dos Municípios do Estado da Bahia — 55 anos de serviços prestados à sociedade" />
+      <p>Portal de Gestão DTI — TCM-BA. Agenda sincronizada automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
+    </footer>
+    </div><!-- /app-coluna -->
   </div>
 
   <div id="export-backdrop" class="export-overlay" role="dialog" aria-modal="true" aria-labelledby="export-titulo" hidden>
@@ -1070,12 +1081,6 @@
       <div id="export-preview" class="export-preview"></div>
     </div>
   </div>
-
-  <footer class="app-footer">
-    <img src="img/tcm-logo.svg" class="app-footer__logo"
-         alt="Tribunal de Contas dos Municípios do Estado da Bahia — 55 anos de serviços prestados à sociedade" />
-    <p>Portal de Gestão DTI — TCM-BA. Agenda sincronizada automaticamente a cada 15 minutos. Fuso horário: America/Bahia.</p>
-  </footer>
 
   <div id="export-sandbox" class="export-sandbox" aria-hidden="true"></div>
 

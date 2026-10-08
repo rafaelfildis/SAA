@@ -575,6 +575,10 @@ button, input {
 .sidebar__collapse-btn:hover { color: var(--color-secondary); }
 .sidebar__collapse-btn svg { transition: transform 0.15s ease; }
 
+/* Coluna à direita da barra lateral: conteúdo e rodapé. O rodapé mora aqui, e
+   não depois do app-shell, para que a barra lateral desça até o fim da página
+   em vez de terminar onde o rodapé começa. */
+.app-coluna { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: calc(100vh - var(--topbar-altura)); }
 .main { flex: 1; min-width: 0; padding: 16px 20px 8px; }
 
 /* ---------------------------------- Filtros (dentro da sidebar) ---------------------------------- */
@@ -1868,7 +1872,15 @@ button, input {
   .breadcrumbs { display: none; }
 }
 
+/* Corta o que vazar na horizontal sem transformar html e body em contêiner de
+   rolagem. Com `hidden`, a barra lateral perdia o `position: sticky`: rolava
+   junto com a página e, ao descer a agenda, sumia pelo topo e deixava a
+   coluna vazia embaixo. `clip` corta do mesmo jeito e mantém o sticky; o
+   `hidden` fica só para navegador que não conhece `clip`. */
 html, body { overflow-x: hidden; }
+@supports (overflow-x: clip) {
+  html, body { overflow-x: clip; }
+}
 .app-shell, .main, .timeline, .timeline__lista, .card, .card__conteudo { min-width: 0; max-width: 100%; }
 .card__meta span, .card__descricao, .brief-card__meta span { min-width: 0; overflow-wrap: anywhere; }
 
@@ -1882,7 +1894,7 @@ html, body { overflow-x: hidden; }
   .topbar, .sidebar, .sidebar-backdrop, .breadcrumbs, .page-header, .conflict-alert, .dashboard, .status-bar,
   .active-filters, .content-toolbar, .export-overlay, .app-footer,
   .detail-panel, .panel-backdrop, .confirm-modal, .text-export-modal, .skip-link { display: none !important; }
-  .app-shell { display: block; }
+  .app-shell, .app-coluna { display: block; min-height: 0; }
   .main { padding: 0; }
   .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
   body { background: #fff; }
