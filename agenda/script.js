@@ -7672,6 +7672,10 @@ function cartaoDeTarefa(t) {
     ? `<span class="tk-card__pessoa">${avataresDoResponsavel(t.responsavel)}<span class="tk-card__nome" title="${escapeAttr(
         t.responsavel
       )}">${escapeHtml(nomeCurtoDoResponsavel(t.responsavel))}</span></span>`
+    : encerrada
+    ? // Na concluída, a falta de responsável já não pede providência: o
+      // alerta âmbar vira texto neutro.
+      `<span class="tk-card__pessoa tk-texto-suave">Sem responsável</span>`
     : `<span class="tk-card__pessoa tk-card__pessoa--vago"><span class="tk-avatar tk-avatar--vago" aria-hidden="true"></span>Sem responsável</span>`;
 
   return `
@@ -8432,7 +8436,12 @@ function semearTarefas() {
       semeadoEm: carimbo,
       criadoEm: carimbo,
       atualizadoEm: carimbo,
-      historico: [{ em: new Date().toISOString(), tipo: "criacao", status, nota: "", autor: "" }],
+      // A semente pode trazer o próprio histórico — é o caso das entregas já
+      // concluídas, que precisam da data real de conclusão.
+      historico:
+        Array.isArray(t.historico) && t.historico.length
+          ? t.historico
+          : [{ em: new Date().toISOString(), tipo: "criacao", status, nota: "", autor: "" }],
     };
     const existente = porId.get(t.id);
     if (!existente) {

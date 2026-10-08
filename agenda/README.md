@@ -676,6 +676,13 @@ A **busca do módulo** alcança código, título, descrição, responsável,
 categoria e unidade, e se combina com as caixas e as pílulas; o vazio explica
 que foram os filtros que deixaram o quadro sem nada.
 
+**As entregas concluídas do Plano 100 dias também estão no quadro.** As 13
+entregas que o Plano registra como concluídas (processos de cooperação,
+soluções em produção e contratos) entram por semente direto na coluna
+**Concluída**, com a data e a nota de conclusão do Plano no histórico — a
+semente pode trazer o próprio `historico`, e é por ele que o cartão mostra
+"02/10" e não o dia em que a tarefa entrou no quadro.
+
 **A carteira inicial vem da Diretoria.** As primeiras tarefas foram informadas
 em 14/09/2026 e entram por semente, aplicada uma vez por navegador e mesclada
 por id: mover de coluna, editar ou apagar uma tarefa semeada não é desfeito no
