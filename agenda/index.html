@@ -434,22 +434,22 @@
               </span>
               <div>
                 <h4 class="portal-card__titulo">Estrutura DTI</h4>
-                <p class="portal-card__descricao">Organograma da Diretoria de Tecnologia da Informação em três visões: a estrutura atual, a minuta de estrutura sugerida e os cargos da equipe Netra por área.</p>
+                <p class="portal-card__descricao">Organograma da Superintendência de Tecnologia da Informação: Diretorias, Coordenações, equipes e quem responde por cada uma.</p>
               </div>
             </header>
 
             <dl class="portal-card__metricas">
               <div class="portal-metrica">
-                <dt>Unidades hoje</dt>
-                <dd id="portal-estrutura-atual">—</dd>
+                <dt>Unidades</dt>
+                <dd id="portal-estrutura-unidades">—</dd>
               </div>
               <div class="portal-metrica">
-                <dt>Unidades na minuta</dt>
-                <dd id="portal-estrutura-sugerida">—</dd>
+                <dt>Pessoas nomeadas</dt>
+                <dd id="portal-estrutura-pessoas">—</dd>
               </div>
-              <div class="portal-metrica portal-metrica--alerta" id="portal-estrutura-cel-lacunas">
-                <dt>Funções sem unidade</dt>
-                <dd id="portal-estrutura-lacunas">—</dd>
+              <div class="portal-metrica portal-metrica--alerta" id="portal-estrutura-cel-postos">
+                <dt>Postos sem nome</dt>
+                <dd id="portal-estrutura-postos">—</dd>
               </div>
             </dl>
 
@@ -808,24 +808,10 @@
         <div class="page-header">
           <div class="page-header__titles">
             <span class="page-header__eyebrow">Estrutura DTI</span>
-            <h2 class="page-title" id="estrutura-titulo">Estrutura da DTI</h2>
+            <h2 class="page-title" id="estrutura-titulo">Organograma – STI</h2>
             <p class="page-subtitle" id="estrutura-subtitulo"></p>
           </div>
           <div class="page-header__acoes">
-            <div class="view-toggle" id="estrutura-visoes" role="group" aria-label="Escolher a estrutura exibida">
-              <button class="view-toggle__btn is-active" data-visao="atual" type="button" aria-pressed="true">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="5" rx="1.2"></rect><rect x="2" y="17" width="6" height="5" rx="1.2"></rect><rect x="16" y="17" width="6" height="5" rx="1.2"></rect><path d="M12 7v5"></path><path d="M5 17v-2.5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1V17"></path></svg>
-                <span>Estrutura atual</span>
-              </button>
-              <button class="view-toggle__btn" data-visao="sugerida" type="button" aria-pressed="false">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4"></path><path d="M9.5 5.5 12 3l2.5 2.5"></path><rect x="3" y="9" width="18" height="5" rx="1.2"></rect><rect x="3" y="17" width="7" height="5" rx="1.2"></rect><rect x="14" y="17" width="7" height="5" rx="1.2"></rect></svg>
-                <span>Estrutura sugerida</span>
-              </button>
-              <button class="view-toggle__btn" data-visao="netra" type="button" aria-pressed="false">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg>
-                <span>Estrutura Netra</span>
-              </button>
-            </div>
             <button id="btn-exportar-estrutura" class="btn btn--secondary" type="button">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span class="btn__label">Exportar estrutura</span>

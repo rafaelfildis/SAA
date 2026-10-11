@@ -3840,18 +3840,9 @@ function aplicarFiltrosDaURL() {
       ? "equipes"
       : pedido;
 
-  // "?visao=" escolhe a estrutura exibida no módulo Estrutura DTI. Aceita
-  // "proposta" como sinônimo de "sugerida": é como a minuta é chamada quando
-  // alguém manda o link.
-  const visaoPedida = (params.get("visao") || "").toLowerCase();
-  if (visaoPedida) {
-    state.estruturaVisao =
-      visaoPedida === "proposta" || visaoPedida === "sugerida"
-        ? "sugerida"
-        : visaoPedida === "netra"
-        ? "netra"
-        : "atual";
-  }
+  // "?visao=" de links antigos (sugerida, proposta, netra) cai no organograma,
+  // que é a única visão do módulo.
+  if (params.get("visao")) state.estruturaVisao = "atual";
 
   const dia = dataValida(params.get("data"));
   const de = dia || dataValida(params.get("de"));
@@ -5578,7 +5569,10 @@ function inicializarModuloRamais() {
    escrita na tela, em vez de ser preenchido por conta própria.
    -------------------------------------------------------------------------- */
 
-const VISOES_ESTRUTURA = ["atual", "sugerida", "netra"];
+// O módulo mostra só o organograma da STI. O desenho continua genérico — sabe
+// desenhar minuta, quadro de contratada e visão estrutural —, mas o arquivo de
+// dados traz uma visão só, e a tela não oferece alternador.
+const VISOES_ESTRUTURA = ["atual"];
 
 const SELO_ESTADO_UNIDADE = {
   nova: "Unidade nova",
@@ -5623,7 +5617,7 @@ const FAIXAS_SENIORIDADE = [
 
 function dadosDeEstrutura() {
   const d = window.SAA_ESTRUTURA;
-  return d && d.atual && d.sugerida && Array.isArray(d.funcoes) ? d : null;
+  return d && d.atual && Array.isArray(d.funcoes) ? d : null;
 }
 
 function visaoDeEstrutura(chave) {
@@ -6502,18 +6496,6 @@ function renderizarEstrutura() {
   renderizarPainelDeUnidade(visao);
 }
 
-function trocarVisaoEstrutura(visao) {
-  const anterior = state.estruturaVisao;
-  state.estruturaVisao = VISOES_ESTRUTURA.includes(visao) ? visao : "atual";
-  // DBAD não existe na minuta, e DDI não existe hoje: manter a sigla aberta
-  // deixaria o painel apontando para uma unidade que não está no desenho.
-  if (state.estruturaVisao !== anterior) {
-    state.estruturaUnidadeAberta = null;
-    state.estruturaPainelPelaBusca = false;
-  }
-  renderizarEstrutura();
-}
-
 function renderizarPortalEstrutura() {
   const d = dadosDeEstrutura();
   const definir = (id, texto) => {
@@ -6521,37 +6503,37 @@ function renderizarPortalEstrutura() {
     if (el) el.textContent = texto;
   };
   if (!d) {
-    definir("portal-estrutura-atual", "—");
-    definir("portal-estrutura-sugerida", "—");
-    definir("portal-estrutura-lacunas", "—");
+    definir("portal-estrutura-unidades", "—");
+    definir("portal-estrutura-pessoas", "—");
+    definir("portal-estrutura-postos", "—");
     definir("portal-estrutura-destaque", "A estrutura da DTI não pôde ser carregada.");
     definir("portal-estrutura-selo", "Indisponível");
     return;
   }
 
-  const lacunas = funcoesSemUnidade(d.atual);
-  definir("portal-estrutura-atual", String(unidadesDaVisao(d.atual).length));
-  definir("portal-estrutura-sugerida", String(unidadesDaVisao(d.sugerida).length));
-  definir("portal-estrutura-lacunas", String(lacunas));
+  const visao = d.atual;
+  const unidades = unidadesDaVisao(visao);
+  const pessoas = pessoasDaVisao(visao);
+  const postos = postosDaVisao(visao);
+  definir("portal-estrutura-unidades", String(unidades.length));
+  definir("portal-estrutura-pessoas", String(pessoas));
+  definir("portal-estrutura-postos", String(postos));
 
-  const cel = document.getElementById("portal-estrutura-cel-lacunas");
-  if (cel) cel.classList.toggle("portal-metrica--acesa", lacunas > 0);
+  // A cela de postos só acende quando há posto sem nome: é o que o organograma
+  // ainda tem a preencher.
+  const cel = document.getElementById("portal-estrutura-cel-postos");
+  if (cel) cel.classList.toggle("portal-metrica--acesa", postos > 0);
 
-  const novas = unidadesDaVisao(d.sugerida).filter((u) => u.estado === "nova");
+  const porNatureza = (n) => unidades.filter((u) => normalizarTexto(u.natureza || "").startsWith(n)).length;
   const destaque = document.getElementById("portal-estrutura-destaque");
   if (destaque) {
-    destaque.textContent = novas.length
-      ? `A minuta cria ${plural(novas.length, "unidade", "unidades")}: ${novas.map((u) => u.nome).join(", ")}.`
-      : "A minuta mantém as unidades existentes e redistribui atribuições.";
+    destaque.textContent =
+      `${visao.topo.sigla} com ${plural(porNatureza("diretoria"), "Diretoria", "Diretorias")} e ` +
+      `${plural(porNatureza("coordenacao"), "Coordenação", "Coordenações")}.`;
     destaque.classList.add("portal-card__destaque--forte");
   }
 
-  // Selo curto: o rodapé do cartão trunca com reticências, e o quadro de
-  // pessoal cabe melhor aqui do que a ressalva cortada pela metade.
-  definir(
-    "portal-estrutura-selo",
-    `${plural(pessoasDaVisao(d.atual), "pessoa", "pessoas")} no organograma · minuta em discussão`
-  );
+  definir("portal-estrutura-selo", `${plural(pessoas + postos, "cargo", "cargos")} no organograma`);
 }
 
 /* --------------------------------------------------------------------------
@@ -6861,9 +6843,10 @@ function abrirDialogoExportEstrutura() {
     ? `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "área", "áreas")} e ` +
       `${plural(pessoasDaVisao(visao), "profissional", "profissionais")}. O documento sai em A4 paisagem, com o ` +
       `organograma e o cargo de cada profissional, por área.`
-    : `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")} e ` +
-      `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}. O documento sai em A4 paisagem, com o organograma ` +
-      `e a equipe de cada unidade` +
+    : `${visao.rotulo}: ${plural(unidadesDaVisao(visao).length, "unidade", "unidades")}, ` +
+      `${plural(pessoasDaVisao(visao), "pessoa", "pessoas")}` +
+      (postosDaVisao(visao) ? ` e ${plural(postosDaVisao(visao), "posto sem nome", "postos sem nome")}` : "") +
+      `. O documento sai em A4 paisagem, com o organograma e a equipe de cada unidade` +
       (minutaEmTela(visao) ? ", carimbado como minuta de proposta." : ".");
 
   elementoComFocoAntesDoExportEstrutura = document.activeElement;
@@ -6921,14 +6904,6 @@ function inicializarModuloEstrutura() {
     if (!document.getElementById("estrutura-export-modal").hidden) fecharDialogoExportEstrutura();
     else if (state.estruturaUnidadeAberta) fecharPainelDeUnidade();
   });
-
-  const grupo = document.getElementById("estrutura-visoes");
-  if (grupo) {
-    grupo.addEventListener("click", (ev) => {
-      const btn = ev.target.closest(".view-toggle__btn");
-      if (btn) trocarVisaoEstrutura(btn.dataset.visao);
-    });
-  }
 
 }
 

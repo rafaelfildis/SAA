@@ -133,11 +133,10 @@ atrasados, e a próxima entrega com o prazo em dias. A cela de risco só acende
 quando existe algo a alertar — uma cela vermelha permanente deixa de ser sinal
 e vira ruído.
 
-**Cartão da Estrutura DTI:** unidades abaixo da Diretoria hoje, unidades
-previstas na minuta e quantas funções de TI seguem sem unidade própria — a cela
-de alerta só acende quando existe alguma. O destaque nomeia as unidades que a
-minuta cria, e o selo traz o total de pessoas nomeadas no organograma com a
-ressalva de que a proposta está em discussão.
+**Cartão da Estrutura DTI:** unidades do organograma da STI, pessoas nomeadas e
+postos ainda sem nome — a cela de alerta só acende quando há posto sem nome. O
+destaque resume o desenho (Diretorias e Coordenações), e o selo traz o total de
+cargos no organograma.
 
 **Cartão de Tarefas:** quantas estão a fazer, quantas em andamento e quantas
 atrasadas — a cela de alerta só acende quando existe atraso. O destaque nomeia a
@@ -156,8 +155,9 @@ fazer, em vez de ficarem inertes.
 `?modulo=ramais` (ou `?modulo=ramal`), `?modulo=estrutura` (ou
 `?modulo=organograma`), `?modulo=tarefas` (ou `?modulo=quadro`, `?modulo=kanban`),
 `?modulo=equipes` (ou `?modulo=equipe`, `?modulo=alocacao`, `?modulo=celulas`)
-e `?modulo=portal` abrem o sistema direto em um módulo. No módulo Estrutura DTI, `?visao=sugerida` (ou `?visao=proposta`)
-abre direto na minuta, e `?visao=atual` na estrutura vigente — que é o padrão.
+e `?modulo=portal` abrem o sistema direto em um módulo. Links antigos do módulo
+Estrutura DTI com `?visao=` continuam funcionando e abrem o organograma da STI,
+que é a única visão do módulo.
 Um intervalo explícito de
 datas na URL (`?data=`, `?de=`/`?ate=`) continua caindo na agenda — é o formato
 dos links do envio diário, e abrir o portal ali esconderia o que foi pedido.
@@ -365,234 +365,41 @@ silenciosa.
 
 ### Estrutura DTI
 
-Organograma da Diretoria de Tecnologia da Informação em **duas visões**, no
-alternador do topo da tela: **estrutura atual** e **estrutura sugerida**.
-Material de consulta que vem com o sistema (`dados/estrutura.js`), igual para
-todo mundo e sem nada a gravar por navegador — desenho de estrutura se decide
-em ato do Tribunal, não no `localStorage` de quem abriu a tela.
+**Uma visão só: o organograma da STI.** O módulo mostra o organograma da
+Superintendência de Tecnologia da Informação (Organograma_TCM, outubro de 2026),
+material de consulta que vem com o sistema (`dados/estrutura.js`), igual para
+todo mundo e sem nada a gravar por navegador. As visões de minuta de proposta e
+de equipe Netra foram retiradas a pedido da Diretoria; não há alternador no topo
+da tela.
 
-A tela tem duas coisas e só: **o fluxograma** e **a lista de quem está em cada
-unidade**. Nenhum texto corrido, nenhum comparativo, nenhuma nota — a leitura é
-o desenho.
+**Esqueleto.** De cima para baixo: **Superintendência (DAS-5) → Diretoria de
+Tecnologia da Informação e Diretoria de Projetos e Planejamento (DAS-4) →
+Coordenações → equipes e frentes**. A tela tem o fluxograma e, ao clicar numa
+caixa, a lista de quem está naquela unidade.
 
-**Esqueleto fixo.** A estrutura atual segue o **organograma da Superintendência
-de Tecnologia da Informação** (Organograma_TCM, outubro de 2026), de cima para
-baixo: **Superintendência (DAS-5) → Diretoria de Tecnologia da Informação e
-Diretoria de Projetos e Planejamento (DAS-4) → Coordenações → equipes e
-frentes**. Os nomes vão como grafados no documento; o que ele desenha sem nome
-("Tec 1", "Dev 2", o Scrum Master) entra como **posto sem nome**, que conta no
-balão de cargos e não no total de pessoas, e a liderança marcada com "?" aparece
-como pendência em cor de aviso. Coordenações e equipes não têm sigla no
-documento, e a tela mostra só o nome delas (`exibirSigla: false`). Sistemas e
-entregas pendurados abaixo de uma equipe vão em linhas da própria caixa
-(`escopo`), em vez de virar uma caixa cada.
+**O que o documento não preenche, a tela não inventa.** Os nomes vão como
+grafados no organograma, em geral só o primeiro nome. O que ele desenha sem
+nome ("Tec 1", "Dev 2", o Scrum Master) entra como **posto sem nome**: conta no
+balão de cargos ao lado do topo, mas não no total de pessoas. A liderança
+marcada com "?" e a "Novo (Terc.)" aparecem como pendência, em cor de aviso.
+Coordenações e equipes não têm sigla no documento, e a tela mostra só o nome
+delas (`exibirSigla: false`). Sistemas e entregas pendurados abaixo de uma
+equipe vão em linhas da própria caixa (`escopo`), em vez de virar uma caixa
+cada.
 
-**Cada gerência tem a sua caixa**, com o selo do cargo comissionado e o nome de
-quem responde em azul no título. Na estrutura atual os três DAS-3 da Divisão de
-Desenvolvimento de Sistemas aparecem assim, um em cada caixa, e sem linha de
-apoio: a relação de lotação não declara o escopo de nenhuma das três, e
-preencher a linha com "escopo a definir" repetido três vezes seria ocupar o
-desenho com o que ele não sabe. Na minuta, as frentes são da unidade e não de
-pessoas: o Núcleo de Desenvolvimento de Sistemas declara `frentes` —
-Desenvolvimento, Sustentação e Modernização de Sistema — e cada uma ganha uma
-caixa com o nome da frente e nada mais.
+**Uma medida e uma cor para toda caixa, e o destaque só no topo.** Todas as
+caixas têm 182px, fundo azul-claro institucional e borda superior navy; só a
+Superintendência sai do padrão, em painel navy com a borda vermelha. O nome de
+quem responde pela unidade vai em azul, em linha própria, e o título de uma
+caixa de pessoa segue o mesmo azul.
 
-**Uma medida e uma cor para toda caixa, e o destaque só no topo.** Com cinco
-camadas na mesma árvore, largura e cor diferentes em cada uma faziam a mesma
-linha parecer desalinhada e o desenho, desorganizado — e a profundidade já se lê
-pela posição e pelos conectores, que é para isso que eles existem. Todas as
-caixas são iguais: 182px, fundo azul-claro institucional e borda superior navy
-mais grossa. Só a caixa de onde o desenho parte — a Diretoria na estrutura
-atual, a Superintendência na minuta — sai do padrão, em painel navy cheio com a
-borda vermelha institucional.
+**Busca.** O campo do topo procura em unidade, escopo, posto e pessoa — inclusive
+pelo nome completo, onde ele está em `nomeNaRelacao`. Como os nomes estão atrás
+de um clique, um termo que case com pessoa abre sozinho o painel da unidade.
 
-Duas distinções sobrevivem, e nenhuma é de camada: unidade que a **minuta cria**
-fica com a mesma caixa **tracejada**, porque a proposta cria cinco unidades e
-mantém as outras, e o **título da caixa de gerência** segue no azul dos
-responsáveis, porque ali ele é nome de pessoa e não de unidade. As classes de
-camada continuam no HTML (`--unidade`, `--diretoria-filha`, `--nucleo`,
-`--gerencia`) como marca do nível, para a busca e para o teste, sem cor nem
-medida próprias.
-
-**Na estrutura atual, o nome de quem responde pela unidade vai em azul, em linha
-própria** — é o que se procura primeiro em um organograma, e em cinza de apoio
-ele se perdia entre o cargo e a contagem de pessoas. Chefia sem titular aparece
-em cor de aviso, não em azul: não é nome, é pendência. A caixa traz ainda o
-nível do cargo e o quadro em números; nome de quem não é chefia ou gerência não
-aparece no desenho.
-
-**A minuta, ao contrário, desenha estrutura e não pessoas.** Nenhuma unidade
-dela declara quadro nominal: cada caixa traz no selo o nível e o cargo que o
-ocupa — `DIRETORIA · DAS-4`, `COORDENAÇÃO · DAS-3`, `NÚCLEO · TERCEIRIZADOS` e,
-no Banco de Dados, `NÚCLEO · EFETIVOS` —, e o único nome do desenho é o do
-titular de hoje na Superintendência. Não há contagem de pessoas na caixa, nem
-chamada de equipe, nem caixa clicável: sem quadro nominal não há lista para
-abrir. Enquanto a criação de unidade e a designação de chefia dependem de ato,
-lotar nomes na proposta daria por decidido o que não está — quem quiser ver
-quem está onde hoje usa a estrutura atual, que é onde esse dado existe.
-
-**Ao lado do topo, um balão com o total de cargos**, e a cor diz de que número
-se trata. Na estrutura atual ele é **vermelho** e conta o quadro que está em
-tela — 59 hoje —, derivado das unidades a cada carga: acrescentar ou remover uma
-pessoa move o balão junto, e um total gravado à mão envelheceria na primeira
-atualização. Na minuta ele é **verde, com seta**, e traz os **45 cargos**
-informados pela Diretoria, que não é conta do sistema — a relação de lotação tem
-16 pessoas e a alocação 43. Vermelho é o que existe, verde é o que se propõe.
-
-O balão fica em posição absoluta dentro de um invólucro da largura do quadro,
-para não deslocar o topo do eixo vertical da árvore, e entra na medida de folga
-da folha, senão passaria da margem no papel.
-
-Quem controla os dois comportamentos é o arquivo de dados, não a tela: a visão
-declara `estrutural: true` e `totalDeCargos`, e cada unidade declara `cargo` —
-com ele, a caixa vira posição; sem ele, mostra o titular, como na estrutura
-atual.
-
-**A estrutura sugerida.** A Diretoria passa a **Superintendência de Tecnologia
-da Informação**, e abaixo dela ficam **duas Diretorias**:
-
-- **Diretoria de Tecnologia da Informação**, que recebe a operação de hoje com
-  a camada renomeada para **Coordenação**: **Coordenação de Sistemas (COSIS)**,
-  ex-DDES, **Coordenação de Infraestrutura (COINFRA)**, ex-DINT, e
-  **Coordenação de Suporte Técnico (COSTEC)**, ex-SEATU, as três no mesmo
-  nível. Sob a Coordenação de Sistemas ficam três Núcleos: o **Núcleo de
-  Desenvolvimento de Sistemas**, que reúne as três gerências (DAS-3) de hoje
-  com a frente de cada uma declarada — liderança técnica, sustentação e
-  modernização —, o **Núcleo de Banco de Dados**, ex-DBAD, com a chefia e o
-  quadro de hoje, e o **Núcleo de UX/UI**, novo;
-- **Diretoria de Projetos de TIC**, nova, com a **Coordenação de Processos de
-  TIC** e a **Coordenação de Governança Digital e Segurança da Informação**.
-
-O cargo de cada camada vem declarado no desenho: **Diretoria em DAS-4,
-Coordenação em DAS-3 e Núcleo com equipe contratada** — com uma exceção
-decidida pela Diretoria, o **Núcleo de Banco de Dados**, que fica com os dois
-analistas efetivos de hoje, porque a administração das bases corporativas
-continua em quadro próprio. O **Núcleo de Desenvolvimento de Sistemas**, esse
-sim terceirizado, é conduzido por três gerências DAS-3, o que explica um Núcleo
-de equipe contratada com três comissionados no quadro; a explicação está nas
-premissas, no arquivo de dados.
-
-**Nenhuma unidade existente é extinta ou perde quadro:** o que muda é a
-denominação da camada de operação, o nível do Atendimento e a criação da segunda
-Diretoria. Três movimentos têm razão declarada no arquivo de dados: o
-**Atendimento sai de dentro da Infraestrutura** e passa ao mesmo nível das
-outras Coordenações, porque é a porta de entrada de toda a área e encaminha
-chamado para as duas; o **Banco de Dados desce a Núcleo sob a Coordenação de
-Sistemas**, onde a prioridade do dado se decide junto com a do sistema que ele
-sustenta, em vez de negociada entre unidades de mesmo nível; e a **Coordenação
-de Governança Digital e Segurança da Informação** reúne o que hoje é acúmulo —
-governança de TI, exercida pela Diretoria junto com a direção da área, e
-segurança da informação, exercida pela Infraestrutura, que opera o ambiente que
-deveria avaliar.
-
-A equipe técnica segue ligada à Coordenação de Sistemas, e não distribuída
-entre as três frentes: nem a relação de lotação nem a alocação dizem a qual
-delas cada técnico responde, e inventar a distribuição seria transformar uma
-pendência do levantamento em dado.
-
-**O que a minuta não pressupõe.** A chefia das duas Diretorias, das Coordenações
-novas e dos Núcleos fica a designar — no Núcleo de Desenvolvimento de Sistemas
-a liderança técnica declarada pode acumulá-la, e isso é decisão da Diretoria —, e a Diretoria de Projetos de TIC, as suas
-duas Coordenações e o Núcleo de UX/UI nascem sem quadro declarado: compô-los
-exige remanejamento ou provimento, e o cargo comissionado correspondente a
-Coordenação e a Núcleo depende do ato de criação — os três são atos do Tribunal.
-As duas unidades sob a Diretoria de Projetos vêm como Coordenação por coerência
-com a camada; se a Diretoria preferir mantê-las como Divisão, muda a
-denominação, não o desenho. As siglas COSIS, COINFRA, COSTEC, NBD, NUX, DPTIC,
-COPRO e COGOV são propostas — a denominação oficial vem no ato de criação.
-**Informação gerencial e painéis seguem sem unidade responsável** nesta versão,
-a definir entre Processos de TIC, Núcleo de Banco de Dados e Governança
-Digital; a lacuna está registrada nas premissas, no arquivo de dados.
-
-**Na estrutura atual, a equipe abre no clique.** Clicar na caixa de uma unidade
-abre, abaixo do desenho, a equipe alocada nela. Um painel por vez, e sempre no mesmo lugar:
-assim nenhuma caixa se mexe quando alguém abre uma divisão — a caixa que se
-quer ler não sai do lugar debaixo do cursor. A caixa aberta fica marcada e a
-chamada muda de "ver equipe alocada (36)" para "ocultar equipe (36)"; unidade
-sem quadro além da chefia diz isso na própria caixa, em vez de abrir um painel
-vazio. Esc, o × do painel e um segundo clique na mesma caixa dispensam a lista.
-
-No painel os nomes vêm em colunas e em três blocos — **gerências (DAS-3),
-relação de lotação e equipe técnica** —, com matrícula, vínculo e cargo para
-quem vem da relação de lotação, e perfil de senioridade (mais a função
-declarada, quando há) para quem vem da alocação. A distribuição por perfil fica
-no título do bloco técnico: "1 master · 12 sêniores · 3 plenos · 7 juniores · 3
-estagiários".
-
-**Duas relações, contadas separadamente.** Na estrutura atual, a linha de apoio
-do título resume o desenho em números: unidades, total de pessoas, quantas vêm
-da **relação de lotação** (com vínculo) e quantas da **equipe técnica** (alocada
-por perfil). Somá-las em um número só apagaria a diferença entre quadro próprio
-e equipe alocada — hoje são **16 e 43**, e a proporção é o dado: a operação
-contínua é contratada. Na minuta, onde não há quadro nominal, a mesma linha
-conta o que ela tem: **unidades e cargos**.
-
-**As respostas das Divisões ao levantamento da Presidência** (agosto de 2026)
-trouxeram o que a alocação inicial não tinha: a **equipe da DINT** (14 pessoas
-na Divisão mais a gerência na Seção — três postos de infraestrutura, quatro de
-apoio aos sistemas, quatro de transmissão e eventos e dois estagiários) e a
-**equipe da DBAD** (o Chefe, uma analista do quadro e três postos de banco de
-dados). O mesmo documento **fechou duas pendências** que a relação de lotação
-deixava abertas: o cargo do Chefe da DBAD, declarado como DAS-4, e o quadro de
-atendimento — a resposta da DINT informa que a Seção deixou de constituir
-chefia autônoma e que a equipe de atendimento está lotada na Divisão. O
-organograma mantém a Seção enquanto não houver ato que a extinga, e registra a
-informação na observação da unidade.
-
-**A árvore é `<ul>` aninhado com os conectores em CSS**: sem biblioteca, sem
-canvas e sem posição calculada em JavaScript, o desenho acompanha o texto
-quando a fonte muda de tamanho, sobrevive ao zoom e continua legível impresso.
-Em tela estreita ele rola dentro do próprio quadro, sem empurrar a página, e
-abre centrado na raiz.
-
-**A busca destaca, não recorta.** Com um termo em vigor, o fluxograma continua
-mostrando a estrutura inteira e acende as caixas correspondentes. Como na
-estrutura atual os nomes estão atrás de um clique, um termo que case com pessoa
-**abre sozinho** o painel da unidade dela e destaca quem bate; quando o termo deixa de casar com alguém, o
-painel que a busca abriu se fecha — o que foi aberto à mão fica aberto. Procura
-por unidade, sigla, pessoa, matrícula, cargo, perfil de senioridade, função
-declarada ou vínculo: "217406" traz a pessoa, "Sênior IV" traz os dois perfis,
-"QA" traz quem responde por QA e requisitos.
-
-**Exportar estrutura em PDF e JPEG.** Mesmo caminho dos demais módulos: o
-botão no cabeçalho abre o diálogo de formato e o documento é montado em HTML no
-tamanho real, rasterizado e entregue nos dois formatos pelo mesmo ponto de
-construção — PDF e JPEG não divergem entre si nem do que está em tela.
-
-A folha é **A4 paisagem**, e não retrato como o extrato do plano: um
-organograma de cinco níveis em retrato obrigaria a comprimir as caixas até o
-nome da pessoa não caber. Traz o cabeçalho institucional, o título da visão com
-os números, **o mesmo organograma que está em tela** — desenhado pela mesma
-função, em modo de papel: sem botão, sem chamada de ação e sem caixa aberta — e
-a **equipe de cada unidade** listada com cargo, matrícula, vínculo ou perfil de
-senioridade. Na minuta, onde não há quadro nominal, essa seção vira **cargos
-por unidade**: nível, cargo, as frentes declaradas e o que a proposta diz sobre
-a composição de cada uma. A folha sai branca mesmo com o app no tema escuro, porque os
-tokens de cor são redefinidos dentro dela em vez de a árvore ser redesenhada.
-
-**Quando a árvore não cabe na largura da folha, ela é reduzida em bloco** — a
-minuta, com cinco camadas, passa dos 1027px úteis da A4 paisagem. Estreitar as
-caixas até caberem quebraria o nome da unidade em quatro linhas e deixaria o
-desenho mais alto que a página; reduzir a escala mantém a proporção do que está
-em tela, que é o que se faz ao levar um organograma grande para o papel. A
-medida é a extensão real das caixas, e não `scrollWidth`: a árvore é um flex
-centralizado, e o que transborda à esquerda não entra nessa conta — foi assim
-que a primeira caixa apareceu cortada na primeira tentativa.
-
-No papel, a sigla é o título da caixa e o nome da unidade desce para a linha
-seguinte: a mesma informação, na ordem que o espaço permite. O cabeçalho
-acompanha a unidade do topo da visão — na minuta o topo é uma Superintendência,
-e o cabeçalho não pode anunciar uma Diretoria. E **a minuta sai carimbada** — "MINUTA DE PROPOSTA · sem valor de ato administrativo" —, porque
-um organograma proposto impresso sem ressalva circula como se fosse a estrutura
-vigente.
-
-**O que o arquivo de dados guarda além do que a tela mostra.** O levantamento
-completo continua em `dados/estrutura.js` — atribuições de cada unidade,
-pendências ("chefia a confirmar", "quem executa o primeiro nível"), as
-premissas da minuta e a lista do que ela muda. Nada disso é exibido hoje: fica
-como registro, e o cabeçalho do arquivo diz exatamente quais campos a tela lê,
-para que quem editar a estrutura não procure na interface um campo que ela
-ignora.
+**Exportação.** PDF ou JPEG em A4 paisagem, com o organograma reduzido em bloco
+para caber na largura da folha e, abaixo, a equipe, o escopo e os postos sem
+nome de cada unidade.
 
 ### Tarefas
 

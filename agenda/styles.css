@@ -3164,23 +3164,6 @@ button.fluxo-no--diretoria:hover { border-color: rgba(255, 255, 255, 0.5); }
 @media (max-width: 860px) {
   .fluxo-no { width: 166px; }
   .fluxo-no--diretoria { width: 210px; }
-
-  /* O alternador da agenda (linha do tempo × tabela) sai no celular porque a
-     tabela sai com ele. Aqui as duas visões são o próprio módulo: escolher
-     entre estrutura atual e sugerida tem de continuar possível no telefone,
-     ocupando a largura inteira — com dois rótulos longos, meia largura
-     quebraria o texto dentro dos botões. */
-  .page-header #estrutura-visoes { display: flex; width: 100%; }
-  .page-header #estrutura-visoes .view-toggle__btn { flex: 1 1 0; justify-content: center; padding: 8px 10px; }
-}
-
-/* Com três visões, ícone e rótulo não cabem lado a lado em cada terço da
-   largura de um telefone: o ícone sai e o rótulo pode quebrar em duas linhas,
-   centrado, em vez de vazar do botão. */
-@media (max-width: 520px) {
-  .page-header #estrutura-visoes .view-toggle__btn { padding: 7px 6px; text-align: center; line-height: 1.2; border-radius: 14px; }
-  .page-header #estrutura-visoes .view-toggle__btn svg { display: none; }
-  .page-header #estrutura-visoes { border-radius: 17px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
